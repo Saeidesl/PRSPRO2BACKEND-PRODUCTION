@@ -1545,3 +1545,98 @@ function diagnoseProjectStatuses() {
 
   return result;
 }
+
+/**
+ * Production configuration migration preview.
+ * Read-only: compares approved configuration sheets between source and production.
+ * Does not copy, edit, or delete any source or destination data.
+ */
+function previewProductionConfigurationMigration() {
+  const SOURCE_SPREADSHEET_ID = '1X0RX1UEHnuf8RWkXCoYTyqiI9l3DxUUgzcN9rb-7bFM';
+  const TARGET_SPREADSHEET_ID = getConfiguredDatabaseSpreadsheetId_();
+
+  const CONFIGURATION_SHEETS = [
+    '01_Tenants',
+    '02_Users',
+    '03_Departments',
+    '04_Roles',
+    '05_Permissions',
+    '06_UserRoles',
+    '07_RolePermissions',
+    '09_Workflows',
+    '10_WorkflowSteps',
+    '11_EventTypes',
+    '12_EventFields',
+    '17_WorkflowStepDepartments',
+    '18_ProjectStatuses',
+    '23_EventTypeProcurementSettings',
+    '28_InformationTypes',
+    '29_InformationTypeColumns',
+    '32_Forms',
+    '33_FormFields',
+    '34_EventTypeForms',
+    '36_PrintTemplates',
+    '37_WorkflowStepEventRules'
+  ];
+
+  const source = SpreadsheetApp.openById(SOURCE_SPREADSHEET_ID);
+  const target = SpreadsheetApp.openById(TARGET_SPREADSHEET_ID);
+  const report = {
+    sourceName: source.getName(),
+    targetName: target.getName(),
+    sourceId: SOURCE_SPREADSHEET_ID,
+    targetId: TARGET_SPREADSHEET_ID,
+    mode: 'READ_ONLY_PREVIEW',
+    sheets: [],
+    missingSourceSheets: [],
+    missingTargetSheets: [],
+    totalSourceRows: 0,
+    totalTargetRows: 0
+  };
+
+  CONFIGURATION_SHEETS.forEach(function(name) {
+    const sourceSheet = source.getSheetByName(name);
+    const targetSheet = target.getSheetByName(name);
+
+    if (!sourceSheet) {
+      report.missingSourceSheets.push(name);
+      return;
+    }
+    if (!targetSheet) {
+      report.missingTargetSheets.push(name);
+      return;
+    }
+
+    const sourceLastRow = sourceSheet.getLastRow();
+    const targetLastRow = targetSheet.getLastRow();
+    const sourceLastColumn = sourceSheet.getLastColumn();
+    const targetLastColumn = targetSheet.getLastColumn();
+
+    const sourceHeaders = sourceLastColumn
+      ? sourceSheet.getRange(1, 1, 1, sourceLastColumn).getDisplayValues()[0]
+      : [];
+    const targetHeaders = targetLastColumn
+      ? targetSheet.getRange(1, 1, 1, targetLastColumn).getDisplayValues()[0]
+      : [];
+
+    const missingHeadersInTarget = sourceHeaders.filter(function(header) {
+      return header && targetHeaders.indexOf(header) === -1;
+    });
+
+    const row = {
+      sheet: name,
+      sourceRows: Math.max(0, sourceLastRow - 1),
+      targetRows: Math.max(0, targetLastRow - 1),
+      sourceColumns: sourceHeaders.filter(String).length,
+      targetColumns: targetHeaders.filter(String).length,
+      missingHeadersInTarget: missingHeadersInTarget
+    };
+
+    report.sheets.push(row);
+    report.totalSourceRows += row.sourceRows;
+    report.totalTargetRows += row.targetRows;
+  });
+
+  Logger.log(JSON.stringify(report, null, 2));
+  return report;
+}
