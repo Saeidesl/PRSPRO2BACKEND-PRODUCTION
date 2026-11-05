@@ -9,13 +9,20 @@
 - پس از پایان مرحله، ثبت رویدادهای آن مرحله متوقف و وضعیت مرحله تکمیل‌شده می‌شود.
 - تعداد دفعات از پیش تعیین نمی‌شود.
 
+
+
+## وضعیت ادغام و تحویل
+- به درخواست صریح مالک محصول، تغییرات این تسک در 2026-11-05 از طریق PR #2 در شاخه `main` ادغام شد؛ Merge Commit: `91d7c80aaaae0f04284f00fab95a52e3b666c039`.
+- ادغام GitHub به معنی انتشار Backend نیست. گردش‌کار همگام‌سازی/انتشار Backend دستی است و در این مرحله اجرا نشده است.
+- پذیرش عملیاتی کاربر هنوز انجام نشده؛ Task 2 باز می‌ماند تا آزمون ثبت چندباره و پایان دستی مرحله تأیید شود.
+
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
 
 ### مخازن و شاخه فاز
 - Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه `feature/repeatable-workflow-events`
 - Frontend: `Saeidesl/PRSPRO2-PRODUCTION`، شاخه `feature/repeatable-workflow-events`
 - مبنای هر دو شاخه: آخرین `main` بررسی‌شده در 2026-11-05.
-- شاخه‌های `main` و سایر شاخه‌ها در این فاز تغییر داده نمی‌شوند.
+- شاخه feature پس از بررسی و به درخواست صریح کاربر از طریق PR #2 در `main` ادغام شد؛ هیچ force-push یا بازنویسی تاریخچه انجام نشد.
 
 ### Backend — مسیر و وابستگی‌های کشف‌شده
 - `Router.js`: مسیر `POST /events` به `EventService.create(body, params)` و مسیر `GET /projects/{projectId}/workflow-progress` به `EventService.workflowProgress(projectId, params)` متصل است.
@@ -66,7 +73,7 @@
 
 - [x] **Task 1 — Discovery & Planning: بررسی معماری، تثبیت تصمیم محصول و طراحی دامنه تغییر**
   - *Log:* هر دو مخزن عملیاتی، شاخه‌ها، آخرین commitها، `TODO5.md` و `ARCHITECTURE.md` بررسی شدند. هر دو main در وضعیت مستقل و بدون تغییر باقی ماندند. مسیر واقعی ثبت در `Router.js`, `EventService.create()`, `EventService._createUnlocked_()`, `EventService._getWorkflowRuleProgress_()`, `EventService._validateWorkflowEvent_()`, `FormService.prepareEventResponses()`, `FormService.saveEventResponses()` و `EventRepository` ردیابی شد. ارتباط UI در `js/modules/events.js` و `js/modules/workflows.js` و قواعد در `WorkflowService.saveStepEventRules()`, `WorkflowStepEventRuleValidator.js`, `WorkflowStepEventRuleRepository.js` بررسی شد. ذخیره رویداد در `13_Events` و پاسخ فرم در `35_EventFormData` است و پاسخ‌ها به EventID مستقل وابسته‌اند. علت محدودیت، تکمیل قاعده با اولین وقوع و رد مجدد آن در Backend و Frontend است. فیلد `IsWorkCompletion` موجود است اما به‌تنهایی منطق تکمیل مرحله را اجرا نمی‌کند. تصمیم کاربر: ثبت نامحدود رویداد تکرارپذیر و پایان صریح توسط مسئول مرحله؛ Idempotency و مسیر اصلی ثبت حفظ شود. شاخه‌های `feature/repeatable-workflow-events` از آخرین main در هر دو مخزن ایجاد شدند؛ هیچ کد اجرایی تغییر نکرد.
-- [ ] **Task 2 — پشتیبانی یکپارچه از رویدادهای تکرارپذیر و پایان دستی مرحله (IN PROGRESS / آماده آزمون کاربر)
+- [ ] **Task 2 — پشتیبانی یکپارچه از رویدادهای تکرارپذیر و پایان دستی مرحله (IN PROGRESS / ادغام‌شده در main؛ در انتظار آزمون پذیرش کاربر)
   - Backend: ذخیره و اعتبارسنجی افزایشی AllowRepeat در قواعد Workflow؛ شمارش وقوع هر رویداد؛ اجازه ثبت چندباره تا زمان بسته‌شدن مرحله؛ API پایان مرحله با کنترل tenant، دسترسی پروژه، واحد تخصیص‌یافته، تکمیل الزامات و ثبت Audit.
   - Frontend: تنظیم تکرارپذیری در ویرایشگر قواعد، نمایش شمارنده ثبت، نمایش وضعیت مرحله و اقدام پایان برای مسئول مجاز؛ حفظ مسیر اصلی POST /events و فرم‌های مستقل هر ثبت.
   - حفظ رفتار پیش‌فرض Workflowهای قدیمی، Idempotency، ابطال رویداد، پیوست‌ها و پاسخ فرم.
