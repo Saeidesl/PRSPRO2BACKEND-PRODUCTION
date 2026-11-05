@@ -70,12 +70,12 @@ SHA مبنای Frontend: `d560a02990d6eaab9572a32c84ccd384468f6671`
 - [x] **Task 2 — اسکرول مستقل پنل اطلاعات کمکی**
   - *Log:* در مخزن Frontend عملیاتی، `css/event-context.css` اصلاح شد: ارتفاع workspace دسکتاپ با محدودیت `min(82vh, 780px)` تثبیت شد؛ grid با `grid-template-rows:auto minmax(0,1fr)` و `min-height:0` از رشد بر اساس محتوای پنل جلوگیری می‌کند. فرم اصلی و `.event-context-panel` دارای ارتفاع کامل، `overflow-y:auto` و `overscroll-behavior:contain` شدند؛ sticky پنل به relative تغییر کرد. drawer موبایل با `max-height:100dvh` و اسکرول مستقل حفظ شد. تست ساختاری در `tests/event-context-panel-scroll.test.js` اضافه شد. تغییرات Frontend در PR #19 ادغام شدند و کاربر نتیجه تست را تأیید کرد. در Backend هیچ فایل اجرایی، API، مجوز یا ساختار دیتابیسی تغییر نکرد.
 
-- [ ] **Task 3 — یکپارچه‌سازی تم تقویم شمسی (IN PROGRESS)**
-  - اصلاح `css/jalali-calendar.css` با توکن‌های رسمی برنامه برای تمام سطوح، دکمه‌ها، hover/focus/selected/today/disabled و کنترل ساعت.
-  - بررسی تم روشن و تاریک و حذف وابستگی به توکن‌های legacy.
+- [x] **Task 3 — یکپارچه‌سازی تم تقویم شمسی**
+  - *Log:* فایل `css/jalali-calendar.css` در Frontend با توکن‌های معنایی رسمی برنامه بازنویسی شد؛ پس‌زمینه، متن، مرزها، دکمه‌های سربرگ/پاورقی، hover/focus، selected/today/disabled و حالت‌های ورودی از توکن‌های مشترک تم روشن/تاریک استفاده می‌کنند. وابستگی به توکن‌های legacy حذف شد و نسخه CSS در `index.html` برای cache-busting به‌روزرسانی شد. تست ساختاری در `tests/event-context-panel-scroll.test.js` افزوده شد. تغییرات در Frontend PR #19 ادغام و تست بصری هر دو تم توسط مالک محصول در 2026-11-06 تأیید شد؛ Backend runtime/API/DB تغییری ندارد.
 
-- [ ] **Task 4 — انتخاب ساعت/دقیقه در تقویم مشترک و QA**
-  - افزودن کنترل ساعت و دقیقه به popup مشترک `PMS.JalaliCalendar` برای `datetime-local`؛ انتخاب روز/ساعت/دقیقه در یک تجربه.
-  - حفظ مقدار قبلی هنگام بازشدن، مقدار محلی ISO، reset، required، min/max و eventهای input/change.
-  - پوشش رویداد، فرم‌های پویا و اطلاعات مرکزی؛ date-only بدون تغییر.
+- [ ] **Task 4 — انتخاب ساعت/دقیقه در تقویم مشترک و QA (IN PROGRESS)**
+  - *Discovery Log:* کد جاری `js/components/jalali-calendar.js` بررسی شد. `enhance(original)` ورودی‌های ثابت و پویا را از طریق MutationObserver به کامپوننت مشترک تبدیل می‌کند؛ `render()` روزها و `setValue()` مقدار ISO و رویدادهای input/change را کنترل می‌کنند. نقص فعلی: مقدار اولیه `datetime-local` در parsing نمایشی فقط به تاریخ محدود می‌شود؛ زمان صرفاً به شکل متن نگه‌داری می‌شود، انتخاب روز popup را می‌بندد و هیچ کنترل ساعت/دقیقه‌ای وجود ندارد؛ `updateFromISO()` نیز ساعت را در نمایش بازیابی نمی‌کند.
+  - *Technical Plan:* فقط همین کامپوننت مشترک توسعه می‌یابد؛ برای `datetime-local` زمان پیش‌نویس، انتخاب ساعت 00–23 و دقیقه 00–59 و دکمه تأیید در popup افزوده می‌شود. انتخاب روز تا زمان تأیید popup را باز نگه می‌دارد؛ «امروز» تاریخ پیش‌نویس را تغییر می‌دهد و «پاک کردن» مقدار را خالی می‌کند. زمان قبلی حفظ می‌شود و مقدار نهایی با قالب محلی `YYYY-MM-DDTHH:mm` ثبت می‌شود.
+  - *Compatibility:* ورودی‌های `date` همچنان فقط با انتخاب روز مقدار `YYYY-MM-DD` می‌گیرند؛ مسیرهای ثابت/پویا، reset، required، disabled، ورود دستی، min/max و eventهای فعلی حفظ می‌شوند. مقایسه min/max برای datetime با تاریخ‌وساعت کامل انجام می‌شود.
+  - *Files:* `js/components/jalali-calendar.js`, `css/jalali-calendar.css`, `index.html`, تست رگرسیون جدید در `tests/jalali-calendar-datetime.test.js`. Backend صرفاً برای سازگاری قرارداد `POST /events` و `13_Events.OccurredAt` بررسی می‌شود؛ تغییر API/Sheet/DB لازم نیست.
   - اجرای تست‌های رگرسیون، syntax و CI فرانت‌اند؛ کنترل قرارداد Backend و تحویل برای تست واقعی کاربر.
