@@ -127,7 +127,7 @@ const GoogleSheetsRepository = {
 
   getSpreadsheet: function() {
     const startTime = Date.now();
-    const spreadsheetId = AppConfig.DATABASE.SPREADSHEET_ID;
+    const spreadsheetId = getConfiguredDatabaseSpreadsheetId_();
 
     if (
       this._spreadsheet &&
