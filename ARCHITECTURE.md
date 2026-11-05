@@ -215,3 +215,29 @@
 - در Backend: قرارداد نتیجه ثبت فرم/اطلاعات مرکزی و idempotency replay، مجوز retry و اصلاح harness/assertion تست‌ها ثبت شد؛ برای Task 7 API یا منطق اجرایی جدیدی لازم نبود.
 - هیچ Sheet، مسیر ثبت، API یا موتور ذخیره‌سازی موازی ایجاد نشد.
 - تست‌های واقعی کاربر برای Taskهای تحویلی تأیید شد. محدودیت‌های تستی که در Logهای هر Task ذکر شده‌اند، به‌عنوان محدودیت تاریخی حفظ شده‌اند.
+
+
+## 2026-11-05 — انتقال فایل‌ها و تصاویر پروژه به پوشه اختصاصی Google Drive
+
+### محدوده و نتیجه پذیرش
+- مخزن عملیاتی: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه `main`.
+- پوشه مقصد فایل‌های جدید و کپی‌شده: `1E-nYv5GF8wPn9diOZlfiGXnWQH-2WSmB`.
+- نتیجه تست واقعی کاربر: موفق؛ ذخیره تصویر پروژه، فایل ضمیمه پروژه و فایل پیوست‌شده از مسیر ثبت رویداد در پوشه مقصد تأیید شد. نمایش و دانلود فایل‌ها در PMS و باقی‌ماندن فایل‌های قدیمی در محل قبلی نیز تأیید شد.
+- فایل‌های قدیمی جابه‌جا یا حذف نشدند؛ هیچ عملیات مهاجرت داده انجام نشد.
+
+### پیاده‌سازی و جریان داده
+- `AppConfig.gs.js`: مقدار `AppConfig.FILES.GOOGLE_DRIVE_FOLDER_ID` برابر شناسه پوشه مقصد تنظیم شد.
+- `GoogleDriveStorage.js:getRootFolder_()`: از تنظیم موجود برای انتخاب پوشه استفاده می‌کند؛ منطق ذخیره‌سازی موجود بدون ایجاد مسیر موازی حفظ شد.
+- `GoogleDriveStorage.js:uploadBase64()`: فایل جدید را با `folder.createFile(blob)` در پوشه مقصد می‌سازد.
+- `GoogleDriveStorage.js:copyFile()`: فایل مرجع را با `source.makeCopy(name, folder)` در همان پوشه کپی می‌کند.
+- `StorageRepository.js`، `AttachmentService.js`، `AttachmentRepository.js` و `Router.js` از نظر قرارداد و منطق اجرایی تغییر نکردند.
+- metadata همچنان در شیت `15_Attachments` ذخیره می‌شود و `StorageKey` همچنان Drive file ID است.
+- APIهای موجود حفظ شدند: `POST /projects/:projectId/attachments`، `GET /projects/:projectId/attachments`، `GET /attachments/:attachmentId/download` و `DELETE /attachments/:attachmentId`.
+- مسیرهای فرم پویا و رویداد نیز از همان AttachmentService و APIهای موجود استفاده می‌کنند.
+
+### آزمون و انتشار
+- پنج تست اختصاصی `tests/google-drive-storage-folder.test.js` موفق شدند: انتخاب پوشه تنظیم‌شده، آپلود در مقصد، کپی در مقصد، عدم fallback هنگام خطای دسترسی و تطبیق شناسه پیکربندی.
+- CI عمومی Backend در مجموع ۱۶۴ از ۱۶۸ تست را گذراند؛ چهار شکست baseline از قبل موجود و مستقل از این تغییر بودند: سه تست invalidation کش GoogleSheetsRepository و assertion مربوط به استقرار خودکار Apps Script. این موارد در سوابق CI حفظ شده‌اند.
+- تغییرات Backend با merge commit `1e1504ed5799118568931d58bfab1e96dd5b4648` وارد `main` شد.
+- GitHub Actions Run #14 با شناسه `42079115129` روی همین commit با موفقیت کامل Push و Deploy به Google Apps Script را انجام داد.
+- تست زنده و پذیرش نهایی کاربر پس از انتشار موفق بود. انتشار GitHub و Deploy به‌عنوان دو مرحله مجزا ثبت شده‌اند.
