@@ -104,3 +104,9 @@ test('folder access errors are not silently redirected to a different folder', (
   const { storage } = loadStorage({ folderError: true });
   assert.throws(() => storage.getRootFolder_(), /folder access denied/);
 });
+
+test('production AppConfig points to the requested shared folder', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'AppConfig.gs.js'), 'utf8');
+  assert.match(source, /GOOGLE_DRIVE_FOLDER_ID:\s*'1E-nYv5GF8wPn9diOZlfiGXnWQH-2WSmB'/);
+  assert.doesNotThrow(() => new vm.Script(source));
+});
