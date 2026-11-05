@@ -8,8 +8,8 @@ https://drive.google.com/drive/folders/1E-nYv5GF8wPn9diOZlfiGXnWQH-2WSmB
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
 
 ### مخزن و شاخه عملیاتی
-- Backend: Saeidesl/PRSPRO2BACKEND-PRODUCTION — شاخه main
-- Frontend: Saeidesl/PRSPRO2-PRODUCTION — شاخه main
+- Backend: Saeidesl/PRSPRO2BACKEND-PRODUCTION — شاخه feature/drive-project-attachments
+- Frontend: Saeidesl/PRSPRO2-PRODUCTION — شاخه feature/drive-project-attachments
 - آخرین commit بررسی‌شده Backend: 8cd0429fc72fe9e95490093cdf6d18d0db1cee69
 - آخرین commit بررسی‌شده Frontend: شاخه main؛ commit جاری در زمان Discovery از فهرست آخرین commitها ثبت نشده است.
 - TODO5.md در شروع این فاز وجود نداشت؛ این فایل برای پیگیری فاز ایجاد شده است.
