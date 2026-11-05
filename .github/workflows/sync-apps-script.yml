@@ -1,24 +1,18 @@
-name: Sync and deploy backend to Google Apps Script
+name: Sync and deploy backend to Google Apps Script (PRODUCTION)
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '*.js'
-      - 'appsscript.json'
   workflow_dispatch:
     inputs:
       phase:
-        description: "Manual mode: push source only, or explicitly deploy after migration checks."
+        description: "Push source only, or explicitly deploy the production web app."
         required: true
         type: choice
         options:
           - push_only
           - push_and_deploy
         default: push_only
-      confirm_production_deploy:
-        description: "Explicitly confirm the requested Apps Script source/deployment action"
+      confirm_production_action:
+        description: "Confirm that this action targets the isolated production Apps Script project and database."
         required: true
         type: boolean
         default: false
@@ -32,27 +26,31 @@ concurrency:
 
 jobs:
   validate-and-sync:
-    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.confirm_production_deploy == true && (inputs.phase == 'push_only' || vars.ALLOW_APPS_SCRIPT_DEPLOY == 'true')) }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.confirm_production_action == true && (inputs.phase == 'push_only' || (inputs.phase == 'push_and_deploy' && vars.ALLOW_APPS_SCRIPT_DEPLOY == 'true')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Checkout repository
+      - name: Checkout production repository
         uses: actions/checkout@v4
+        with:
+          ref: main
 
-      - name: Confirm deployment gate
+      - name: Confirm isolated production targets
         env:
-          ALLOW_APPS_SCRIPT_DEPLOY: ${{ vars.ALLOW_APPS_SCRIPT_DEPLOY }}
-          CONFIRM_PRODUCTION_DEPLOY: ${{ inputs.confirm_production_deploy }}
+          SCRIPT_ID: ${{ secrets.APPS_SCRIPT_ID }}
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
           REQUESTED_PHASE: ${{ inputs.phase }}
+          ALLOW_APPS_SCRIPT_DEPLOY: ${{ vars.ALLOW_APPS_SCRIPT_DEPLOY }}
         shell: bash
         run: |
           set -euo pipefail
-          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
-            echo "Automatic production sync and deployment enabled for main."
-          else
-            test "$CONFIRM_PRODUCTION_DEPLOY" = "true" || (echo "Apps Script change blocked: explicitly confirm the requested action." && exit 1)
-            if [ "$REQUESTED_PHASE" = "push_and_deploy" ]; then
-              test "$ALLOW_APPS_SCRIPT_DEPLOY" = "true" || (echo "Deployment blocked: repository variable ALLOW_APPS_SCRIPT_DEPLOY must be true." && exit 1)
+          test -n "$SCRIPT_ID" || (echo "Missing production secret APPS_SCRIPT_ID." && exit 1)
+          if [ "$REQUESTED_PHASE" = "push_and_deploy" ]; then
+            test "$ALLOW_APPS_SCRIPT_DEPLOY" = "true" || (echo "Production deployment is disabled. Set repository variable ALLOW_APPS_SCRIPT_DEPLOY=true only after production checks." && exit 1)
+            test -n "$DEPLOYMENT_ID" || (echo "Missing production secret APPS_SCRIPT_DEPLOYMENT_ID." && exit 1)
+            if [ "$DEPLOYMENT_ID" = "AKfycbzHlLF_UuVZu6VIbl59EyIi4ZnLeJfssrBmo0jkn4BvrCPpqYyJ5qP71WdALtyalOKv_A" ] || [ "$DEPLOYMENT_ID" = "AKfycbw-o15vVNFbnfqhVYV6PtpDOTt4jURF5QKEahvnENkZp2hOPlek1Hj55T2tBnypfPCb" ]; then
+              echo "Refusing deployment: configured deployment ID belongs to an existing environment."
+              exit 1
             fi
           fi
 
@@ -81,11 +79,8 @@ jobs:
             names["$name"]=1
             count=$((count + 1))
           done
-          if [ "$count" -lt 60 ]; then
-            echo "Refusing deployment: expected at least 60 backend source files, found $count."
-            exit 1
-          fi
-          echo "Validated $count JavaScript source files and appsscript.json."
+          test "$count" -ge 60 || (echo "Refusing sync: expected at least 60 source files, found $count." && exit 1)
+          echo "Validated $count source files."
 
       - name: Install clasp
         run: npm install --global @google/clasp
@@ -96,7 +91,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$CLASP_CREDENTIALS" || (echo "Missing CLASP_CREDENTIALS secret" && exit 1)
+          test -n "$CLASP_CREDENTIALS" || (echo "Missing CLASP_CREDENTIALS secret." && exit 1)
           printf '%s' "$CLASP_CREDENTIALS" > "$HOME/.clasprc.json"
           chmod 600 "$HOME/.clasprc.json"
           node <<'NODE'
@@ -104,7 +99,6 @@ jobs:
           const path = require('path');
           const file = path.join(process.env.HOME, '.clasprc.json');
           let parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
-
           if (typeof parsed === 'string') parsed = JSON.parse(parsed);
           if (parsed && parsed.token && parsed.token.access_token &&
               !parsed.oauth2ClientSettings && !parsed.tokens) {
@@ -119,25 +113,23 @@ jobs:
             const named = Object.entries(parsed.tokens).filter(([, value]) => value);
             if (named.length === 1) parsed.tokens.default = named[0][1];
           }
-
           const hasV3 = parsed && parsed.tokens && parsed.tokens.default;
           const hasLegacyLocal = parsed && parsed.token && parsed.token.access_token &&
             parsed.oauth2ClientSettings && parsed.oauth2ClientSettings.clientId &&
             parsed.oauth2ClientSettings.clientSecret;
           const hasLegacyGlobal = parsed && parsed.access_token && parsed.refresh_token;
           if (!hasV3 && !hasLegacyLocal && !hasLegacyGlobal) {
-            throw new Error('CLASP_CREDENTIALS must contain a supported .clasprc.json or token format.');
+            throw new Error('CLASP_CREDENTIALS is not a supported clasp credential file.');
           }
           fs.writeFileSync(file, JSON.stringify(parsed), { mode: 0o600 });
           NODE
 
-      - name: Prepare Apps Script source files
+      - name: Prepare isolated Apps Script source
         env:
           SCRIPT_ID: ${{ secrets.APPS_SCRIPT_ID }}
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$SCRIPT_ID" || (echo "Missing APPS_SCRIPT_ID secret" && exit 1)
           mkdir -p deploy
           cp appsscript.json deploy/appsscript.json
           for file in *.js; do
@@ -149,15 +141,15 @@ jobs:
           test "$(find deploy -maxdepth 1 -type f -name '*.gs' | wc -l)" -ge 60
           printf '{"scriptId":"%s","rootDir":"deploy"}\n' "$SCRIPT_ID" > .clasp.json
 
-      - name: Push validated source to Apps Script
+      - name: Push validated source to isolated production Apps Script
         run: clasp push --force
 
-      - name: Update existing Web App deployment
-        if: ${{ github.event_name == 'push' || inputs.phase == 'push_and_deploy' }}
+      - name: Deploy isolated production web app
+        if: ${{ inputs.phase == 'push_and_deploy' && vars.ALLOW_APPS_SCRIPT_DEPLOY == 'true' }}
         env:
-          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID || 'AKfycbzHlLF_UuVZu6VIbl59EyIi4ZnLeJfssrBmo0jkn4BvrCPpqYyJ5qP71WdALtyalOKv_A' }}
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$DEPLOYMENT_ID" || (echo "Missing Web App deployment ID" && exit 1)
-          clasp deploy --deploymentId "$DEPLOYMENT_ID" --description "Automated/manual deployment ${GITHUB_SHA:0:7}"
+          test -n "$DEPLOYMENT_ID"
+          clasp deploy --deploymentId "$DEPLOYMENT_ID" --description "Production deployment ${GITHUB_SHA:0:7}"
