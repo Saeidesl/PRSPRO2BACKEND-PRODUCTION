@@ -833,10 +833,11 @@ const EventService = {
   },
 
   _validateWorkflowEvent_: function(project, eventType, tenantId) {
-    if (String(project.CurrentStepStatus || '').toUpperCase() === 'COMPLETED') {
+    const progress = this._getWorkflowRuleProgress_(project, tenantId);
+    if (progress.manualCompletionRequired &&
+        String(project.CurrentStepStatus || '').toUpperCase() === 'COMPLETED') {
       throw ErrorHandler.create(Constants.ERROR.INVALID_STATUS, 'مرحله این پروژه پایان یافته است و ثبت رویداد جدید امکان‌پذیر نیست.');
     }
-    const progress = this._getWorkflowRuleProgress_(project, tenantId);
     if (!progress.configured) return progress;
     const typeId = String(eventType.ID);
     const rule = progress.rules.find(function(item) { return item.eventTypeId === typeId; });
