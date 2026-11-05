@@ -413,7 +413,7 @@ const GoogleSheetsRepository = {
     }
   },
 
-  insert: function(sheetName, data) {
+  insert: function(sheetName, data, beforeWrite) {
     const totalStart = Date.now();
     let lockWaitMs = 0;
     let writeMs = 0;
@@ -444,6 +444,7 @@ const GoogleSheetsRepository = {
       lockAcquired = true;
 
       try {
+        if (typeof beforeWrite === 'function') beforeWrite();
         const writeStart = Date.now();
         const targetRow = sheet.getLastRow() + 1;
 
