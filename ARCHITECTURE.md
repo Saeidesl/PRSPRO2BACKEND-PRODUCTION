@@ -325,3 +325,32 @@
 
 ### اجزای Backend و داده
 - تغییرات اجرایی Backend انجام نشد؛ فقط harness و قرارداد تست در `tests/google-sheets-cache-invalidation.test.js` و `tests/schema-contract.test.js` اصلاح شدند. APIها، Router، EventService، شیت‌ها و داده عملیاتی تغییر نکردند.
+
+
+## 2026-11-06 — فاز ارتقای کارت پروژه‌ها و سوابق رویدادها (نسخه عملیاتی)
+
+### محدوده و نتیجه
+- مخازن: `Saeidesl/PRSPRO2BACKEND-PRODUCTION` و `Saeidesl/PRSPRO2-PRODUCTION`، شاخه عملیاتی `main`.
+- وضعیت: هر چهار Macro-Task فاز تکمیل و تست دستی مالک محصول تأیید شد.
+- تغییر اجرایی Backend در این فاز لازم نبود؛ هیچ endpoint، Sheet، schema، permission یا سرویس Backend تغییر نکرد.
+
+### معماری و قراردادهای تأییدشده
+- `Router.js`: مسیر `GET /events` با مجوز `EVENT_VIEW` به `EventService.list(params)` متصل است.
+- `EventService.js`: محدودسازی tenant و پروژه‌های قابل مشاهده و enrichment رویدادها حفظ می‌شود.
+- `EventRepository.js`: منبع رویدادها شیت `13_Events` با فیلدهای `CreatedBy`, `PerformedBy`, `DepartmentID`, `EventTypeID`, `ProjectID`, `OccurredAt`, `CreatedAt`, `Status` است.
+- `AttachmentService.js` و `AttachmentRepository.js`: metadata پیوست‌ها در `15_Attachments`؛ تصاویر پروفایل پروژه با `EntityType=PROJECT` و `AttachmentType=PROFILE` از مسیرهای موجود خوانده می‌شوند.
+- APIهای موجود و مورد استفاده: `GET /events`، `GET /project-card-images` و `GET /attachments/:attachmentId/download`.
+- `CreatedBy` معیار ثبت‌کننده و `PerformedBy` انجام‌دهنده است. تاریخ ثبت `CreatedAt` از تاریخ وقوع `OccurredAt` مستقل است. فیلتر Frontend هرگز جایگزین مجوز و tenant isolation سمت Backend نیست.
+
+### تصمیم معماری
+- قابلیت‌های کارت پروژه، فیلتر و مرتب‌سازی با reuse مسیرها، APIها و ساختار داده موجود در Frontend اجرا شدند.
+- هیچ مسیر ثبت رویداد، endpoint یا Sheet موازی ساخته نشد.
+- چون تغییری در کد اجرایی Backend ایجاد نشد، deployment بک‌اند برای این فاز لازم نبود.
+
+### سوابق پذیرش
+- Task 1: Discovery مسیرهای رویداد و پیوست و قراردادهای دسترسی تکمیل شد.
+- Task 2: نمایش تصویر PROFILE و آخرین رویداد معتبر هر پروژه روی کارت‌های صف مرکز عملیات؛ انتخاب آخرین رویداد غیر VOID با اولویت `CreatedAt` و fallback به `OccurredAt`. تست دستی کاربر موفق.
+- Task 3: پیش‌فرض سوابق بر اساس `CreatedBy` کاربر جاری، دامنه «رویدادهای من/همه رویدادهای مجاز» و فیلترهای ترکیبی؛ اصلاح مسیر پایه Router در Frontend برای بارگذاری صفحه عملیاتی. تست دستی کاربر موفق.
+- Task 4: مرتب‌سازی سوابق با `CreatedAt` از جدید به قدیم و برعکس؛ حفظ ترتیب هنگام تغییر و پاک‌سازی فیلترها. ۱۳۵ تست Frontend و workflowهای QA/agent/UI audit موفق؛ تست دستی کاربر موفق.
+- PRهای مهم Frontend: #4، #7 و #9 ادغام شدند. commit نهایی Task 4: `57f2605d6f25b021a099528dcbc287131555cb3a`.
+- انتشار GitHub Pages پس از ادغام PR #9 در سوابق موجود مستقلاً تأیید نشده است؛ با این حال مالک محصول عملکرد مرتب‌سازی را در نسخه مورد استفاده با موفقیت تست کرده است.
