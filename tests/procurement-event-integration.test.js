@@ -141,7 +141,7 @@ test('event creation validates forms before insert, saves central information, t
   const source = fs.readFileSync(path.join(__dirname, '..', 'EventService.js'), 'utf8');
   const prepare = source.indexOf('FormService.prepareEventResponses');
   const validate = source.indexOf('ProcurementEventIntegrationService.validate');
-  const insert = source.indexOf('const created = EventRepository.insert(newEvent)');
+  const insert = source.indexOf('const created = EventRepository.insert(newEvent, project ? function()');
   const saveForms = source.indexOf('FormService.saveEventResponses(created, validatedFormResponses, user, requestParams)');
   const apply = source.indexOf('ProcurementEventIntegrationService.apply(eventType, created, requestParams)');
   assert.ok(prepare > 0 && validate > prepare && insert > validate && saveForms > insert && apply > saveForms);

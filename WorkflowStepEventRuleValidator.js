@@ -67,7 +67,8 @@ const WorkflowStepEventRuleValidator = {
         SequenceMode: sequence,
         GroupKey: groupKey,
         GroupOrder: groupOrder,
-        EventOrder: eventOrder
+        EventOrder: eventOrder,
+        AllowRepeat: rule.AllowRepeat === true || String(rule.AllowRepeat).toLowerCase() === 'true' || String(rule.AllowRepeat) === '1'
       };
     });
   }

@@ -748,6 +748,12 @@ const Router = {
       }
     }
 
+    const completeWorkflowStepMatch = path.match(/^\/projects\/([^/]+)\/complete-step$/);
+    if (completeWorkflowStepMatch) {
+      AccessControlService.require(params, 'EVENT_CREATE');
+      return EventService.completeStep(decodeURIComponent(completeWorkflowStepMatch[1]), params);
+    }
+
     if (path.indexOf('/projects/') === 0) {
       const parts = path.split('/');
 

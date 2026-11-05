@@ -34,7 +34,7 @@ test('central information structure and status cannot invalidate active reusable
 test('event creation validates and persists form responses before completing idempotency',()=>{
   const source=read('EventService.js');
   const validate=source.indexOf('FormService.prepareEventResponses');
-  const insert=source.indexOf('const created = EventRepository.insert(newEvent)');
+  const insert=source.indexOf('const created = EventRepository.insert(newEvent, project ? function()');
   const persist=source.indexOf('FormService.saveEventResponses(created, validatedFormResponses, user, requestParams)');
   const complete=source.indexOf("IdempotencyStatus: 'COMPLETED'",persist);
   assert.ok(validate>0&&insert>validate&&persist>insert&&complete>persist);

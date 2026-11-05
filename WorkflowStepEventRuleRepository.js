@@ -3,7 +3,7 @@ const WorkflowStepEventRuleRepository = {
   REQUIRED_COLUMNS: [
     'ID','TenantID','WorkflowID','WorkflowVersion','WorkflowStepID','EventTypeID',
     'RequirementMode','DataSource','SequenceMode','GroupKey','GroupOrder','EventOrder',
-    'Status','CreatedAt','UpdatedAt'
+    'Status','CreatedAt','UpdatedAt','AllowRepeat'
   ],
 
   ensureSchema: function() {
@@ -57,6 +57,7 @@ const WorkflowStepEventRuleRepository = {
         GroupKey: item.GroupKey,
         GroupOrder: item.GroupOrder,
         EventOrder: item.EventOrder,
+        AllowRepeat: item.AllowRepeat === true || String(item.AllowRepeat).toLowerCase() === 'true' || String(item.AllowRepeat) === '1',
         Status: 'ACTIVE',
         CreatedAt: now,
         UpdatedAt: now
