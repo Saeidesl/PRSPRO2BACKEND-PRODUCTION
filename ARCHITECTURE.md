@@ -354,3 +354,39 @@
 - Task 4: مرتب‌سازی سوابق با `CreatedAt` از جدید به قدیم و برعکس؛ حفظ ترتیب هنگام تغییر و پاک‌سازی فیلترها. ۱۳۵ تست Frontend و workflowهای QA/agent/UI audit موفق؛ تست دستی کاربر موفق.
 - PRهای مهم Frontend: #4، #7 و #9 ادغام شدند. commit نهایی Task 4: `57f2605d6f25b021a099528dcbc287131555cb3a`.
 - انتشار GitHub Pages پس از ادغام PR #9 در سوابق موجود مستقلاً تأیید نشده است؛ با این حال مالک محصول عملکرد مرتب‌سازی را در نسخه مورد استفاده با موفقیت تست کرده است.
+
+
+## 2026-11-06 — فاز بهینه‌سازی سرعت و تجربه بارگذاری صفحه ثبت و پیگیری رویدادها (آرشیو نهایی)
+
+### هدف و دامنه
+- بهبود سرعت ادراک‌شده و کاهش رندرهای تکراری در صفحه رویدادها، نمایش Skeleton متناسب با محتوای واقعی و یکپارچه‌سازی تجربه پیش‌نمایش تصاویر کارت پروژه‌ها.
+- مخازن عملیاتی: `Saeidesl/PRSPRO2-PRODUCTION` و `Saeidesl/PRSPRO2BACKEND-PRODUCTION`.
+- شاخه‌های کاری نهایی Task 8: `feature/events-project-image-experience-20261106` در هر دو مخزن؛ مقصد ادغام Frontend: `main`.
+- هر هشت Macro-Task این فاز پس از پذیرش دستی مالک محصول تکمیل شدند. فاز در 2026-11-06 به درخواست مالک محصول بسته شد.
+
+### Frontend — پیاده‌سازی و جریان داده
+- `js/modules/events.js`: callbackهای refresh سه منبع `/events`، `/projects` و `/event-types` با `Events.scheduleRefreshRender()` و debounce چهل میلی‌ثانیه‌ای تجمیع شدند. رندر نهایی Promise.all فقط در صورت دریافت نتیجه تازه اجرا می‌شود؛ نمایش فوری cache و حفظ فیلترها برقرار ماند.
+- `pages/events.html` و `css/events.css`: Skeleton صف‌های سه‌گانه، پروژه‌های اخیر و جدول تاریخچه با RTL، responsive، تم‌ها و reduced-motion تکمیل شد؛ وضعیت cache، خطا و محتوای واقعی مدیریت می‌شود.
+- `js/modules/events.js`: کلیک و دسترسی صفحه‌کلید تصاویر کارت رویداد به `PMS.Modules.Projects.openProjectImage()` متصل شد و مسیر موازی `openQueueProjectImage` و کنترل زوم مستقل حذف شدند.
+- `css/events.css`: placeholder، حالت loading، نمایش تصویر، hover/focus و `prefers-reduced-motion` هماهنگ شد.
+- `index.html`: نسخه asset به `20261106-events-project-image-1` تغییر یافت.
+- تست‌های مرتبط: `tests/event-queue-project-cards.test.js` و `tests/workflow-management.test.js`.
+- رفتار lazy loading، cache تصاویر PROFILE، مجوز `ATTACHMENT_VIEW`، صف‌ها، ثبت رویداد و fallbackهای تصویر حفظ شدند.
+
+### Backend و Database — قراردادهای حفظ‌شده
+- هیچ کد اجرایی Backend، API، permission، Sheet، schema یا داده عملیاتی در Taskهای 6 تا 8 تغییر نکرد.
+- قراردادهای موجود `GET /events`، `GET /project-card-images` و `GET /attachments/:attachmentId/download` و شیت‌های `13_Events` و `15_Attachments` بدون تغییر باقی ماندند.
+- هیچ مسیر موازی ثبت رویداد یا ذخیره‌سازی تصویر ایجاد نشد.
+
+### اعتبارسنجی و پذیرش
+- Task 6: کاربر نمایش فوری cache، refresh پس‌زمینه، حفظ فیلترها و نبود پرش محسوس را تأیید کرد. baseline عددی runtime در دسترس نبود؛ بنابراین بهبود عددی ادعا نمی‌شود.
+- Task 7: CIهای مربوط به Frontend و Cross-repository QA موفق و تست دستی Skeleton توسط کاربر تأیید شد.
+- Task 8: Frontend checks run #113، Frontend agent suite #75 و Cross-repository QA #95 موفق شدند. مراحل مرورگر واقعی و keyboard، UI inventory و بارگذاری گزارش audit موفق بودند؛ اما workflow جامع UI performance audit #95 در پایان cancelled شد و موفقیت کامل آن ادعا نمی‌شود. تست دستی نمایش تصویر، بستن با Escape/دکمه و موبایل توسط کاربر تأیید شد.
+- Frontend PR #17 پیش‌تر ادغام شد. Frontend PR #18 با merge عادی در `main` ادغام شد؛ Merge Commit: `6609ab75b725a8038913f4f8ce44467c39f6dac6`.
+- Backend در این فاز PR اجرایی یا تغییر کد نداشت؛ صرفاً مستندات فاز در ARCHITECTURE ثبت شد.
+- ادغام GitHub به‌معنای انتشار نیست. در زمان بستن فاز، Backend deployment جدید و تأیید مستقل انتشار GitHub Pages/live verification برای این فاز ثبت نشده است.
+
+### نتیجه
+- Taskهای 1 تا 8 پذیرفته و تکمیل شدند.
+- TODO5.md در هر دو مخزن برای فاز بعدی به `Ready for the next feature` بازنشانی شد.
+- هیچ کار ناتمام این فاز به‌عنوان تکمیل‌شده یا منتشرشده گزارش نشده است.
