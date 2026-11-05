@@ -31,9 +31,6 @@ function runTelegramWebhookInfo() {
 }
 
 /**
- * Register the confirmed Telegram chat for the actual main tenant.
- * Run after deployment from the Apps Script editor; credentials stay in Script Properties.
+ * Telegram tenant/chat registration is intentionally not preconfigured in Production.
+ * Configure a production-specific tenant and chat only after Telegram credentials are added.
  */
-function registerTelegramMainTenantChat() {
-  return TelegramBotService.registerTenantChat('TEN_4262d97d', '8508458192');
-}
