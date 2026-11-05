@@ -563,17 +563,9 @@ function setupDatabase() {
 
   try {
 
-    // Always initialize the explicitly configured staging database when an ID is set.
-    // This prevents a manual setup run from accidentally targeting a different active sheet.
-    const configuredSpreadsheetId =
-      typeof AppConfig !== 'undefined' &&
-      AppConfig.DATABASE &&
-      AppConfig.DATABASE.SPREADSHEET_ID
-        ? String(AppConfig.DATABASE.SPREADSHEET_ID).trim()
-        : '';
-    const ss = configuredSpreadsheetId
-      ? SpreadsheetApp.openById(configuredSpreadsheetId)
-      : SpreadsheetApp.getActiveSpreadsheet();
+    // Production must always target the explicitly configured isolated database.
+    const configuredSpreadsheetId = getConfiguredDatabaseSpreadsheetId_();
+    const ss = SpreadsheetApp.openById(configuredSpreadsheetId);
 
     if (!ss) {
       throw new Error(
