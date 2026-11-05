@@ -193,3 +193,175 @@ function executeProductionConfigurationMigration() {
     Logger.log(JSON.stringify(result,null,2)); return result;
   } finally { lock.releaseLock(); }
 }
+
+
+/**
+ * انتقال تنظیمات Development به Production و همگام‌سازی ساختار شیت‌های عملیاتی.
+ *
+ * هشدارهای ایمنی:
+ * - از شناسه ثابت فایل‌ها استفاده می‌شود، نه جست‌وجوی نام فایل.
+ * - پیش از هر تغییری از فایل مقصد نسخه پشتیبان کامل گرفته می‌شود.
+ * - شیت‌های تنظیمات از مبدا جایگزین می‌شوند.
+ * - داده‌های عملیاتی Production پاک نمی‌شوند.
+ * - اگر سرستون شیت عملیاتی با داده موجود متفاوت باشد، عملیات پیش از هر تغییری متوقف می‌شود.
+ * - فایل مبدا فقط خوانده می‌شود و هرگز تغییر نمی‌کند.
+ */
+function migrateToProduction() {
+  const SOURCE_ID = '1X0RX1UEHnuf8RWkXCoYTyqiI9l3DxUUgzcN9rb-7bFM';
+  const TARGET_ID = '1UmMK-3Ltrlnfobjjb4PrQy8hYSJxaVqxFgAyr9mr0Z8';
+
+  const configSheets = [
+    '01_Tenants',
+    '02_Users',
+    '03_Departments',
+    '04_Roles',
+    '05_Permissions',
+    '06_UserRoles',
+    '07_RolePermissions',
+    '09_Workflows',
+    '10_WorkflowSteps',
+    '11_EventTypes',
+    '12_EventFields',
+    '17_WorkflowStepDepartments',
+    '18_ProjectStatuses',
+    '23_EventTypeProcurementSettings',
+    '28_InformationTypes',
+    '29_InformationTypeColumns',
+    '32_Forms',
+    '33_FormFields',
+    '34_EventTypeForms',
+    '36_PrintTemplates',
+    '37_WorkflowStepEventRules'
+  ];
+
+  // این شیت‌ها فقط از نظر ساختار بررسی می‌شوند؛ هیچ داده‌ای از آن‌ها کپی یا حذف نمی‌شود.
+  const projectDataSheets = [
+    '08_Projects',
+    '13_Events',
+    '14_EventData',
+    '15_Attachments',
+    '16_AuditLogs',
+    '18_MaterialNeeds',
+    '19_PurchaseOrders',
+    '20_PurchaseOrderItems',
+    '21_PurchaseAllocations',
+    '22_MaterialReceipts',
+    '24_ProjectMaterialSpecs',
+    '25_MaterialNeedCalculations',
+    '30_ProjectInformation',
+    '31_ProjectInformationHistory',
+    '35_EventFormData',
+    '38_ProjectReferenceSyncLog',
+    'PMS_PerformanceDiagnostics'
+  ];
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+
+  try {
+    const sourceSS = SpreadsheetApp.openById(SOURCE_ID);
+    const targetSS = SpreadsheetApp.openById(TARGET_ID);
+
+    if (sourceSS.getId() === targetSS.getId()) {
+      throw new Error('شناسه فایل مبدا و مقصد یکسان است؛ عملیات متوقف شد.');
+    }
+
+    // آماده‌سازی و اعتبارسنجی کامل قبل از اولین تغییر
+    const preparedConfig = configSheets.map(function(name) {
+      const sourceSheet = sourceSS.getSheetByName(name);
+      if (!sourceSheet) throw new Error('شیت تنظیمات در مبدا پیدا نشد: ' + name);
+
+      const values = sourceSheet.getDataRange().getValues();
+      if (!values.length || !values[0].length) {
+        throw new Error('سرستون شیت تنظیمات خالی است: ' + name);
+      }
+      return { name: name, values: values };
+    });
+
+    const preparedStructure = projectDataSheets.map(function(name) {
+      const sourceSheet = sourceSS.getSheetByName(name);
+      if (!sourceSheet) return { name: name, existsInSource: false };
+
+      const lastCol = sourceSheet.getLastColumn();
+      if (!lastCol) return { name: name, existsInSource: true, headers: [] };
+
+      const headers = sourceSheet.getRange(1, 1, 1, lastCol).getValues()[0];
+      const targetSheet = targetSS.getSheetByName(name);
+      if (targetSheet && targetSheet.getLastRow() > 1) {
+        const targetLastCol = targetSheet.getLastColumn();
+        const targetHeaders = targetLastCol
+          ? targetSheet.getRange(1, 1, 1, targetLastCol).getValues()[0]
+          : [];
+        if (JSON.stringify(headers) !== JSON.stringify(targetHeaders)) {
+          throw new Error(
+            'سرستون شیت عملیاتی ' + name +
+            ' با مقصد متفاوت است و داده عملیاتی دارد؛ برای جلوگیری از جابه‌جایی ستون‌ها عملیات متوقف شد.'
+          );
+        }
+      }
+      return { name: name, existsInSource: true, headers: headers };
+    });
+
+    // نسخه پشتیبان کامل از فایل مقصد، قبل از هرگونه تغییر
+    const backupName = 'PMS-PRODUCTION-BACKUP-BEFORE-MIGRATION-' +
+      new Date().toISOString().replace(/[:.]/g, '-');
+    const backupFile = DriveApp.getFileById(TARGET_ID).makeCopy(backupName);
+
+    const configResults = [];
+    preparedConfig.forEach(function(item) {
+      let targetSheet = targetSS.getSheetByName(item.name);
+      if (!targetSheet) targetSheet = targetSS.insertSheet(item.name);
+
+      targetSheet.clearContents();
+      const values = item.values;
+      if (values.length && values[0].length) {
+        targetSheet.getRange(1, 1, values.length, values[0].length).setValues(values);
+      }
+      configResults.push({ sheet: item.name, rowsCopied: Math.max(0, values.length - 1) });
+    });
+
+    const structureResults = [];
+    preparedStructure.forEach(function(item) {
+      if (!item.existsInSource) {
+        structureResults.push({ sheet: item.name, status: 'NOT_IN_SOURCE' });
+        return;
+      }
+
+      let targetSheet = targetSS.getSheetByName(item.name);
+      if (!targetSheet) targetSheet = targetSS.insertSheet(item.name);
+
+      if (item.headers.length) {
+        // فقط سرستون نوشته می‌شود؛ محتوای ردیف‌های عملیاتی دست‌نخورده می‌ماند.
+        targetSheet.getRange(1, 1, 1, item.headers.length).setValues([item.headers]);
+      }
+      structureResults.push({ sheet: item.name, status: 'HEADERS_SYNCED_DATA_PRESERVED' });
+    });
+
+    const sheet1 = targetSS.getSheetByName('Sheet1');
+    if (sheet1 && targetSS.getSheets().length > 1 && sheet1.getLastRow() <= 1 &&
+        sheet1.getLastColumn() <= 1 && !sheet1.getRange(1, 1).getValue()) {
+      targetSS.deleteSheet(sheet1);
+    }
+
+    SpreadsheetApp.flush();
+
+    const result = {
+      success: true,
+      sourceSpreadsheetId: SOURCE_ID,
+      targetSpreadsheetId: TARGET_ID,
+      backupUrl: backupFile.getUrl(),
+      configurationSheets: configResults,
+      operationalSheets: structureResults,
+      totalConfigurationRowsCopied: configResults.reduce(function(sum, item) {
+        return sum + item.rowsCopied;
+      }, 0),
+      sourceModified: false,
+      operationalDataDeleted: false
+    };
+
+    Logger.log(JSON.stringify(result, null, 2));
+    return result;
+  } finally {
+    lock.releaseLock();
+  }
+}
