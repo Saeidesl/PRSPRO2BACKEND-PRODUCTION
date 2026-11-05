@@ -792,10 +792,13 @@ const EventService = {
     const normalized = rules.map(function(rule) {
       const mode = String(rule.RequirementMode || 'REQUIRED').toUpperCase();
       const source = mode === 'REFERENCE' ? sourceEvents : projectEvents;
-      const matching = source.some(function(item) {
+      const matchingEvents = source.filter(function(item) {
         return String(item.EventTypeID) === String(rule.EventTypeID);
       });
-      const satisfied = mode === 'NOT_REQUIRED' || (mode === 'REFERENCE' ? matching : matching);
+      const eventCount = matchingEvents.length;
+      const allowRepeat = rule.AllowRepeat === true ||
+        String(rule.AllowRepeat).toLowerCase() === 'true' || String(rule.AllowRepeat) === '1';
+      const satisfied = mode === 'NOT_REQUIRED' || eventCount > 0;
       const item = {
         eventTypeId: String(rule.EventTypeID),
         requirementMode: mode,
@@ -804,22 +807,35 @@ const EventService = {
         eventOrder: Number(rule.EventOrder || 0),
         groupKey: String(rule.GroupKey || ''),
         groupOrder: Number(rule.GroupOrder || 0),
+        allowRepeat: allowRepeat,
+        eventCount: eventCount,
         satisfied: satisfied
       };
       if (satisfied) completed.push(item); else if (mode !== 'NOT_REQUIRED') remaining.push(item);
       return item;
     });
+    const requirementsSatisfied = remaining.filter(function(item) {
+      return item.requirementMode === 'REQUIRED' || item.requirementMode === 'REFERENCE';
+    }).length === 0;
+    const manualCompletionRequired = normalized.some(function(item) { return item.allowRepeat; });
+    const stepClosed = String(project.CurrentStepStatus || '').toUpperCase() === 'COMPLETED';
     return {
       configured: true,
       rules: normalized,
       completed: completed,
       remaining: remaining,
       sequenceMode: normalized[0].sequenceMode,
-      stageComplete: remaining.filter(function(item) { return item.requirementMode === 'REQUIRED' || item.requirementMode === 'REFERENCE'; }).length === 0
+      requirementsSatisfied: requirementsSatisfied,
+      manualCompletionRequired: manualCompletionRequired,
+      stepClosed: stepClosed,
+      stageComplete: manualCompletionRequired ? stepClosed && requirementsSatisfied : requirementsSatisfied
     };
   },
 
   _validateWorkflowEvent_: function(project, eventType, tenantId) {
+    if (String(project.CurrentStepStatus || '').toUpperCase() === 'COMPLETED') {
+      throw ErrorHandler.create(Constants.ERROR.INVALID_STATUS, 'مرحله این پروژه پایان یافته است و ثبت رویداد جدید امکان‌پذیر نیست.');
+    }
     const progress = this._getWorkflowRuleProgress_(project, tenantId);
     if (!progress.configured) return progress;
     const typeId = String(eventType.ID);
@@ -830,7 +846,7 @@ const EventService = {
     if (rule.requirementMode === 'REFERENCE' || rule.requirementMode === 'NOT_REQUIRED') {
       throw ErrorHandler.create(Constants.ERROR.INVALID_STATUS, 'این مورد از پروژه مرجع تأمین می‌شود و نباید به‌عنوان رویداد جدید ثبت شود.');
     }
-    if (rule.satisfied) {
+    if (rule.satisfied && !rule.allowRepeat) {
       throw ErrorHandler.create(Constants.ERROR.INVALID_STATUS, 'این رویداد قبلاً برای مرحله فعلی ثبت شده است.');
     }
     const requiredIncomplete = progress.rules.filter(function(item) {
@@ -854,6 +870,58 @@ const EventService = {
     return progress;
   },
 
+  _canUserCompleteStep_: function(project, user) {
+    if (this._isAdmin_(user)) return true;
+    if (!project || !project.WorkflowID || !project.CurrentStepID || !user.DepartmentID) return false;
+    const assignments = WorkflowStepDepartmentRepository.findByWorkflowId(project.WorkflowID) || [];
+    return assignments.some(function(item) {
+      return String(item.TenantID) === String(user.TenantID) &&
+        String(item.WorkflowID) === String(project.WorkflowID) &&
+        String(item.WorkflowStepID) === String(project.CurrentStepID) &&
+        String(item.DepartmentID) === String(user.DepartmentID) &&
+        String(item.Status || 'ACTIVE').toUpperCase() === 'ACTIVE';
+    });
+  },
+
+  completeStep: function(projectId, params) {
+    Validator.id(projectId, 'ProjectID');
+    const user = AccessControlService.getCurrentUser(params || {});
+    const project = ProjectRepository.findById(projectId);
+    if (!project || String(project.TenantID) !== String(user.TenantID) ||
+        !ProjectService._isProjectAvailableToUser_(project, user)) {
+      throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'پروژه مورد نظر پیدا نشد.');
+    }
+    if (!this._canUserCompleteStep_(project, user)) {
+      throw ErrorHandler.create(Constants.ERROR.PERMISSION_DENIED, 'فقط مسئول واحد تخصیص‌یافته به مرحله یا مدیر سامانه می‌تواند پایان مرحله را اعلام کند.');
+    }
+    const progress = this._getWorkflowRuleProgress_(project, user.TenantID);
+    if (!progress.configured || !progress.manualCompletionRequired) {
+      throw ErrorHandler.create(Constants.ERROR.INVALID_STATUS, 'این مرحله برای پایان دستی تنظیم نشده است.');
+    }
+    if (!progress.requirementsSatisfied) {
+      throw ErrorHandler.create(Constants.ERROR.INVALID_STATUS, 'تا ثبت تمام رویدادهای اجباری، امکان پایان مرحله وجود ندارد.');
+    }
+    if (String(project.CurrentStepStatus || '').toUpperCase() === 'COMPLETED') {
+      return Response.success({ project: project, alreadyCompleted: true }, { message: 'این مرحله قبلاً پایان یافته است.' });
+    }
+    const now = new Date().toISOString();
+    const updated = ProjectRepository.update(project.ID, {
+      CurrentStepStatus: 'COMPLETED',
+      UpdatedAt: now
+    });
+    AuditService.log({
+      TenantID: user.TenantID,
+      UserID: user.ID,
+      Action: 'WORKFLOW_STEP_COMPLETED',
+      EntityType: 'PROJECT',
+      EntityID: project.ID,
+      OldData: project,
+      NewData: updated,
+      Reason: 'پایان مرحله گردش‌کار توسط مسئول مجاز'
+    });
+    return Response.success({ project: updated, alreadyCompleted: false }, { message: 'پایان مرحله با موفقیت ثبت شد.' });
+  },
+
   workflowProgress: function(projectId, params) {
     Validator.id(projectId, 'ProjectID');
     const user = AccessControlService.getCurrentUser(params || {});
@@ -874,6 +942,8 @@ const EventService = {
     progress.stepName = project.CurrentStepID
       ? ((WorkflowStepRepository.findById(project.CurrentStepID) || {}).Name || '')
       : '';
+    progress.canCompleteStep = !!progress.manualCompletionRequired &&
+      !!progress.requirementsSatisfied && this._canUserCompleteStep_(project, user);
     return Response.success(progress);
   },
 
