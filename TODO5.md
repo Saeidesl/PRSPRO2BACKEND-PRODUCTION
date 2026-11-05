@@ -97,14 +97,15 @@
 
 - [x] **Task 1 — Discovery & Planning**
   - *Log:* مخازن عملیاتی و فایل‌های TODO5.md و ARCHITECTURE.md هر دو مخزن بررسی شدند. شاخه‌های موجود، آخرین commitهای قابل مشاهده و مسیرهای اجرایی مرتبط بررسی شدند. شاخه کاری امن feature/project-cards-event-filters از main در هر دو مخزن ایجاد شد. در Frontend مسیرهای pages/events.html، js/modules/events.js، js/modules/projects.js، js/modules/project-images.js، css/events.css و index.html شناسایی شدند. توابع Events.renderProjectQueues، Events.applyFilters، Events.render، Events.creatorValue و Events.departmentValue و زیرساخت تصویر شامل getProjectCardAttachments، loadProjectCardImages و applyProjectCardImagesToCards ثبت شدند. در Backend مسیر GET /events در Router.js به EventService.list متصل است؛ داده رویدادها از EventRepository.js و شیت 13_Events با فیلدهای CreatedBy، PerformedBy، DepartmentID، EventTypeID، ProjectID، OccurredAt و CreatedAt خوانده می‌شود. تصاویر پروفایل از metadata شیت 15_Attachments با EntityType=PROJECT و AttachmentType=PROFILE و APIهای موجود /project-card-images و /attachments/:id/download دریافت می‌شوند. ناهماهنگی HTML و منطق فعلی فیلتر (کنترل‌های ثبت‌کننده/واحد/تاریخ در HTML موجود نیستند) شناسایی شد. تصمیم محصول ثبت شد: CreatedBy معیار «ثبت‌کننده جاری»، CreatedAt معیار آخرین رویداد و ترتیب سوابق با fallback کنترل‌شده به OccurredAt است. هیچ API، شیت یا فایل اجرایی تغییر نکرد.
-- [ ] **Task 2 — ارتقای کارت پروژه‌ها (IN PROGRESS)**
+- [x] **Task 2 — ارتقای کارت پروژه‌ها**
   - نمایش تصویر PROFILE پروژه روی کارت‌های صف مرکز عملیات با reuse زیرساخت موجود و کنترل مجوز.
   - نمایش آخرین رویداد معتبر پروژه شامل نوع رویداد، تاریخ ثبت و نام ثبت‌کننده؛ بدون درخواست جداگانه برای هر کارت.
   - تجمیع یک‌مرحله‌ای رویدادها با ProjectID و انتخاب آخرین مورد بر اساس CreatedAt.
   - مدیریت نبود تصویر/رویداد، بارگذاری و خطا؛ حفظ سرعت، RTL و نمایش responsive.
   - آزمون منطق انتخاب آخرین رویداد، مجوزها، cache و رگرسیون صف‌ها.
+  - *Log:* پیاده‌سازی Frontend در فایل‌های `js/modules/events.js`، `css/events.css` و `index.html` انجام شد؛ آزمون‌های regression در `tests/event-queue-project-cards.test.js` اضافه/تکمیل و assertion نسخه asset در `tests/workflow-management.test.js` به‌روز شد. توابع `Events.getLatestEventByProject` و `Events.renderProjectQueues` برای انتخاب آخرین رویداد غیر VOID با اولویت `CreatedAt` و fallback به `OccurredAt` و نمایش نوع رویداد/ثبت‌کننده/تاریخ روی کارت‌ها استفاده شدند. بارگذاری تصویر PROFILE با reuse زیرساخت موجود پروژه، metadata، مجوز `ATTACHMENT_VIEW`، cache و `IntersectionObserver` انجام شد. هیچ API، Sheet، ساختار دیتابیس یا کد اجرایی Backend تغییر نکرد. آزمون‌های Frontend شامل 127 تست بدون شکست و Cross-repository QA، agent suite، syntax/asset و UI performance audit موفق بودند. PR فرانت‌اند #4 با commit ادغام `a789b8a1f73a0c766a3a6da1298f98c85ebbc9b4` در `main` ادغام شد؛ GitHub Pages publish workflow با Run ID `42101855707` موفق گزارش شد. مالک محصول تست دستی کارت‌ها را تأیید کرد. تأیید زنده عملکرد توسط مالک محصول دریافت شد؛ Backend deployment لازم نبود چون کد Backend تغییر نکرد.
 
-- [ ] **Task 3 — فیلتر پیشرفته و پیش‌فرض رویدادهای کاربر جاری**
+- [ ] **Task 3 — فیلتر پیشرفته و پیش‌فرض رویدادهای کاربر جاری (IN PROGRESS)**
   - پیش‌فرض سوابق فقط CreatedBy کاربر جاری باشد.
   - افزودن گزینه دامنه نمایش: رویدادهای من / همه رویدادهای مجاز.
   - تکمیل فیلتر ثبت‌کننده، واحد، نوع رویداد، پروژه، وضعیت، جستجو و بازه تاریخ ثبت/وقوع.
