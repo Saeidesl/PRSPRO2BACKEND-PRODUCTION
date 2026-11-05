@@ -90,11 +90,12 @@ const EventRepository = {
   },
 
 
-  insert: function(event) {
+  insert: function(event, beforeWrite) {
 
     return GoogleSheetsRepository.insert(
       this.SHEET_NAME,
-      event
+      event,
+      beforeWrite
     );
 
   },
