@@ -45,11 +45,9 @@ https://drive.google.com/drive/folders/1E-nYv5GF8wPn9diOZlfiGXnWQH-2WSmB
 
 - [x] **Task 1 — Discovery & Planning**
   - *Log:* مخازن عملیاتی مجاز بررسی شدند؛ هر دو روی شاخه main هستند. Backend آخرین commit بررسی‌شده 8cd0429fc72fe9e95490093cdf6d18d0db1cee69 است. ARCHITECTURE.md در هر دو مخزن مطالعه شد. TODO5.md پیش از این فاز وجود نداشت. کد واقعی AppConfig.gs.js، GoogleDriveStorage.js، StorageRepository.js و AttachmentService.js بررسی شد. مشخص شد مقصد Drive از AppConfig.FILES.GOOGLE_DRIVE_FOLDER_ID کنترل می‌شود و هر دو uploadBase64 و copyFile از getRootFolder_ استفاده می‌کنند؛ مقدار این تنظیم در فایل فعلی خالی است و در این حالت پوشه پیش‌فرض برنامه استفاده/ایجاد می‌شود. مسیرهای API و metadata فعلی باید بدون تغییر حفظ شوند. هیچ کد اجرایی یا داده عملیاتی تغییر نکرد.
-- [ ] **Task 2 — تنظیم مقصد واحد Google Drive در مسیر ذخیره‌سازی موجود (IN PROGRESS)**
-  - تنظیم امن شناسه پوشه مقصد در منبع پیکربندی عملیاتی و بررسی مسیر تزریق تنظیمات در workflow استقرار.
-  - اطمینان از اینکه uploadBase64 و copyFile هر دو در پوشه تعیین‌شده ذخیره می‌کنند.
-  - حفظ نام‌گذاری فایل پروژه، StorageKey، metadata، مجوزها و قرارداد API.
-- [ ] **Task 3 — آزمون یکپارچگی و پذیرش عملیاتی**
+- [x] **Task 2 — تنظیم مقصد واحد Google Drive در مسیر ذخیره‌سازی موجود**
+  - *Log:* در `AppConfig.gs.js` مقدار `AppConfig.FILES.GOOGLE_DRIVE_FOLDER_ID` به شناسه پوشه معرفی‌شده تغییر کرد. منطق مشترک `GoogleDriveStorage.getRootFolder_()` بدون تغییر باقی ماند؛ بنابراین `uploadBase64()` و `copyFile()` از طریق `folder.createFile(blob)` و `source.makeCopy(name, folder)` در همان مقصد ذخیره می‌کنند. `StorageRepository`، `AttachmentService`، مسیرهای Router و شیت `15_Attachments` تغییر نکردند. فایل‌های قدیمی جابه‌جا/حذف نمی‌شوند. تست خودکار `tests/google-drive-storage-folder.test.js` برای مقصد آپلود، کپی تصویر و خطای دسترسی پوشه اضافه شد. Commitهای کد: `26d477f8b5301781dd11ecbdafaceb4bf5cf73aa` و تست: `516be50d836d13581bdc86c91bd47fbd09cb90c9`.
+- [ ] **Task 3 — آزمون یکپارچگی و پذیرش عملیاتی (IN PROGRESS)**
   - بررسی syntax و تست‌های Backend مرتبط با Attachment/Storage.
   - بررسی عدم تغییر قراردادهای Frontend و مسیرهای موجود.
   - تست واقعی آپلود تصویر، فایل، فایل اطلاعات مرکزی/فرم و کپی تصویر پروژه؛ تأیید محل ذخیره در پوشه مقصد.
