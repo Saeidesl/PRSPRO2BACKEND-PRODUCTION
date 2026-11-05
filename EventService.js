@@ -1301,7 +1301,19 @@ const EventService = {
       ProcurementEventIntegrationService.validate(eventType, validatedFormResponses, project ? project.ID : '', requestParams);
     }
 
-    const created = EventRepository.insert(newEvent);
+    const created = EventRepository.insert(newEvent, project ? function() {
+      // Revalidate under the repository's ScriptLock so a concurrent manual
+      // completion cannot slip between the initial validation and persistence.
+      const freshProject = ProjectRepository.findById(project.ID);
+      if (!freshProject || String(freshProject.TenantID) !== String(user.TenantID)) {
+        throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'پروژه مورد نظر پیدا نشد.');
+      }
+      if (String(freshProject.CurrentStepID || '') !== String(project.CurrentStepID || '')) {
+        throw ErrorHandler.create(Constants.ERROR.INVALID_STATUS, 'مرحله پروژه هنگام ثبت تغییر کرده است؛ اطلاعات را تازه‌سازی کنید.');
+      }
+      EventService._checkProjectAvailability_(freshProject, user);
+      EventService._validateWorkflowEvent_(freshProject, eventType, user.TenantID);
+    } : null);
     const workflowProgressAfter = project
       ? this._getWorkflowRuleProgress_(project, user.TenantID)
       : null;
