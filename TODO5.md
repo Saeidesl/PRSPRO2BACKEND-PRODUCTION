@@ -1,1 +1,83 @@
-Ready for the next feature
+## 🎯 Current Objective
+
+پیاده‌سازی پشتیبانی از ثبت چندباره یک نوع رویداد برای یک پروژه در همان مرحله گردش‌کار، بدون محدودیت تعداد دفعات؛ مرحله تا زمانی که مسئول مجاز آن پایان کار را اعلام نکرده باز می‌ماند. پاسخ فرم و هر ثبت رویداد باید سابقه مستقل خود را حفظ کنند. مسیر اصلی ثبت رویداد، APIها، مجوزها، Idempotency و سازگاری با Workflowهای فعلی حفظ می‌شوند.
+
+تصمیم کسب‌وکاری تأییدشده:
+- رویدادهای تکرارپذیر مانند «درخواست اصلاح نمونه» می‌توانند هر تعداد بار در مرحله جاری ثبت شوند.
+- ثبت رویداد تکرارپذیر به‌تنهایی مرحله را تکمیل نمی‌کند.
+- پایان مرحله باید با اقدام صریح مسئول مجاز مرحله اعلام شود.
+- پس از پایان مرحله، ثبت رویدادهای آن مرحله متوقف و وضعیت مرحله تکمیل‌شده می‌شود.
+- تعداد دفعات از پیش تعیین نمی‌شود.
+
+## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
+
+### مخازن و شاخه فاز
+- Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه `feature/repeatable-workflow-events`
+- Frontend: `Saeidesl/PRSPRO2-PRODUCTION`، شاخه `feature/repeatable-workflow-events`
+- مبنای هر دو شاخه: آخرین `main` بررسی‌شده در 2026-11-05.
+- شاخه‌های `main` و سایر شاخه‌ها در این فاز تغییر داده نمی‌شوند.
+
+### Backend — مسیر و وابستگی‌های کشف‌شده
+- `Router.js`: مسیر `POST /events` به `EventService.create(body, params)` و مسیر `GET /projects/{projectId}/workflow-progress` به `EventService.workflowProgress(projectId, params)` متصل است.
+- `EventService.js`:
+  - `create()` کلید Idempotency و جلوگیری از پردازش مجدد یک درخواست شبکه را مدیریت می‌کند.
+  - `_createUnlocked_()` پروژه، نوع رویداد، tenant، مجوز واحد و قواعد مرحله را اعتبارسنجی و رویداد را در مسیر اصلی ذخیره می‌کند.
+  - `_getWorkflowRuleProgress_()` قواعد مرحله و رویدادهای معتبر دارای همان `WorkflowStepID` را بررسی می‌کند؛ در نسخه فعلی وجود یک رویداد هم‌نوع برای قاعده کافی است.
+  - `_validateWorkflowEvent_()` در حال حاضر قاعده‌ای را که قبلاً یک بار ثبت شده رد می‌کند.
+  - پس از ثبت، `workflowProgressAfter.stageComplete` می‌تواند `CurrentStepStatus` را خودکار به `COMPLETED` تغییر دهد؛ این رفتار باید برای مراحل دارای تکمیل دستی کنترل شود.
+  - ابطال رویداد نیز وضعیت مرحله را با `_getWorkflowRuleProgress_()` باز‌محاسبه می‌کند و باید با سیاست جدید سازگار بماند.
+- `WorkflowService.js`: `saveStepEventRules()` قواعد مرحله را اعتبارسنجی و در مخزن ذخیره می‌کند؛ `getStepEventRules()` قواعد نسخه Workflow را برمی‌گرداند.
+- `WorkflowStepEventRuleValidator.js`: اعتبارسنجی RequirementMode، DataSource و SequenceMode.
+- `WorkflowStepEventRuleRepository.js`: شیت `37_WorkflowStepEventRules` و نسخه‌بندی قواعد؛ متدهای `findByStepAndVersion` و `replaceForStepVersion`.
+- `EventTypeService.js` و `EventTypeValidator.js`: مدیریت نوع رویداد. فیلد `IsWorkCompletion` از قبل در schema/validator/normalizer وجود دارد، اما create آن را در رکورد جدید ذخیره نمی‌کند و منطق Backend تکمیل مرحله از آن استفاده نمی‌کند؛ این فیلد بدون بررسی اثرات جانبی نباید به‌عنوان فرمان تکمیل مرحله فرض شود.
+- `DatabaseSetup.js`: شیت `37_WorkflowStepEventRules` و ستون‌های فعلی قواعد؛ هر تغییر schema باید افزایشی و بدون حذف/بازنویسی داده باشد.
+- `EventRepository.js`: شیت `13_Events`؛ رویدادها با شناسه مستقل و فیلدهای `WorkflowID`, `WorkflowVersion`, `WorkflowStepID`, `EventTypeID`, `Status`, `IdempotencyKey`, `IdempotencyStatus` ذخیره می‌شوند.
+- `FormService.js` و `FormRepository.js`: پاسخ فرم در شیت `35_EventFormData` با `EventID` و `FormID` ذخیره می‌شود؛ Snapshot نسخه فرم نگهداری می‌شود. پاسخ‌های رویدادهای مختلف مستقل‌اند.
+- `ProjectRepository.js`: وضعیت جاری مرحله پروژه با `CurrentStepID` و `CurrentStepStatus` نگهداری می‌شود.
+- مجوزهای ثبت فعلی: `EVENT_CREATE` در Router و کنترل tenant، دسترسی پروژه و واحد/کاربر در EventService؛ اقدام پایان مرحله باید در Backend و با کنترل مجوز/واحد مسئول مرحله اعتبارسنجی شود.
+
+### Frontend — مسیر و وابستگی‌های کشف‌شده
+- `js/modules/events.js`: فرم ثبت واحد، ارسال `POST /events`، دریافت پیشرفت از `GET /projects/{id}/workflow-progress` و غیرفعال‌سازی انواع رویداد بر اساس `rule.satisfied`.
+- `js/modules/workflows.js`: ویرایشگر قواعد هر مرحله، بارگذاری و ذخیره از مسیر `/workflows/{workflowId}/steps/{stepId}/event-rules`.
+- `index.html`: بارگذاری ماژول‌ها و نسخه‌گذاری cache-busting.
+- `tests/workflow-management.test.js`: قراردادهای ویرایشگر Workflow و نمایش پیشرفت رویداد.
+- رابط کاربری باید رویداد تکرارپذیر را تا اعلام پایان قابل انتخاب نگه دارد، تعداد وقوع را نمایش دهد و اقدام پایان را فقط برای مسئول مجاز مرحله عرضه کند.
+
+### قواعد سازگاری و یکپارچگی
+- API اصلی `POST /events` و مدل Event/Form موجود حفظ شود؛ برای ثبت رویداد مسیر موازی ساخته نشود.
+- Idempotency فقط برای retry همان درخواست باقی بماند؛ هر ثبت واقعی جدید باید کلید مستقل داشته باشد.
+- پیش‌فرض قواعد فعلی باید رفتار سابق را حفظ کند؛ Workflowهای منتشرشده و قدیمی نباید ناخواسته تکرارپذیر یا تکمیل دستی شوند.
+- رویدادهای ابطال‌شده نباید در شمارش وقوع/تکمیل مؤثر باشند.
+- همه خواندن‌ها و نوشتن‌ها tenant-scoped و با حفظ مجوزهای موجود باشند.
+- پاسخ فرم، snapshot، پیوست‌ها، Audit، اعلان‌ها و یکپارچگی تأمین باید از مسیر جاری عبور کنند.
+- هیچ داده عملیاتی حذف یا مهاجرت مخرب انجام نشود.
+- تکمیل مرحله باید اتمیک/قابل بازیابی باشد و پس از بسته‌شدن مرحله، ثبت عادی در مرحله بسته رد شود.
+- تغییرات Backend و Frontend باید روی همین شاخه‌های feature سازگار بمانند؛ انتشار یا ادغام به main بدون پذیرش کاربر انجام نشود.
+
+### جریان داده فعلی
+1. Frontend پروژه و نوع رویداد را انتخاب می‌کند و پیشرفت Workflow را از endpoint موجود می‌خواند.
+2. فرم‌های متصل به نوع رویداد دریافت و اعتبارسنجی می‌شوند.
+3. Frontend payload فعلی شامل `ProjectID`, `EventTypeID`, `OccurredAt`, `Description`, `FormResponses`, `VariantQuantity` و `IdempotencyKey` را به `POST /events` می‌فرستد.
+4. Backend در EventService دسترسی و Workflow را اعتبارسنجی و رویداد را در `13_Events` ذخیره می‌کند.
+5. FormService پاسخ‌ها را در `35_EventFormData` ذخیره و اطلاعات مرکزی پروژه را طبق قواعد فعلی به‌روزرسانی می‌کند.
+6. EventService نتیجه Workflow و وضعیت پروژه را برمی‌گرداند.
+
+## 📋 Macro-Task Queue & Implementation Log
+
+- [x] **Task 1 — Discovery & Planning: بررسی معماری، تثبیت تصمیم محصول و طراحی دامنه تغییر**
+  - *Log:* هر دو مخزن عملیاتی، شاخه‌ها، آخرین commitها، `TODO5.md` و `ARCHITECTURE.md` بررسی شدند. هر دو main در وضعیت مستقل و بدون تغییر باقی ماندند. مسیر واقعی ثبت در `Router.js`, `EventService.create()`, `EventService._createUnlocked_()`, `EventService._getWorkflowRuleProgress_()`, `EventService._validateWorkflowEvent_()`, `FormService.prepareEventResponses()`, `FormService.saveEventResponses()` و `EventRepository` ردیابی شد. ارتباط UI در `js/modules/events.js` و `js/modules/workflows.js` و قواعد در `WorkflowService.saveStepEventRules()`, `WorkflowStepEventRuleValidator.js`, `WorkflowStepEventRuleRepository.js` بررسی شد. ذخیره رویداد در `13_Events` و پاسخ فرم در `35_EventFormData` است و پاسخ‌ها به EventID مستقل وابسته‌اند. علت محدودیت، تکمیل قاعده با اولین وقوع و رد مجدد آن در Backend و Frontend است. فیلد `IsWorkCompletion` موجود است اما به‌تنهایی منطق تکمیل مرحله را اجرا نمی‌کند. تصمیم کاربر: ثبت نامحدود رویداد تکرارپذیر و پایان صریح توسط مسئول مرحله؛ Idempotency و مسیر اصلی ثبت حفظ شود. شاخه‌های `feature/repeatable-workflow-events` از آخرین main در هر دو مخزن ایجاد شدند؛ هیچ کد اجرایی تغییر نکرد.
+- [ ] **Task 2 — Backend: پشتیبانی از رویداد تکرارپذیر و تکمیل صریح مرحله (IN PROGRESS)**
+  - تعریف قرارداد سازگار برای علامت‌گذاری قاعده تکرارپذیر و سازوکار پایان مرحله؛ حفظ پیش‌فرض رفتار قدیمی.
+  - اصلاح محاسبه پیشرفت، اعتبارسنجی ثبت، بستن مرحله، کنترل مجوز مسئول و رفتار ابطال رویداد.
+  - توسعه افزایشی schema در صورت نیاز و حفظ tenant isolation، Audit و Idempotency.
+  - تست‌های واحد/قراردادی برای ثبت چندباره، پایان مرحله، جلوگیری از ثبت بعد از پایان، ابطال، نسخه Workflow و سازگاری قواعد قدیمی.
+- [ ] **Task 3 — Frontend: تنظیمات Workflow و تجربه ثبت/اعلام پایان**
+  - افزودن تنظیم تکرارپذیری در ویرایشگر قواعد مرحله بدون تغییر مسیر API موجود.
+  - نمایش شمارنده وقوع رویدادهای تکرارپذیر و فعال نگه‌داشتن آن‌ها تا پایان مرحله.
+  - ارائه اقدام صریح پایان مرحله با تأیید کاربر و فقط برای مسئول مجاز؛ نمایش وضعیت نهایی و refresh داده‌ها.
+  - حفظ فرم‌ها، پنل اطلاعات جانبی، موبایل، RTL و مسیر ثبت اصلی.
+- [ ] **Task 4 — Integration QA & Acceptance: آزمون سرتاسری و تحویل برای تست**
+  - اجرای تست‌های Backend/Frontend و بررسی قرارداد API، فرم، فایل، Audit، Idempotency، مجوزها و Workflowهای موجود.
+  - سناریوی پذیرش: ثبت ۳+ درخواست اصلاح با پاسخ‌های مستقل، پایان توسط مسئول، رد ثبت بعدی و حفظ تاریخچه.
+  - بررسی رگرسیون مراحل غیرتکرارپذیر و Workflowهای قدیمی؛ commit و push فقط به شاخه feature.
+  - گزارش دقیق تفکیک‌شده GitHub، انتشار Backend، انتشار Frontend و وضعیت تأیید زنده؛ توقف تا تأیید کاربر.
