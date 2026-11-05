@@ -1,6 +1,12 @@
 ## 🎯 Current Objective
 
-پیاده‌سازی پشتیبانی از ثبت چندباره یک نوع رویداد برای یک پروژه در همان مرحله گردش‌کار، بدون محدودیت تعداد دفعات؛ مرحله تا زمانی که مسئول مجاز آن پایان کار را اعلام نکرده باز می‌ماند. پاسخ فرم و هر ثبت رویداد باید سابقه مستقل خود را حفظ کنند. مسیر اصلی ثبت رویداد، APIها، مجوزها، Idempotency و سازگاری با Workflowهای فعلی حفظ می‌شوند.
+اجرای آزمون یکپارچگی و رگرسیون روی نسخه عملیاتی PMS پس از انتشار قابلیت رویدادهای تکرارپذیر؛ رفع شکست‌های CI و تست‌های نادرست بدون تغییر غیرضروری در منطق عملیاتی، و بررسی سازگاری Frontend/Backend، مجوزها، tenant isolation، Idempotency، فرم‌ها، پیوست‌ها و Workflowهای قدیمی.
+
+محدوده ایمنی:
+- همه اصلاحات QA در شاخه مستقل `qa/integration-regression-20261105` انجام می‌شوند.
+- تا تأیید مالک محصول هیچ PR ادغام و هیچ نسخه‌ای دوباره منتشر نمی‌شود.
+- آزمون‌هایی که به API محیط staging نیاز دارند، بدون تنظیمات staging به‌عنوان کامل/موفق گزارش نمی‌شوند.
+- هیچ داده عملیاتی یا شیت موجود تغییر داده نمی‌شود.
 
 تصمیم کسب‌وکاری تأییدشده:
 - رویدادهای تکرارپذیر مانند «درخواست اصلاح نمونه» می‌توانند هر تعداد بار در مرحله جاری ثبت شوند.
@@ -80,6 +86,11 @@
   - انتشار: Backend با Workflow Run `42091457135` (Push و Deploy موفق)؛ Frontend با GitHub Pages Run `42090914176` (موفق).
   - *Log:* Backend: `WorkflowStepEventRuleValidator.js` اعتبارسنجی `AllowRepeat`؛ `WorkflowStepEventRuleRepository.js` افزودن ستون و حفظ آن هنگام clone نسخه Workflow؛ `DatabaseSetup.js` افزودن header افزایشی؛ `EventService.js` شمارش occurrenceها و خروجی‌های `eventCount`, `allowRepeat`, `manualCompletionRequired`, `stepClosed`, `requirementsSatisfied`, `stageComplete`، متد `completeStep()` و کنترل `_canUserCompleteStep_()`؛ `EventRepository.js` و `GoogleSheetsRepository.js` اجرای revalidation در callback داخل ScriptLock؛ `Router.js` افزودن `POST /projects/{id}/complete-step` با `EVENT_CREATE`. Frontend: `js/modules/workflows.js` تنظیم `AllowRepeat`؛ `js/modules/events.js` ثبت مجدد رویداد، نمایش شمارنده و اقدام اعلام پایان؛ `index.html` cache-busting. ذخیره رویدادها در `13_Events` و پاسخ فرم‌ها در `35_EventFormData` با EventID مستقل؛ قواعد در `37_WorkflowStepEventRules`. تست‌های افزوده/به‌روزشده در `tests/workflow-event-enforcement.test.js` و `tests/workflow-management.test.js`. PRهای ادغام‌شده: Backend #2 (merge `91d7c80aaaae0f04284f00fab95a52e3b666c039`) و Frontend #1 (merge `ec13efe137deb14c9937499666046538e35a46a0`). آزمون پذیرش عملیاتی کاربر در 2026-11-05 موفق اعلام شد: حداقل سه ثبت هم‌نوع مستقل، شمارنده، عدم تکمیل خودکار، پایان دستی توسط مسئول و رد ثبت پس از بسته‌شدن مرحله تأیید شدند.
 - [ ] **Task 3 — Integration QA & Regression (IN PROGRESS): آزمون سرتاسری و بررسی رگرسیون
-  - تکمیل بررسی CI و اجرای مجموعه تست Backend/Frontend؛ بررسی قرارداد API، مجوزها، tenant isolation، Idempotency، فرم/فایل، ابطال و Workflowهای قدیمی.
-  - پیگیری شکست‌های CI شناخته‌شده Backend (سه تست `google-sheets-cache-invalidation` و یک تست `schema-contract`) و تفکیک baseline از رگرسیون این قابلیت.
-  - بررسی سازگاری نسخه‌های منتشرشده و انجام آزمون‌های تکمیلی بدون تغییر داده عملیاتی؛ گزارش نتیجه و توقف برای تأیید مالک محصول.
+  - [x] Discovery & Planning: هر دو `TODO5.md` و `ARCHITECTURE.md` خوانده شدند؛ شاخه‌ها و آخرین commitهای main بررسی شدند. Backend main در زمان شروع `123b2bfaae4929beb56aeda71c89984aaffbdbf0` و Frontend main `5a7978ea5d657b17a40132892f30f3f957f94d7d` بود. شاخه QA مستقل در هر دو مخزن از همین commitها ایجاد شد.
+  - [x] اصلاح شکست‌های CI بک‌اند: سه تست `google-sheets-cache-invalidation.test.js` به دلیل نبود global مربوط به resolver دیتابیس در mock محیط تست fail می‌شدند؛ resolver آزمایشی به context تست اضافه شد. تست `schema-contract.test.js` انتظار workflow خودکار deploy روی push را داشت که با سیاست امنیتی جدید ناسازگار بود؛ assertionها با workflow واقعی manual-dispatch و تأیید صریح هم‌راستا شدند.
+  - [x] اصلاح وابستگی تست مرورگر: نصب شناور Playwright به نسخه منتشرنشده `1.65.0` resolve می‌شد؛ workflow به نسخه پایدار منتشرشده `1.64.1` pin شد.
+  - [x] Backend CI روی commit `ecbb842c6d9d834e963c06531ef4fcd22088a2ff`: 172/172 تست Backend موفق؛ 14/14 تست Procurement diagnostics موفق؛ هر دو agent مربوط به Domain Contract و QA/Release Safety موفق.
+  - [x] Frontend CI روی commit `2ba6612976a79d5958248d818c834206a6907656`: Frontend Checks، Cross-repository QA، Browser Audit و تست واقعی دسترس‌پذیری/کیبورد موفق.
+  - محدودیت باقیمانده: گزارش Browser Audit مقدار `overallStatus=blocked-no-staging-api` را برگرداند؛ مسیرهای بررسی‌شده خطای route، network یا console نداشتند، اما آزمون API/performance متصل به staging به دلیل نبود تنظیمات/دسترسی staging قابل تکمیل نبود. این مورد به‌عنوان قبولی کامل API staging محسوب نمی‌شود.
+  - PRها برای بازبینی و نگهداری تغییرات QA باز و Draft هستند: Backend PR #3 و Frontend PR #2. هیچ‌کدام ادغام نشده‌اند و main/نسخه عملیاتی تغییر نکرده است.
+  - *Log موقت:* Backend: `tests/google-sheets-cache-invalidation.test.js` و `tests/schema-contract.test.js`. Frontend: `.github/workflows/pms-ui-performance-audit.yml`. شاخه‌های QA: `qa/integration-regression-20261105`. اجرای تست‌ها از GitHub Actions انجام شد؛ نتیجه نهایی Task 3 پس از رفع محدودیت staging و تأیید مالک محصول ثبت می‌شود.
