@@ -8,7 +8,8 @@ const AppConfig = {
   AUTH: { SESSION_DURATION_HOURS: 0 },
   FILES: {
     MAX_SIZE_MB: 10,
-    GOOGLE_DRIVE_FOLDER_ID: '',
+    // Shared destination for new project and event attachments.
+    GOOGLE_DRIVE_FOLDER_ID: '1E-nYv5GF8wPn9diOZlfiGXnWQH-2WSmB',
     ALLOWED_MIME_TYPES: [
       'image/jpeg','image/png','image/webp','image/gif','application/pdf',
       'application/msword',
