@@ -24,7 +24,7 @@ const procurement = read('ProcurementService.js');
 const integrationTests = read('tests/procurement-event-integration.test.js');
 const planningTests = read('tests/material-planning.test.js');
 
-const eventInsert = eventService.indexOf('const created = EventRepository.insert(newEvent)');
+const eventInsert = eventService.indexOf('const created = EventRepository.insert(newEvent');
 const preValidate = eventService.lastIndexOf('ProcurementEventIntegrationService.validate(', eventInsert);
 const applyIndex = eventService.indexOf('ProcurementEventIntegrationService.apply(', eventInsert);
 check('EVENT-VALIDATE-BEFORE-PERSIST', 'Mapped procurement inputs are validated before the event is persisted.',
