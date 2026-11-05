@@ -13,10 +13,10 @@
 - Backend: https://github.com/Saeidesl/PRSPRO2BACKEND-PRODUCTION
 - Frontend: https://github.com/Saeidesl/PRSPRO2-PRODUCTION
 
-شاخه کاری این فاز در هر دو مخزن:
-- feature/event-queue-card-ux-20261106
-شاخه مبنا: main
-هیچ تغییری روی main یا مخازن توسعه مجاز نیست.
+شاخه اجرای Task 3:
+- feature/event-queue-image-preview-20261106
+مقصد ادغام: main (PRهای #15 فرانت‌اند و #7 مستندسازی بک‌اند با تأیید مالک محصول ادغام شدند).
+تسک ۴ از این مرحله به بعد فقط در شاخه کاری جدید و پس از بررسی وضعیت مخازن آغاز می‌شود؛ هیچ تغییر مستقیمی روی main یا مخازن توسعه مجاز نیست.
 
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
 
@@ -89,13 +89,11 @@
   - نمایش رنگ وضعیت صف با پالت معنایی موجود و بدون تغییر الگوریتم دسته‌بندی.
   - آزمون رگرسیون برای تب پیش‌فرض، وضعیت ARIA و markup/layout کارت‌ها.
 
-- [ ] **Task 3 — پیش‌نمایش تعاملی تصویر پروژه (IN PROGRESS)**
-  - اتصال کلیک thumbnail مجاز به PMS.Modal موجود؛ نمایش تصویر بزرگ، زوم/کوچک‌نمایی و کنترل اندازه برای صفحه موبایل.
-  - دکمه بستن، Escape، overlay، focus و پاک‌سازی منبع/منابع احتمالی حفظ شود.
-  - جلوگیری از بازشدن تصویر placeholder، تصویر ناموجود یا کاربر فاقد مجوز.
-  - آزمون رگرسیون و بررسی دسترس‌پذیری.
+- [x] **Task 3 — پیش‌نمایش تعاملی تصویر پروژه**
+  - *Log:* Frontend: در `js/modules/events.js` کلیک تصویر کارت به cache موجود `PMS.Modules.Projects.projectCardImages` متصل شد و با کنترل مجوز `ATTACHMENT_VIEW`/ادمین و وضعیت آماده تصویر، پیش‌نمایش از طریق `PMS.Modal.open()` موجود باز می‌شود. زوم، کوچک‌نمایی، بازگشت به اندازه اصلی، بستن با دکمه/Escape/overlay، پشتیبانی Enter/Space، متن جایگزین، رفتار responsive و fallback خطای بارگذاری پیاده‌سازی شد. پاک‌سازی `src` و `srcset` تصویر هنگام بستن Modal انجام می‌شود. در `css/events.css` استایل‌های نمایشگر و کنترل‌ها تکمیل و در `index.html` نسخه cache-busting به `20261106-event-queue-image-preview-1` تغییر کرد. تست‌های `tests/event-queue-project-cards.test.js` و `tests/workflow-management.test.js` اصلاح/تکمیل شدند. CI روی آخرین commit فرانت‌اند `1fd8c555d2d4f4cf9637b81d8d5db37d971a1160` موفق شد: ۱۳۳ تست Frontend و بررسی‌های Cross-repository QA، UI performance audit و agent suite. PR Frontend #15 با Merge Commit `6c763f2b69c5cb0535116b079c8fb5314937a65a` و PR مستندسازی Backend #7 با Merge Commit `81383b3adc81b2cbe2c0fbc659f4550003c113b3` در `main` ادغام شدند. هیچ API، Sheet، schema یا مسیر ذخیره‌سازی جدیدی ایجاد نشد و کد اجرایی Backend تغییر نکرد. انتشار GitHub Pages پس از ادغام آغاز شد؛ پذیرش دستی کاربر در 2026-11-06 موفق اعلام شد. 
+  - نتیجه تست دستی مالک محصول: نمایش پیش‌نمایش و کنترل‌های زوم/بستن در نسخه مورد استفاده موفق بود؛ Task پذیرفته شد.
 
-- [ ] **Task 4 — CTA درخواست تغییرات برای پروژه‌های تکمیل‌شده و QA نهایی**
+- [ ] **Task 4 — CTA درخواست تغییرات برای پروژه‌های تکمیل‌شده و QA نهایی (IN PROGRESS)**
   - حذف دکمه ثبت رویداد از کارت‌های صف completed و جایگزینی با «درخواست ثبت تغییرات».
   - کلیک فقط پیام اطلاع‌رسانی موقت را با PMS.Alert.info نمایش دهد؛ هیچ API یا ذخیره‌سازی فراخوانی نشود.
   - اجرای تست‌های Frontend مرتبط، بررسی syntax، CI، سازگاری تم/موبایل و رگرسیون ثبت رویداد و تصاویر.
