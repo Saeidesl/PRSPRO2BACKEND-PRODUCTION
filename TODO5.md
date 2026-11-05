@@ -87,6 +87,8 @@
 5. خطا/نبود تصویر نباید نمایش کارت یا صف پروژه را متوقف کند.
 
 ### ملاحظات امنیت و سازگاری
+
+- محدودیت CI: فایل `.github/workflows/pms-cross-repo-qa.yml` در Frontend فعلاً مخزن `Saeidesl/PRSPRO2BACKEND` (Development) را checkout می‌کند؛ موفقیت این workflow به‌تنهایی اثبات سازگاری با Backend عملیاتی `PRSPRO2BACKEND-PRODUCTION` نیست. در این فاز Backend عملیاتی تغییر اجرایی نداشته است.
 - مجوز EVENT_VIEW، ATTACHMENT_VIEW و محدودیت‌های دسترسی پروژه/tenant حفظ شود.
 - فیلتر Frontend جایگزین کنترل دسترسی Backend نیست.
 - رویدادهای مستقل فاقد ProjectID در سوابق باقی می‌مانند و نباید به کارت پروژه متصل شوند.
