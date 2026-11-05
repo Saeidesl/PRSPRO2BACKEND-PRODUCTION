@@ -22,7 +22,7 @@
 ### مخازن، شاخه و پشته
 - Backend: https://github.com/Saeidesl/PRSPRO2BACKEND-PRODUCTION
 - Frontend: https://github.com/Saeidesl/PRSPRO2-PRODUCTION
-- شاخه کاری هر دو: feature/project-cards-event-filters
+- شاخه کاری جاری هر دو: feature/event-history-filters (مبنای فعلی main؛ شاخه قبلی feature/project-cards-event-filters به‌دلیل واگرایی/عقب‌ماندگی برای ادامه توسعه کنار گذاشته شد)
 - مبنای ایجاد شاخه: main در هر مخزن.
 - Backend: Google Apps Script V8؛ Google Sheets پایگاه داده.
 - Frontend: HTML/CSS/JavaScript، رابط فارسی RTL و responsive.
@@ -31,16 +31,18 @@
 ### Frontend — نقاط اتصال کشف‌شده
 - pages/events.html:
   - میزبان مرکز عملیات، صف‌های پروژه و بخش «رویدادهای ثبت‌شده».
-  - فیلتر جمع‌شونده فعلی: #events-filter-toggle و #events-filter-content.
-  - کنترل‌های فعلی HTML فقط شامل event-project-filter، event-type-filter و event-status-filter به‌علاوه event-search هستند.
-  - کنترل‌های creator، department و تاریخ که در منطق applyFilters ارجاع شده‌اند در HTML فعلی وجود ندارند؛ این ناهماهنگی باید در Task 3 تکمیل شود.
+  - فیلتر جمع‌شونده: #events-filter-toggle و #events-filter-content.
+  - کنترل‌های فعلی پس از اجرای Task 3: event-history-scope (mine/all)، event-project-filter، event-creator-filter، event-department-filter، event-type-filter، event-status-filter، event-created-from/to، event-occurred-from/to و event-search.
+  - دکمه events-clear-filters و شمارنده events-active-filter-count برای پاک‌سازی و نمایش تعداد فیلترهای فعال اضافه شده‌اند.
 - js/modules/events.js:
   - Events.init و Events.bindEvents: راه‌اندازی صفحه و event handlers.
   - Events.events، Events.projects و Events.eventTypes: داده‌های بارگذاری‌شده فعلی.
   - Events.getLatestEventByProject(events): انتخاب آخرین رویداد غیر VOID هر پروژه با اولویت CreatedAt و fallback به OccurredAt.
   - Events.renderProjectQueues: تجمیع رویدادها بر اساس ProjectID و ساخت کارت‌های صف؛ نمایش آخرین رویداد، ثبت‌کننده و تاریخ ثبت روی کارت.
   - Events.loadQueueProjectImages و Events.applyQueueProjectImages: اتصال کارت‌های صف به metadata و دانلود تصویر PROFILE از ماژول موجود Projects با مجوز ATTACHMENT_VIEW، cache و IntersectionObserver.
-  - Events.applyFilters: منطق فیلتر محلی موجود؛ فیلترهای project/type/status/creator/department/search و occurred/created date range را می‌خواند.
+  - Events.applyFilters: فیلتر محلی ترکیبی با scope پیش‌فرض mine بر اساس CreatedBy شناسه کاربر جاری؛ حالت all فقط مجموعه‌ای را نشان می‌دهد که API مجاز برگردانده است. فیلترهای پروژه/نوع/وضعیت/ثبت‌کننده/واحد/جستجو و بازه تاریخ ثبت/وقوع را اعمال می‌کند.
+  - Events.currentUserId، Events.creatorIdValue و Events.departmentIdValue: مقایسه هویت و فیلتر با شناسه‌های پایدار، نه نام نمایشی.
+  - Events.clearHistoryFilters و Events.updateHistoryFilterSummary: بازنشانی فیلترها و شمارنده فیلترهای فعال.
   - Events.render: نمایش دسکتاپ و موبایل سوابق.
   - Events.creatorValue: نام نمایشی ثبت‌کننده از CreatorName/CreatedByName/CreatedBy.
   - Events.departmentValue: نام واحد از DepartmentName/DepartmentTitle/DepartmentID.
