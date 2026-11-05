@@ -81,13 +81,15 @@
   - *Log:* در هر دو مخزن عملیاتی، شاخه‌ها، آخرین commitها، TODO5.md و ARCHITECTURE.md بررسی شدند. مسیرهای واقعی صفحه و کارت‌ها در `pages/events.html`، `js/modules/events.js` و `css/events.css`، زیرساخت تصویر در `Events.loadQueueProjectImages` و `Events.applyQueueProjectImages`، Modal عمومی در `js/components/modal.js` و پیام اطلاع‌رسانی در `js/components/alert.js` ردیابی شد. منطق دسته‌بندی صف‌ها در `Events.renderProjectQueues` بر اساس فعالیت مرتبط و IsWorkCompletion است و باید حفظ شود. قرارداد Backend شامل `GET /events`، `GET /project-card-images` و `GET /attachments/:attachmentId/download` و شیت‌های `13_Events` و `15_Attachments` بررسی شد. نتیجه: نیاز اجرایی فعلاً Frontend-only است و هیچ تغییر Backend/Database لازم نیست. شاخه کاری `feature/event-queue-card-ux-20261106` در هر دو مخزن از main ایجاد شد.
   - محدوده فاز به سه Macro-Task اجرایی تقسیم شد.
 
-- [ ] **Task 2 — تب پیش‌فرض و بازطراحی کارت پروژه‌ها (IN PROGRESS)**
+- [x] **Task 2 — تب پیش‌فرض و بازطراحی کارت پروژه‌ها**
+  - *Log:* Frontend: در `pages/events.html` تب «پروژه‌های در حال انجام» به‌عنوان تب پیش‌فرض فعال شد؛ کارت‌ها در `js/modules/events.js` و `css/events.css` بازطراحی شدند تا تصویر و اطلاعات پروژه، وضعیت واقعی پروژه و رنگ معنایی مناسب نمایش داده شود. خطای runtime در `Events.renderProjectQueues()` با جایگزینی `this.getProjectStatusTone` با `Events.getProjectStatusTone` رفع و آزمون رگرسیون در `tests/event-queue-project-cards.test.js` اضافه شد. سپس نسخه asset در `index.html` از `20261106-event-queue-card-1` به `20261106-event-queue-render-fix-3` تغییر کرد تا کش نسخه قدیمی پاک شود. PR #13 با Merge Commit `28a5649b9d140937e5464e768cc24a987aeb0457` و PR #14 با Merge Commit `297bfc23b80b13edac89fe3a0cc2de798b61fef6` در Frontend `main` ادغام شدند. کاربر نمایش صحیح پروژه‌ها و رویدادها را در نسخه مورد استفاده تأیید کرد. مجموعه تست Frontend در مرحله قبل ۱۳۷ تست موفق داشت؛ برای PR #14 اجرای CI مستقلی از طریق گزارش موجود تأیید نشده و انتشار Pages نیز جداگانه تأیید نشده است. Backend/API/Database تغییری نکرد.
+
   - فعال‌سازی پیش‌فرض «پروژه‌های در حال انجام» در HTML/JS با ARIA و hidden هماهنگ.
   - بازچینی کارت: تصویر در سمت چپ با حدود ۵۰٪ عرض و اطلاعات در سمت راست؛ حفظ دکمه‌های عملیاتی و سازگاری موبایل.
   - نمایش رنگ وضعیت صف با پالت معنایی موجود و بدون تغییر الگوریتم دسته‌بندی.
   - آزمون رگرسیون برای تب پیش‌فرض، وضعیت ARIA و markup/layout کارت‌ها.
 
-- [ ] **Task 3 — پیش‌نمایش تعاملی تصویر پروژه**
+- [ ] **Task 3 — پیش‌نمایش تعاملی تصویر پروژه (IN PROGRESS)**
   - اتصال کلیک thumbnail مجاز به PMS.Modal موجود؛ نمایش تصویر بزرگ، زوم/کوچک‌نمایی و کنترل اندازه برای صفحه موبایل.
   - دکمه بستن، Escape، overlay، focus و پاک‌سازی منبع/منابع احتمالی حفظ شود.
   - جلوگیری از بازشدن تصویر placeholder، تصویر ناموجود یا کاربر فاقد مجوز.
