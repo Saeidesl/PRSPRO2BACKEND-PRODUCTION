@@ -778,6 +778,8 @@ const EventService = {
     const projectEvents = (EventRepository.findByProjectId(project.ID) || []).filter(function(item) {
       return String(item.TenantID) === String(tenantId) &&
         String(item.Status || '').toUpperCase() !== String(Constants.STATUS.VOID).toUpperCase() &&
+        (!item.WorkflowID || String(item.WorkflowID) === String(project.WorkflowID)) &&
+        (!item.WorkflowVersion || Number(item.WorkflowVersion) === version) &&
         (!item.WorkflowStepID || String(item.WorkflowStepID) === String(project.CurrentStepID));
     });
     let sourceEvents = [];
