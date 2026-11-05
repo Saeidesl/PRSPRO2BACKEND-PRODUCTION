@@ -58,3 +58,14 @@ test('manual workflow step completion is exposed through the existing project AP
   assert.match(router, /EventService\.completeStep/);
   assert.match(router, /AccessControlService\.require\(params, 'EVENT_CREATE'\)/);
 });
+
+
+test('event insert revalidates workflow state inside the shared spreadsheet write lock', () => {
+  const service = read('EventService.js');
+  const eventRepository = read('EventRepository.js');
+  const sheets = read('GoogleSheetsRepository.js');
+  assert.match(service, /EventRepository\.insert\(newEvent, project \? function\(\)/);
+  assert.match(service, /Revalidate under the repository's ScriptLock/);
+  assert.match(eventRepository, /insert: function\(event, beforeWrite\)/);
+  assert.match(sheets, /if \(typeof beforeWrite === 'function'\) beforeWrite\(\)/);
+});
