@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 
 const read = (name) => fs.readFileSync(path.join(__dirname, '..', name), 'utf8');
 
@@ -68,4 +69,19 @@ test('event insert revalidates workflow state inside the shared spreadsheet writ
   assert.match(service, /Revalidate under the repository's ScriptLock/);
   assert.match(eventRepository, /insert: function\(event, beforeWrite\)/);
   assert.match(sheets, /if \(typeof beforeWrite === 'function'\) beforeWrite\(\)/);
+});
+
+
+test('changed backend sources pass JavaScript syntax parsing', () => {
+  [
+    'DatabaseSetup.js',
+    'EventRepository.js',
+    'EventService.js',
+    'GoogleSheetsRepository.js',
+    'Router.js',
+    'WorkflowStepEventRuleRepository.js',
+    'WorkflowStepEventRuleValidator.js'
+  ].forEach((file) => {
+    assert.doesNotThrow(() => new vm.Script(read(file), { filename: file }), file);
+  });
 });
