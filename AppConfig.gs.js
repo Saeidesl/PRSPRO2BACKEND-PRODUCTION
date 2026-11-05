@@ -1,14 +1,12 @@
 const AppConfig = {
   APP_NAME: 'Production Management System',
   VERSION: '1.0.0',
-  ENVIRONMENT: 'MVP',
+  ENVIRONMENT: 'PRODUCTION',
 
-  // Temporary diagnostics for procurement performance testing.
-  // Disable after collecting the baseline.
-  PERFORMANCE_LOG_TO_CONSOLE: true,
+  PERFORMANCE_LOG_TO_CONSOLE: false,
 
   DATABASE: {
-    SPREADSHEET_ID: '',
+    SPREADSHEET_ID: '1UmMK-3Ltrlnfobjjb4PrQy8hYSJxaVqxFgAyr9mr0Z8',
   },
 
   API: {
@@ -18,13 +16,11 @@ const AppConfig = {
   },
 
   AUTH: {
-    // 0 means sessions remain valid until the user logs out.
     SESSION_DURATION_HOURS: 0
   },
 
   FILES: {
     MAX_SIZE_MB: 10,
-
     GOOGLE_DRIVE_FOLDER_ID: '',
 
     ALLOWED_MIME_TYPES: [
