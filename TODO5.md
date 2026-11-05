@@ -37,7 +37,9 @@
 - js/modules/events.js:
   - Events.init و Events.bindEvents: راه‌اندازی صفحه و event handlers.
   - Events.events، Events.projects و Events.eventTypes: داده‌های بارگذاری‌شده فعلی.
-  - Events.renderProjectQueues: تجمیع رویدادها بر اساس ProjectID و ساخت کارت‌های صف.
+  - Events.getLatestEventByProject(events): انتخاب آخرین رویداد غیر VOID هر پروژه با اولویت CreatedAt و fallback به OccurredAt.
+  - Events.renderProjectQueues: تجمیع رویدادها بر اساس ProjectID و ساخت کارت‌های صف؛ نمایش آخرین رویداد، ثبت‌کننده و تاریخ ثبت روی کارت.
+  - Events.loadQueueProjectImages و Events.applyQueueProjectImages: اتصال کارت‌های صف به metadata و دانلود تصویر PROFILE از ماژول موجود Projects با مجوز ATTACHMENT_VIEW، cache و IntersectionObserver.
   - Events.applyFilters: منطق فیلتر محلی موجود؛ فیلترهای project/type/status/creator/department/search و occurred/created date range را می‌خواند.
   - Events.render: نمایش دسکتاپ و موبایل سوابق.
   - Events.creatorValue: نام نمایشی ثبت‌کننده از CreatorName/CreatedByName/CreatedBy.
