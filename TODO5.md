@@ -8,8 +8,8 @@ https://drive.google.com/drive/folders/1E-nYv5GF8wPn9diOZlfiGXnWQH-2WSmB
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
 
 ### مخزن و شاخه عملیاتی
-- Backend: Saeidesl/PRSPRO2BACKEND-PRODUCTION — شاخه main
-- Frontend: Saeidesl/PRSPRO2-PRODUCTION — شاخه main
+- Backend: Saeidesl/PRSPRO2BACKEND-PRODUCTION — شاخه feature/drive-project-attachments
+- Frontend: Saeidesl/PRSPRO2-PRODUCTION — شاخه feature/drive-project-attachments
 - آخرین commit بررسی‌شده Backend: 8cd0429fc72fe9e95490093cdf6d18d0db1cee69
 - آخرین commit بررسی‌شده Frontend: شاخه main؛ commit جاری در زمان Discovery از فهرست آخرین commitها ثبت نشده است.
 - TODO5.md در شروع این فاز وجود نداشت؛ این فایل برای پیگیری فاز ایجاد شده است.
@@ -45,11 +45,10 @@ https://drive.google.com/drive/folders/1E-nYv5GF8wPn9diOZlfiGXnWQH-2WSmB
 
 - [x] **Task 1 — Discovery & Planning**
   - *Log:* مخازن عملیاتی مجاز بررسی شدند؛ هر دو روی شاخه main هستند. Backend آخرین commit بررسی‌شده 8cd0429fc72fe9e95490093cdf6d18d0db1cee69 است. ARCHITECTURE.md در هر دو مخزن مطالعه شد. TODO5.md پیش از این فاز وجود نداشت. کد واقعی AppConfig.gs.js، GoogleDriveStorage.js، StorageRepository.js و AttachmentService.js بررسی شد. مشخص شد مقصد Drive از AppConfig.FILES.GOOGLE_DRIVE_FOLDER_ID کنترل می‌شود و هر دو uploadBase64 و copyFile از getRootFolder_ استفاده می‌کنند؛ مقدار این تنظیم در فایل فعلی خالی است و در این حالت پوشه پیش‌فرض برنامه استفاده/ایجاد می‌شود. مسیرهای API و metadata فعلی باید بدون تغییر حفظ شوند. هیچ کد اجرایی یا داده عملیاتی تغییر نکرد.
-- [ ] **Task 2 — تنظیم مقصد واحد Google Drive در مسیر ذخیره‌سازی موجود (IN PROGRESS)**
-  - تنظیم امن شناسه پوشه مقصد در منبع پیکربندی عملیاتی و بررسی مسیر تزریق تنظیمات در workflow استقرار.
-  - اطمینان از اینکه uploadBase64 و copyFile هر دو در پوشه تعیین‌شده ذخیره می‌کنند.
-  - حفظ نام‌گذاری فایل پروژه، StorageKey، metadata، مجوزها و قرارداد API.
-- [ ] **Task 3 — آزمون یکپارچگی و پذیرش عملیاتی**
+- [x] **Task 2 — تنظیم مقصد واحد Google Drive در مسیر ذخیره‌سازی موجود**
+  - *Log:* در `AppConfig.gs.js` مقدار `AppConfig.FILES.GOOGLE_DRIVE_FOLDER_ID` به شناسه پوشه معرفی‌شده تغییر کرد. منطق مشترک `GoogleDriveStorage.getRootFolder_()` بدون تغییر باقی ماند؛ بنابراین `uploadBase64()` و `copyFile()` از طریق `folder.createFile(blob)` و `source.makeCopy(name, folder)` در همان مقصد ذخیره می‌کنند. `StorageRepository`، `AttachmentService`، مسیرهای Router و شیت `15_Attachments` تغییر نکردند. فایل‌های قدیمی جابه‌جا/حذف نمی‌شوند. تست خودکار `tests/google-drive-storage-folder.test.js` برای مقصد آپلود، کپی تصویر و خطای دسترسی پوشه اضافه شد. Commitهای کد: `26d477f8b5301781dd11ecbdafaceb4bf5cf73aa` و تست: `516be50d836d13581bdc86c91bd47fbd09cb90c9`.
+- [ ] **Task 3 — آزمون یکپارچگی و پذیرش عملیاتی (IN PROGRESS)**
+  - *Log:* در اجرای نهایی GitHub Actions روی commit `35e877ea2df9f3513dd6f41149fe1f12b8070b0b` هر پنج آزمون اختصاصی `tests/google-drive-storage-folder.test.js` موفق شدند: انتخاب پوشه تنظیم‌شده، ایجاد آپلود جدید در پوشه مقصد، کپی تصویر پروژه در همان پوشه، عدم fallback در خطای دسترسی و تطبیق `AppConfig` با شناسه پوشه. Backend source checks شامل ۱۶۸ تست بود که ۱۶۴ مورد موفق و ۴ مورد ناموفق شدند. چهار شکست دقیقاً همان موارد baseline هستند که در اجرای قبلی شاخه main با commit `8cd0429` نیز وجود داشتند: سه تست invalidation کش GoogleSheetsRepository و یک assertion قدیمی درباره workflow استقرار. PMS Agent Suite نیز به‌دلیل همین ۴ شکست عمومی ناموفق شد؛ Domain Contract Review موفق بود. به‌دلیل توقف job در مرحله تست، مرحله مستقل اعتبارسنجی manifest و syntax اجرا نشد. PR بازبینی Draft شماره 1 باز است و هیچ merge یا deployment انجام نشده است.
   - بررسی syntax و تست‌های Backend مرتبط با Attachment/Storage.
   - بررسی عدم تغییر قراردادهای Frontend و مسیرهای موجود.
   - تست واقعی آپلود تصویر، فایل، فایل اطلاعات مرکزی/فرم و کپی تصویر پروژه؛ تأیید محل ذخیره در پوشه مقصد.
