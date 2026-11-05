@@ -16,7 +16,10 @@
 شاخه اجرای Task 3:
 - feature/event-queue-image-preview-20261106
 مقصد ادغام: main (PRهای #15 فرانت‌اند و #7 مستندسازی بک‌اند با تأیید مالک محصول ادغام شدند).
-تسک ۴ از این مرحله به بعد فقط در شاخه کاری جدید و پس از بررسی وضعیت مخازن آغاز می‌شود؛ هیچ تغییر مستقیمی روی main یا مخازن توسعه مجاز نیست.
+شاخه کاری Task 4 در هر دو مخزن:
+- feature/event-queue-completed-cta-20261106
+شاخه مبنا: main
+هیچ تغییر اجرایی مستقیمی روی main یا مخازن توسعه مجاز نیست.
 
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
 
@@ -93,8 +96,10 @@
   - *Log:* Frontend: در `js/modules/events.js` کلیک تصویر کارت به cache موجود `PMS.Modules.Projects.projectCardImages` متصل شد و با کنترل مجوز `ATTACHMENT_VIEW`/ادمین و وضعیت آماده تصویر، پیش‌نمایش از طریق `PMS.Modal.open()` موجود باز می‌شود. زوم، کوچک‌نمایی، بازگشت به اندازه اصلی، بستن با دکمه/Escape/overlay، پشتیبانی Enter/Space، متن جایگزین، رفتار responsive و fallback خطای بارگذاری پیاده‌سازی شد. پاک‌سازی `src` و `srcset` تصویر هنگام بستن Modal انجام می‌شود. در `css/events.css` استایل‌های نمایشگر و کنترل‌ها تکمیل و در `index.html` نسخه cache-busting به `20261106-event-queue-image-preview-1` تغییر کرد. تست‌های `tests/event-queue-project-cards.test.js` و `tests/workflow-management.test.js` اصلاح/تکمیل شدند. CI روی آخرین commit فرانت‌اند `1fd8c555d2d4f4cf9637b81d8d5db37d971a1160` موفق شد: ۱۳۳ تست Frontend و بررسی‌های Cross-repository QA، UI performance audit و agent suite. PR Frontend #15 با Merge Commit `6c763f2b69c5cb0535116b079c8fb5314937a65a` و PR مستندسازی Backend #7 با Merge Commit `81383b3adc81b2cbe2c0fbc659f4550003c113b3` در `main` ادغام شدند. هیچ API، Sheet، schema یا مسیر ذخیره‌سازی جدیدی ایجاد نشد و کد اجرایی Backend تغییر نکرد. انتشار GitHub Pages پس از ادغام آغاز شد؛ پذیرش دستی کاربر در 2026-11-06 موفق اعلام شد. 
   - نتیجه تست دستی مالک محصول: نمایش پیش‌نمایش و کنترل‌های زوم/بستن در نسخه مورد استفاده موفق بود؛ Task پذیرفته شد.
 
-- [ ] **Task 4 — CTA درخواست تغییرات برای پروژه‌های تکمیل‌شده و QA نهایی (IN PROGRESS)**
+- [x] **Task 4 — CTA درخواست تغییرات برای پروژه‌های تکمیل‌شده و QA نهایی**
+  - *Discovery Log:* پس از تأیید تست Task 3، وضعیت شاخه‌های `main` در هر دو مخزن و آخرین commitها بررسی و شاخه کاری مستقل `feature/event-queue-completed-cta-20261106` از main ایجاد شد. در Frontend، مسیر تولید کارت در `js/modules/events.js → Events.renderProjectQueues()` (حدود خطوط 934–951) در حال حاضر برای همه صف‌ها یکسان دکمه `.event-queue-register-button` را تولید می‌کند؛ delegation کلیک در `Events.bindEvents()` (حدود خطوط 213–218) مستقیماً `Events.openForm()` را اجرا می‌کند. صف تکمیل‌شده با `definition.key === 'completed'` از قبل در داده کارت مشخص است؛ بنابراین راهکار باید در همان renderer و همان event delegation پیاده شود: CTA اختصاصی فقط برای completed و پیام موقت از `PMS.Alert.info`، بدون فراخوانی فرم/API یا ذخیره‌سازی. تست‌های موجود در `tests/event-queue-project-cards.test.js` محل افزودن پوشش رگرسیون برای تفکیک CTA و عدم اجرای مسیر ثبت هستند. Backend/Database/Sheets/API تغییری لازم ندارند.
   - حذف دکمه ثبت رویداد از کارت‌های صف completed و جایگزینی با «درخواست ثبت تغییرات».
   - کلیک فقط پیام اطلاع‌رسانی موقت را با PMS.Alert.info نمایش دهد؛ هیچ API یا ذخیره‌سازی فراخوانی نشود.
   - اجرای تست‌های Frontend مرتبط، بررسی syntax، CI، سازگاری تم/موبایل و رگرسیون ثبت رویداد و تصاویر.
   - تحویل برای تست دستی مالک محصول؛ تا دریافت تأیید، Task تکمیل نشود و فاز/ادغام بسته نشود.
+  - *Log:* در Frontend، فایل `js/modules/events.js` در `Events.renderProjectQueues()` برای صف `completed` دکمه `.event-queue-change-request-button` با عنوان «درخواست ثبت تغییرات» تولید می‌کند؛ در `Events.bindEvents()` کلیک این دکمه فقط `PMS.Alert.info('این امکان فعلاً در دسترس نیست و به‌زودی فعال می‌شود')` را اجرا کرده و پیش از مسیر `.event-queue-register-button` بازمی‌گردد. مسیر ثبت رویداد برای صف‌های pending و progress با `Events.openForm()` بدون تغییر حفظ شد. آزمون رگرسیون در `tests/event-queue-project-cards.test.js` اضافه و پس از اصلاح assertion اجرا شد. Commit پیاده‌سازی `8d2854db33f5ad6d2dd9dc96f7061c9e91ecdfaf` و commit اصلاح آزمون `d7486dcf1c31ffa64d1a0efd6129631bd6500c1a` در شاخه عملیاتی فرانت‌اند ثبت شدند. CI نهایی روی commit `d7486dcf...` شامل Frontend checks، PMS frontend agent suite، Cross-repository QA و comprehensive UI performance audit همگی موفق شدند؛ بررسی browser-audit نیز موفق بود. PR فرانت‌اند #16 و PR مستندسازی Backend #8 هر دو باز و قابل ادغام باقی ماندند؛ هیچ ادغامی در این مرحله انجام نشد. در Backend فقط TODO5.md مستندسازی شد (commit `1530295ca3d363dc4842a93fe3a12a8ac097e445`) و هیچ کد اجرایی، API، Sheet یا Database تغییر نکرد. مالک محصول در تاریخ 2026-11-06 تست دستی CTA، عدم بازشدن فرم/ثبت رویداد، حفظ ثبت عادی در صف‌های دیگر و سازگاری نمایشی را تأیید کرد؛ Task 4 پذیرفته شد.
