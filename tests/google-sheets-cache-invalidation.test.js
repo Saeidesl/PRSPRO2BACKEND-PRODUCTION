@@ -20,6 +20,9 @@ function createEnvironment() {
   const spreadsheet = { getSheetByName: name => name === 'Records' ? sheet : null };
   const context = {
     AppConfig: { DATABASE: { SPREADSHEET_ID: '' } },
+    // The repository's production database resolver is an external Apps Script
+    // global. This unit test intentionally uses the active in-memory spreadsheet.
+    getConfiguredDatabaseSpreadsheetId_: () => '',
     SpreadsheetApp: { getActiveSpreadsheet: () => spreadsheet },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     ErrorHandler: { create: (_code, message) => new Error(message) },

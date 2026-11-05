@@ -1,6 +1,12 @@
 ## 🎯 Current Objective
 
-پیاده‌سازی پشتیبانی از ثبت چندباره یک نوع رویداد برای یک پروژه در همان مرحله گردش‌کار، بدون محدودیت تعداد دفعات؛ مرحله تا زمانی که مسئول مجاز آن پایان کار را اعلام نکرده باز می‌ماند. پاسخ فرم و هر ثبت رویداد باید سابقه مستقل خود را حفظ کنند. مسیر اصلی ثبت رویداد، APIها، مجوزها، Idempotency و سازگاری با Workflowهای فعلی حفظ می‌شوند.
+اجرای آزمون یکپارچگی و رگرسیون روی نسخه عملیاتی PMS پس از انتشار قابلیت رویدادهای تکرارپذیر؛ رفع شکست‌های CI و تست‌های نادرست بدون تغییر غیرضروری در منطق عملیاتی، و بررسی سازگاری Frontend/Backend، مجوزها، tenant isolation، Idempotency، فرم‌ها، پیوست‌ها و Workflowهای قدیمی.
+
+محدوده ایمنی:
+- همه اصلاحات QA در شاخه مستقل `qa/integration-regression-20261105` انجام می‌شوند.
+- تا تأیید مالک محصول هیچ PR ادغام و هیچ نسخه‌ای دوباره منتشر نمی‌شود.
+- آزمون‌هایی که به API محیط staging نیاز دارند، بدون تنظیمات staging به‌عنوان کامل/موفق گزارش نمی‌شوند.
+- هیچ داده عملیاتی یا شیت موجود تغییر داده نمی‌شود.
 
 تصمیم کسب‌وکاری تأییدشده:
 - رویدادهای تکرارپذیر مانند «درخواست اصلاح نمونه» می‌توانند هر تعداد بار در مرحله جاری ثبت شوند.
@@ -79,7 +85,13 @@
   - Frontend: تنظیم تکرارپذیری در `js/modules/workflows.js`؛ نمایش شمارنده، وضعیت مرحله و اقدام پایان برای مسئول مجاز در `js/modules/events.js`؛ حفظ مسیر اصلی `POST /events` و پاسخ مستقل فرم‌ها.
   - انتشار: Backend با Workflow Run `42091457135` (Push و Deploy موفق)؛ Frontend با GitHub Pages Run `42090914176` (موفق).
   - *Log:* Backend: `WorkflowStepEventRuleValidator.js` اعتبارسنجی `AllowRepeat`؛ `WorkflowStepEventRuleRepository.js` افزودن ستون و حفظ آن هنگام clone نسخه Workflow؛ `DatabaseSetup.js` افزودن header افزایشی؛ `EventService.js` شمارش occurrenceها و خروجی‌های `eventCount`, `allowRepeat`, `manualCompletionRequired`, `stepClosed`, `requirementsSatisfied`, `stageComplete`، متد `completeStep()` و کنترل `_canUserCompleteStep_()`؛ `EventRepository.js` و `GoogleSheetsRepository.js` اجرای revalidation در callback داخل ScriptLock؛ `Router.js` افزودن `POST /projects/{id}/complete-step` با `EVENT_CREATE`. Frontend: `js/modules/workflows.js` تنظیم `AllowRepeat`؛ `js/modules/events.js` ثبت مجدد رویداد، نمایش شمارنده و اقدام اعلام پایان؛ `index.html` cache-busting. ذخیره رویدادها در `13_Events` و پاسخ فرم‌ها در `35_EventFormData` با EventID مستقل؛ قواعد در `37_WorkflowStepEventRules`. تست‌های افزوده/به‌روزشده در `tests/workflow-event-enforcement.test.js` و `tests/workflow-management.test.js`. PRهای ادغام‌شده: Backend #2 (merge `91d7c80aaaae0f04284f00fab95a52e3b666c039`) و Frontend #1 (merge `ec13efe137deb14c9937499666046538e35a46a0`). آزمون پذیرش عملیاتی کاربر در 2026-11-05 موفق اعلام شد: حداقل سه ثبت هم‌نوع مستقل، شمارنده، عدم تکمیل خودکار، پایان دستی توسط مسئول و رد ثبت پس از بسته‌شدن مرحله تأیید شدند.
-- [ ] **Task 3 — Integration QA & Regression (IN PROGRESS): آزمون سرتاسری و بررسی رگرسیون
-  - تکمیل بررسی CI و اجرای مجموعه تست Backend/Frontend؛ بررسی قرارداد API، مجوزها، tenant isolation، Idempotency، فرم/فایل، ابطال و Workflowهای قدیمی.
-  - پیگیری شکست‌های CI شناخته‌شده Backend (سه تست `google-sheets-cache-invalidation` و یک تست `schema-contract`) و تفکیک baseline از رگرسیون این قابلیت.
-  - بررسی سازگاری نسخه‌های منتشرشده و انجام آزمون‌های تکمیلی بدون تغییر داده عملیاتی؛ گزارش نتیجه و توقف برای تأیید مالک محصول.
+- [x] **Task 3 — Integration QA & Regression: آزمون سرتاسری و بررسی رگرسیون**
+  - [x] Discovery & Planning: هر دو `TODO5.md` و `ARCHITECTURE.md` خوانده شدند؛ شاخه‌ها و آخرین commitهای main بررسی شدند. Backend main در زمان شروع `123b2bfaae4929beb56aeda71c89984aaffbdbf0` و Frontend main `5a7978ea5d657b17a40132892f30f3f957f94d7d` بود. شاخه QA مستقل در هر دو مخزن از همین commitها ایجاد شد.
+  - [x] اصلاح شکست‌های CI بک‌اند: سه تست `google-sheets-cache-invalidation.test.js` به دلیل نبود global مربوط به resolver دیتابیس در mock محیط تست fail می‌شدند؛ resolver آزمایشی به context تست اضافه شد. تست `schema-contract.test.js` با سیاست deploy دستی و تأیید صریح هم‌راستا شد.
+  - [x] اصلاح وابستگی تست مرورگر: Playwright به نسخه پایدار `1.64.1` pin شد.
+  - [x] Backend CI: تعداد 172/172 تست Backend و 14/14 تست Procurement diagnostics موفق؛ بررسی‌های Domain Contract و QA/Release Safety نیز موفق شدند. آخرین اجرای ثبت‌شده روی شاخه QA شامل runهای موفق `42094313650` (Backend source checks)، `42094313813` (Procurement diagnostics) و `42094313608` (PMS agent suite) است.
+  - [x] Frontend CI: Frontend Checks، Cross-repository QA، Browser Audit و تست دسترس‌پذیری/کیبورد موفق شدند. بررسی UI inventory/performance بدون خطای route، درخواست شبکه، Console یا page error بود: `failedRoutes=0`, `procurementApiFailedRequests=0`, `failedNetworkRequests=0`, `consoleErrors=0`, `pageErrors=0`, `failedSafeButtonChecks=0`.
+  - [x] تصمیم دامنه آزمون: مالک محصول تأیید کرد که PMS محیط Staging مجزا نخواهد داشت و ایجاد آن نیز مطلوب نیست. بنابراین آزمون متصل به API Staging از دامنه QA خارج شد؛ گزارش `overallStatus=blocked-no-staging-api` به‌عنوان محدودیت محیطی ثبت می‌شود و هرگز قبولی آزمون API متصل تلقی نمی‌شود.
+  - [x] پذیرش Task: مالک محصول در 2026-11-05 صریحاً دامنه فعلی QA را با محدودیت فوق پذیرفت.
+  - وضعیت تحویل: تغییرات QA در شاخه‌های مستقل باقی مانده‌اند؛ Backend PR #3 و Frontend PR #2 باز و Draft هستند. هیچ‌یک merge نشده‌اند و هیچ Deploy جدیدی انجام نشده است. شاخه‌های main و نسخه عملیاتی تغییر نکرده‌اند.
+  - *Log:* Backend: اصلاح mock resolver در `tests/google-sheets-cache-invalidation.test.js` و اصلاح قرارداد workflow انتشار دستی در `tests/schema-contract.test.js`؛ اجرای موفق 172 تست Backend، 14 تست Procurement diagnostics و PMS agent suite. Frontend: pin نسخه Playwright به `1.64.1` در `.github/workflows/pms-ui-performance-audit.yml`؛ اجرای موفق Frontend Checks، Cross-repository QA، Browser Audit و accessibility/keyboard audit؛ خروجی inventory شامل صفر خطای route/network/console/page و صفر safe-button failure. Browser Audit run `42094111595` با artifact `13445104867` وضعیت `blocked-no-staging-api` داشت؛ به تصمیم صریح مالک محصول هیچ Staging ایجاد یا پیکربندی نمی‌شود و این تست خارج از دامنه پذیرش است. مالک محصول در 2026-11-05 پذیرش Task 3 را با همین محدودیت اعلام کرد. همه تغییرات فقط روی شاخه `qa/integration-regression-20261105` در مخازن `Saeidesl/PRSPRO2BACKEND-PRODUCTION` و `Saeidesl/PRSPRO2-PRODUCTION` ثبت شدند؛ PRهای Backend #3 و Frontend #2 همچنان باز و Draft هستند؛ merge و deploy انجام نشده است.
