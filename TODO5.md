@@ -26,7 +26,8 @@
 - [x] **Task 3 — فیلتر پیشرفته و پیش‌فرض رویدادهای کاربر جاری**
   - *Log:* تست دستی مالک محصول موفق اعلام شد. قابلیت‌های فیلتر در Frontend با CreatedBy برای حالت پیش‌فرض mine و حالت all محدود به داده‌های مجاز کار می‌کنند. اصلاح Router مربوط به مسیر GitHub Pages در مخزن Frontend و PR #7 ادغام شد؛ انتشار GitHub Pages با Run ID 42107639255 موفق بود. در Backend هیچ endpoint، Sheet، schema یا منطق اجرایی تغییر نکرد و deployment Backend لازم نبود.
 
-- [ ] **Task 4 — مرتب‌سازی، بهینه‌سازی و آزمون پذیرش (IN PROGRESS)**
+- [x] **Task 4 — مرتب‌سازی، بهینه‌سازی و آزمون پذیرش**
+  - *Log:* تست دستی مالک محصول با موفقیت تأیید شد. بررسی پذیرش نشان داد مرتب‌سازی سوابق در Frontend با کنترل `#event-history-sort` و دو حالت `desc` (جدید به قدیم) و `asc` (قدیم به جدید) بر اساس `CreatedAt` درست عمل می‌کند؛ ترتیب در تاریخ‌های ثبت مساوی پایدار است و با تغییر/پاک‌کردن فیلترها حفظ می‌شود. تغییرات اجرایی این تسک فقط در مخزن Frontend و فایل‌های `pages/events.html`، `js/modules/events.js`، `css/events.css`، `tests/event-history-filters.test.js`، `tests/workflow-management.test.js` و `index.html` انجام شد. PR #9 با squash در Frontend `main` ادغام شد؛ commit نهایی `57f2605d6f25b021a099528dcbc287131555cb3a`. آزمون‌های Frontend شامل ۱۳۵ تست بدون شکست، PMS cross-repository QA، agent suite و comprehensive UI performance audit موفق بودند. Backend، API، Sheet و schema تغییر اجرایی نداشتند و deployment بک‌اند لازم نبود. مالک محصول تست زنده مرتب‌سازی را موفق اعلام کرد.
   - مرتب‌سازی سوابق بر اساس CreatedAt از جدید به قدیم و برعکس در Frontend.
   - حفظ انتخاب sort هنگام تغییر فیلترها.
   - بررسی قرارداد GET /events، مجوزها و رگرسیون Backend بدون تغییر غیرضروری.
