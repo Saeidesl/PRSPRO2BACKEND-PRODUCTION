@@ -283,3 +283,45 @@
 
 ### اجزای Backend و داده
 - تغییرات اجرایی Backend انجام نشد؛ فقط harness و قرارداد تست در دو فایل تست ذکرشده اصلاح شدند. APIها، Router، EventService، شیت‌ها و داده عملیاتی تغییر نکردند.
+
+
+## 2026-11-05 — فاز Integration QA & Regression (آرشیو نهایی)
+
+### هدف و دامنه
+- اجرای آزمون یکپارچگی و رگرسیون روی مخازن عملیاتی پس از قابلیت رویدادهای تکرارپذیر؛ اصلاح شکست‌های CI و قراردادهای تست بدون تغییر غیرضروری در منطق عملیاتی.
+- هیچ محیط Staging ایجاد یا پیکربندی نشد؛ آزمون متصل به API Staging با وضعیت `blocked-no-staging-api` محدودیت محیطی محسوب شد و به‌عنوان آزمون موفق API گزارش نمی‌شود. این محدودیت با تأیید مالک محصول پذیرفته شد.
+- هیچ داده عملیاتی، Sheet یا Workflow عملیاتی برای این فاز حذف یا مهاجرت داده نشد.
+
+### Backend — اصلاحات و اعتبارسنجی
+- مخزن: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه کاری `qa/integration-regression-20261105`، مقصد ادغام `main`.
+- فایل `tests/google-sheets-cache-invalidation.test.js`: resolver آزمایشی دیتابیس به mock تست اضافه شد تا وابستگی global در harness فراهم باشد.
+- فایل `tests/schema-contract.test.js`: assertion قرارداد انتشار با سیاست انتشار دستی Apps Script از طریق `workflow_dispatch` و تأیید صریح هماهنگ شد.
+- اعتبارسنجی ثبت‌شده: 172/172 تست Backend، 14/14 تست Procurement diagnostics و PMS agent suite موفق؛ Backend source checks و Domain Contract و QA/Release Safety نیز موفق.
+- آخرین اجرای ثبت‌شده: Backend source checks run `42094313650`؛ Procurement diagnostics run `42094313813`؛ PMS agent suite run `42094313608`.
+- PR شماره #3 با عنوان `[QA] Fix backend integration test harness and deployment contract` در `main` ادغام شد؛ Merge Commit: `bd41b665e822714c7c95d6294e77cce23ad5ff2c`.
+
+### Frontend — اصلاحات و اعتبارسنجی
+- مخزن: `Saeidesl/PRSPRO2-PRODUCTION`، شاخه کاری `qa/integration-regression-20261105`، مقصد ادغام `main`.
+- فایل `.github/workflows/pms-ui-performance-audit.yml`: نسخه Playwright به نسخه منتشرشده و پایدار `1.64.1` pin شد تا نصب وابستگی به نسخه شناور/منتشرنشده وابسته نباشد.
+- Frontend Checks، Cross-repository QA، Browser Audit و accessibility/keyboard tests موفق شدند.
+- خروجی UI inventory: `failedRoutes=0`، `procurementApiFailedRequests=0`، `failedNetworkRequests=0`، `consoleErrors=0`، `pageErrors=0`، `failedSafeButtonChecks=0`.
+- Browser Audit run `42094111595` و artifact `13445104867` وضعیت `blocked-no-staging-api` داشت؛ این وضعیت به‌عنوان محدودیت محیطی ثبت شده است، نه قبولی آزمون متصل به API.
+- PR شماره #2 با عنوان `[QA] Pin published Playwright version for browser audit` در `main` ادغام شد؛ Merge Commit: `da2d8d89859f0c6fbf11529e23f120849c185abe`.
+
+### سازگاری، ادغام و انتشار
+- هر دو PR پس از کنترل شاخه مقصد `main`، قابل ادغام بودن و SHA شاخه مبدأ، با روش merge عادی و بدون force-push ادغام شدند.
+- Backend PR #3: https://github.com/Saeidesl/PRSPRO2BACKEND-PRODUCTION/pull/3
+- Frontend PR #2: https://github.com/Saeidesl/PRSPRO2-PRODUCTION/pull/2
+- پس از ادغام، مقایسه شاخه کاری و `main` نشان داد تغییر محتوایی QA باقی نمانده است؛ اختلاف یک commit ناشی از ثبت merge commit است.
+- این فاز صرفاً تغییرات و تست‌های QA را ادغام کرد. هیچ Backend deploy یا Frontend deploy جدیدی در نتیجه این ادغام انجام نشد و Live verification جدیدی ادعا نمی‌شود.
+- سیاست انتشار همچنان دستی و منوط به تأیید صریح است.
+
+### نتیجه پذیرش و بستن فاز
+- Task 1 — Discovery & Planning: تکمیل شد.
+- Task 2 — اصلاح CI و تست‌های Backend: تکمیل شد.
+- Task 3 — اصلاح وابستگی Browser Audit و آزمون‌های Frontend/Regression: تکمیل شد.
+- مالک محصول دامنه QA و محدودیت نبود Staging را پذیرفت و سپس ادغام هر دو PR را صریحاً درخواست کرد.
+- فاز در تاریخ 2026-11-05 بسته شد. برای فاز بعدی، `TODO5.md` در هر دو مخزن به عبارت `Ready for the next feature` بازنشانی شد.
+
+### اجزای Backend و داده
+- تغییرات اجرایی Backend انجام نشد؛ فقط harness و قرارداد تست در `tests/google-sheets-cache-invalidation.test.js` و `tests/schema-contract.test.js` اصلاح شدند. APIها، Router، EventService، شیت‌ها و داده عملیاتی تغییر نکردند.
