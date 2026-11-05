@@ -33,3 +33,28 @@ test('events retain the workflow step and version used at registration', () => {
   assert.match(database, /'WorkflowID','WorkflowVersion','WorkflowStepID','EventTypeID'/);
   assert.match(service, /بازمحاسبه تکمیل مرحله پس از ابطال رویداد/);
 });
+
+
+test('repeatable workflow rules expose occurrence counts and require explicit completion', () => {
+  const service = read('EventService.js');
+  const validator = read('WorkflowStepEventRuleValidator.js');
+  const repository = read('WorkflowStepEventRuleRepository.js');
+  assert.match(validator, /AllowRepeat/);
+  assert.match(repository, /AllowRepeat/);
+  assert.match(service, /eventCount:\s*eventCount/);
+  assert.match(service, /manualCompletionRequired/);
+  assert.match(service, /if \(rule\.satisfied && !rule\.allowRepeat\)/);
+  assert.match(service, /مرحله این پروژه پایان یافته است/);
+});
+
+test('manual workflow step completion is exposed through the existing project API namespace', () => {
+  const service = read('EventService.js');
+  const router = read('Router.js');
+  assert.match(service, /completeStep:\s*function/);
+  assert.match(service, /_canUserCompleteStep_/);
+  assert.match(service, /WorkflowStepDepartmentRepository\.findByWorkflowId/);
+  assert.match(service, /WORKFLOW_STEP_COMPLETED/);
+  assert.match(router, /complete-step/);
+  assert.match(router, /EventService\.completeStep/);
+  assert.match(router, /AccessControlService\.require\(params, 'EVENT_CREATE'\)/);
+});
