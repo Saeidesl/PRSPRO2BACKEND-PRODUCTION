@@ -219,3 +219,10 @@
 - مقایسه با اجرای قبلی Run `42278302128` نشان می‌دهد زمان‌ها نوسان دارند؛ در هر دو اجرا diagnostics مدیریتی Backend خالی بود. این اختلاف به‌عنوان بهبود یا پسرفت قطعی تفسیر نمی‌شود.
 - API مقصد، Staging احراز هویت‌شده است؛ اما deployment شاخه Backend PR #17 روی آن مستقلاً تأیید نشده. workflow موجود `.github/workflows/sync-apps-script.yml` فقط `main` و Secrets محیط Production را هدف می‌گیرد؛ از آن برای انتشار Staging یا feature branch استفاده نخواهد شد.
 - وضعیت Task 2 همچنان `IN PROGRESS` است. برای اثبات اثر بهینه‌سازی Backend، باید مسیر مجزای امن Staging مشخص/تأیید شود، Backend branch روی همان محیط منتشر شود و audit مجدداً اجرا گردد. هیچ merge یا Production deployment انجام نشده است.
+
+
+#### Task 2 — تکرار warm endpoint روی Staging (2026-11-06)
+
+- اجرای Browser Audit روی Frontend HEAD `85d9dd54dd1aa52107e713f4a3024c1197bd3aea` در Run `42278648501` و Artifact `13534980965` موفق شد؛ `GET /event-types/{id}/forms` در درخواست اول به آماده‌شدن فرم `11326ms` و در درخواست تکراری `5501ms` رسید.
+- این اجرا هنوز به Backend کَش‌دار commit `6024eb418007a86b820877e801b9ad3b190fc879` متصل نبود؛ بنابراین `5501ms` به نسخه جدید Backend نسبت داده نمی‌شود. تفاوت با warm قبلی `7634ms` نوسان Staging را نشان می‌دهد.
+- برای نتیجه معتبر، باید همین کد Backend روی یک deployment مستقل Staging اجرا شود و سپس درخواست اول/تکراری با همان نوع رویداد اندازه‌گیری شود. deployment موجود GitHub فقط production و `main` را هدف می‌گیرد؛ عمداً اجرا نشده است.
