@@ -312,6 +312,26 @@ const EventTypeService = {
       return EventTypeService._normalize_(eventType);
     });
 
+    // Optional read-only prefetch used by the event-registration UI. Keep the
+    // default /event-types response unchanged for every existing caller.
+    const includeFormDefinitions = params && (
+      params.includeFormDefinitions === true ||
+      String(params.includeFormDefinitions || '').toLowerCase() === 'true'
+    );
+    if (includeFormDefinitions) {
+      filtered.forEach(function(eventType) {
+        try {
+          const response = FormService.listEventTypeForms(eventType.ID, params || {});
+          eventType.FormDefinitions = response && response.success === true &&
+            Array.isArray(response.data) ? response.data : [];
+        } catch (error) {
+          // Preserve the original per-type endpoint's error behavior as a
+          // fallback when a single definition is invalid or unavailable.
+          eventType.FormDefinitionsLoadFailed = true;
+        }
+      });
+    }
+
     return Response.success({
       items: filtered,
       total: filtered.length
