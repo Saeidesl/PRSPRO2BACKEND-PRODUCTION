@@ -157,3 +157,72 @@
 - شروع فاز: 2026-11-06.
 - Task 1 تکمیل و Task 2 در وضعیت IN PROGRESS قرار گرفت.
 - تا این نقطه فقط مستندات TODO5 به‌روزرسانی می‌شود؛ هیچ تغییر اجرایی، انتشار یا مهاجرت داده انجام نشده است.
+
+#### Task 2 — Implementation progress (در انتظار تکمیل ارزیابی و پذیرش؛ baseline احراز هویت‌شده تهیه شد)
+
+- `FormService.js`:
+  - متد جدید `_definitionsForForms_(forms, tenantId)` تعریف فرم‌های چندگانه را با یک بار خواندن `FormRepository.getFields()`، `InformationTypeRepository.findByTenant()` و `InformationTypeRepository.getAllColumns()` می‌سازد.
+  - `listEventTypeForms(eventTypeId, params)` اکنون فرم‌ها را با یک بار `FormRepository.getForms()` و mappingها را با یک بار `findMappingsByEventType()` index می‌کند؛ lookup جداگانه هر فرم/فیلد/نوع اطلاعات/ستون حذف شد.
+  - ترتیب mapping، فیلدها و ستون‌ها، فیلتر TenantID/Status، خطاهای نوع اطلاعات غیرفعال/ناموجود، VisibilityRule و حذف ValidationRuleJSON از پاسخ حفظ شد. قرارداد API و snapshot پاسخ تغییر نکرد.
+- `ProjectService.js:list(params)`:
+  - حالت خواندنی `params.view === 'event-picker'` افزوده شد؛ projection سبک شامل `ID, ProjectCode, Title, Name, ProjectName, RecordState, WorkflowID, CurrentStepID, CurrentStepName, WorkflowStepName, CurrentStepStatus, Status` برمی‌گرداند.
+  - این حالت قبل از ساخت CardInformation برمی‌گردد و خواندن انواع اطلاعات/ستون‌ها/اطلاعات پروژه برای picker را حذف می‌کند. فیلترهای tenant، دسترسی و Draft بدون تغییر باقی ماندند.
+- APIهای موجود حفظ شدند: `GET /event-types/{id}/forms` و `GET /projects?view=event-picker` (پارامتر view در query string؛ همان `GET /projects` و همان مجوزها). هیچ مسیر ثبت جدید یا شیت/مهاجرتی اضافه نشده است.
+- تست‌های جدید: `tests/event-form-definition-batch.test.js` و `tests/event-project-picker-projection.test.js`.
+- CI Backend: تست‌ها و بررسی syntax در commit `8409a0d338093a9deb98c77a60b0aa024fa66af7` موفق شدند.
+
+- محدودیت baseline: اجرای browser audit روی PR به‌صورت امن انجام شد، اما Repository variable/secret مربوط به `PMS_STAGING_API_BASE_URL` تنظیم نشده بود. گزارش `pms-ui-performance-audit-167` وضعیت `blocked-no-staging-api` داشت؛ فقط صفحه ورود عمومی با زمان آماده‌شدن 199ms بررسی شد، 0 خطای Console و 0 خطای Page ثبت شد و هیچ داده‌ای از فرم ثبت رویداد یا API عملیاتی خوانده نشد. بنابراین baseline واقعی فرم هنوز ثبت نشده و Task 2 باز می‌ماند.
+
+
+#### Task 2 — گزارش سنجش احراز هویت‌شده و کنترل‌های تکمیلی (2026-11-06)
+
+- اجرای مرورگر واقعی روی Staging احراز هویت‌شده با Run شماره `42277205597` و Artifact شماره `13532194544` تکمیل شد؛ حالت اجرا `authenticated-read-only` و وضعیت `authenticated-audit-complete` بود.
+- نتایج فرم ثبت رویداد: آماده‌شدن Modal برابر `1409ms`؛ آماده‌شدن پروژه و Workflow برابر `3723ms`؛ آماده‌شدن تعریف فرم‌های متصل برابر `9207ms`؛ تعداد گزینه پروژه `2`؛ انواع رویداد مجاز `10`؛ کنترل‌های فرم متصل `2`.
+- سلامت مرورگر: `47` درخواست شبکه؛ `0` درخواست ناموفق؛ `0` خطای Console؛ `0` خطای Page؛ بدون سرریز افقی در viewport موبایل `390px`. هیچ مقداری وارد و هیچ رویدادی ثبت نشد.
+- گزارش، زمان مرورگر برای endpointهای نمونه را نیز ثبت کرده است: `GET /event-types/:id/forms = 5332ms`، `GET /projects/:id/information = 4443ms` و `GET /projects/:id/workflow-progress = 3594ms`. این اعداد زمان مشاهده‌شده در مرورگرند و به‌دلیل نبود جدول diagnostics مدیریتی، زمان خالص Backend/Google Sheets محسوب نمی‌شوند.
+- baseline قبل از تغییرات در دسترس نیست؛ بنابراین درصد بهبود یا کاهش قطعی زمان ادعا نمی‌شود. زمان `9207ms` برای تعریف فرم‌ها هنوز زیاد است و نقطه تمرکز ادامه Task 2 خواهد بود.
+- کنترل Backend روی HEAD شاخه PR #17: Backend source checks و PMS agent suite هر دو موفق؛ `179/179` تست Backend پاس، `85` فایل منبع JavaScript و manifest بررسی شدند؛ Domain Contract و QA/Release Safety بدون finding بحرانی موفق شدند. Runها: `42277904168` و `42277903928`.
+- کنترل Frontend روی HEAD شاخه PR #37: Frontend checks، frontend agent suite و Cross-repository QA موفق؛ Browser Audit احراز هویت‌شده نیز بدون خطای مرورگر تکمیل شد.
+- PRها همچنان باز و ادغام‌نشده‌اند؛ هیچ Backend deployment، Frontend deployment یا live verification بعد از ادغام انجام نشده است.
+- وضعیت Task 2: `IN PROGRESS`؛ بهینه‌سازی‌های اولیه پیاده‌سازی و تست خودکار شده‌اند، اما کاهش زمان آماده‌شدن تعریف فرم‌ها باید با سنجش تکراری/تشخیصی و سپس پذیرش عملیاتی تأیید شود.
+
+
+#### Task 2 — کش تعریف فرم‌های متصل در Backend (پیاده‌سازی و تست خودکار)
+
+- `FormService.js`:
+  - پاسخ `listEventTypeForms(eventTypeId, params)` پس از اعتبارسنجی Tenant و وجود نوع رویداد، با `CacheService.getScriptCache()` و TTL برابر `60` ثانیه cache می‌شود.
+  - کلید کش به‌صورت tenant + eventType + version ساخته می‌شود؛ داده یک Tenant برای Tenant دیگر قابل استفاده نیست.
+  - در صورت نبود CacheService، خطای خواندن/نوشتن کش یا عبور اندازه داده از محدودیت CacheService، مسیر اصلی محاسبه batch بدون تغییر اجرا می‌شود؛ کش صرفاً بهینه‌سازی است.
+  - `_invalidateEventTypeFormDefinitions_` با تغییر version، تمام تعریف‌های قبلی همان Tenant را بدون حذف داده عملیاتی از چرخه اعتبار خارج می‌کند.
+- ابطال کش پس از تغییرات مرتبط:
+  - `FormService.update`, `addField`, `updateField`, `removeField`, `assignEventType`, `unassignEventType`.
+  - `InformationTypeService.update`, `deactivate`, `createColumn`, `updateColumn`, `deactivateColumn` از طریق helper محافظت‌شده `_invalidateFormDefinitions_`.
+- تست جدید `tests/event-form-definition-cache.test.js` سه مورد را پوشش می‌دهد: cache hit در درخواست تکراری، جداسازی Tenantها و اجبار به خواندن تازه پس از تغییر version.
+- اعتبارسنجی روی commit `6024eb418007a86b820877e801b9ad3b190fc879`: Backend source checks و PMS agent suite موفق؛ تست‌های Backend `179/179` پاس شدند. اجرای Cross-repository QA روی Frontend نیز commit Backend شاخه عملیاتی را با موفقیت بررسی کرد.
+- این کش هنوز روی Staging deploy نشده است؛ بنابراین اثر آن بر زمان واقعی endpoint هنوز اندازه‌گیری نشده و هیچ ادعای بهبود عملیاتی ثبت نمی‌شود.
+
+
+#### Task 2 — نتیجه warm endpoint و محدودیت سنجش Staging (2026-11-06)
+
+- Browser Audit روی Frontend commit `9d517bddf8edc62b4e41cef87a615618ef0c26ab` یک درخواست تکراری مستقیم به `GET /event-types/{id}/forms` اجرا کرد؛ زمان مشاهده‌شده `7634ms` بود و درخواست اول در همان اجرا `5970ms` ثبت شد.
+- این دو زمان مربوط به Backend فعلی مستقر روی Staging هستند؛ commit دارای کش `FormService` هنوز deploy نشده بود. بنابراین نتیجه، اثر کش جدید را نشان نمی‌دهد و baseline warm برای نسخه جدید محسوب نمی‌شود.
+- Browser audit در حالت read-only تکمیل شد؛ هیچ ثبت رویداد یا تغییر داده انجام نشد. diagnostics مدیریتی در پاسخ‌های حساب تست در دسترس نبود و تفکیک `accessMs`, `routerMs` و عملیات Sheet هنوز قابل تأیید نیست.
+- آخرین کنترل Backend پس از مستندسازی کش: Backend source checks و PMS agent suite روی commit `d065bc878829b072d8ec2c3c0f85e2f08c6d0f9d` موفق؛ هیچ تغییر runtime پس از commit تست‌شده `6024eb418007a86b820877e801b9ad3b190fc879` اعمال نشده است.
+- برای تأیید اثر کش: انتشار Backend شاخه `feat/event-form-performance` روی deployment آزمایشی موجود، سپس اجرای مجدد audit و مقایسه cold/warm request الزامی است. هیچ deployment یا ادغام انجام نشده است.
+
+
+#### Task 2 — تکرار سنجش مرورگر و نتیجه warm probe محدودشده (2026-11-06)
+
+- Browser Audit Run `42278648501` / Artifact `13534980965` روی commit Frontend `85d9dd54dd1aa52107e713f4a3024c1197bd3aea` با وضعیت `authenticated-audit-complete` موفق شد.
+- نتایج: Modal `2919ms`؛ پروژه/Workflow `6892ms`؛ تعریف فرم‌های متصل `11326ms`؛ درخواست مستقیم warm به همان endpoint `5501ms`؛ timeout رخ نداد.
+- سلامت آزمون: `49` درخواست شبکه، `0` خطای شبکه، `0` خطای Console/Page، بدون overflow موبایل؛ `2` پروژه، `10` نوع رویداد مجاز و `2` کنترل فرم متصل. هیچ فرم submit نشد.
+- مقایسه با اجرای قبلی Run `42278302128` نشان می‌دهد زمان‌ها نوسان دارند؛ در هر دو اجرا diagnostics مدیریتی Backend خالی بود. این اختلاف به‌عنوان بهبود یا پسرفت قطعی تفسیر نمی‌شود.
+- API مقصد، Staging احراز هویت‌شده است؛ اما deployment شاخه Backend PR #17 روی آن مستقلاً تأیید نشده. workflow موجود `.github/workflows/sync-apps-script.yml` فقط `main` و Secrets محیط Production را هدف می‌گیرد؛ از آن برای انتشار Staging یا feature branch استفاده نخواهد شد.
+- وضعیت Task 2 همچنان `IN PROGRESS` است. برای اثبات اثر بهینه‌سازی Backend، باید مسیر مجزای امن Staging مشخص/تأیید شود، Backend branch روی همان محیط منتشر شود و audit مجدداً اجرا گردد. هیچ merge یا Production deployment انجام نشده است.
+
+
+#### Task 2 — تکرار warm endpoint روی Staging (2026-11-06)
+
+- اجرای Browser Audit روی Frontend HEAD `85d9dd54dd1aa52107e713f4a3024c1197bd3aea` در Run `42278648501` و Artifact `13534980965` موفق شد؛ `GET /event-types/{id}/forms` در درخواست اول به آماده‌شدن فرم `11326ms` و در درخواست تکراری `5501ms` رسید.
+- این اجرا هنوز به Backend کَش‌دار commit `6024eb418007a86b820877e801b9ad3b190fc879` متصل نبود؛ بنابراین `5501ms` به نسخه جدید Backend نسبت داده نمی‌شود. تفاوت با warm قبلی `7634ms` نوسان Staging را نشان می‌دهد.
+- برای نتیجه معتبر، باید همین کد Backend روی یک deployment مستقل Staging اجرا شود و سپس درخواست اول/تکراری با همان نوع رویداد اندازه‌گیری شود. deployment موجود GitHub فقط production و `main` را هدف می‌گیرد؛ عمداً اجرا نشده است.
