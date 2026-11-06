@@ -7,6 +7,12 @@ const InformationTypeService = {
     return row;
   },
   _json: function(value, label, fallback) { return InformationTypeValidator.parseJson(value, label, fallback); },
+  _invalidateFormDefinitions_: function(tenantId) {
+    if (typeof FormService !== 'undefined' && FormService &&
+        typeof FormService._invalidateEventTypeFormDefinitions_ === 'function') {
+      FormService._invalidateEventTypeFormDefinitions_(tenantId);
+    }
+  },
   list: function(params) {
     var user=this._user(params);
     return Response.success(InformationTypeRepository.findByTenant(user.TenantID).filter(function(row){return String(row.Status || 'ACTIVE')!=='DELETED';}));
@@ -54,7 +60,7 @@ const InformationTypeService = {
       patch.Code=String(data.Code).trim();
     }
     var updated=InformationTypeRepository.update(id,patch);
-    FormService._invalidateEventTypeFormDefinitions_(user.TenantID);
+    this._invalidateFormDefinitions_(user.TenantID);
     AuditService.log({TenantID:user.TenantID,UserID:user.ID,Action:Constants.ACTION.UPDATE,EntityType:'INFORMATION_TYPE',EntityID:id,OldData:existing,NewData:updated,Reason:'ویرایش تعریف نوع اطلاعات'});
     return Response.success(updated,{message:'تعریف نوع اطلاعات به‌روزرسانی شد.'});
   },
@@ -64,7 +70,7 @@ const InformationTypeService = {
       throw ErrorHandler.create(Constants.ERROR.CONFLICT,'این نوع اطلاعات در فرم فعال استفاده شده است؛ ابتدا آن را از فرم‌ها خارج کنید.');
     }
     var updated=InformationTypeRepository.update(id,{Status:'DELETED',UpdatedAt:new Date().toISOString(),Revision:Number(existing.Revision || 1)+1});
-    FormService._invalidateEventTypeFormDefinitions_(user.TenantID);
+    this._invalidateFormDefinitions_(user.TenantID);
     AuditService.log({TenantID:user.TenantID,UserID:user.ID,Action:Constants.ACTION.DELETE,EntityType:'INFORMATION_TYPE',EntityID:id,OldData:existing,NewData:updated,Reason:'حذف منطقی نوع اطلاعات'});
     return Response.success(updated,{message:'نوع اطلاعات به‌صورت منطقی حذف شد.'});
   },
@@ -81,7 +87,7 @@ const InformationTypeService = {
     var now=new Date().toISOString();
     var row={ID:'ITC_'+Utilities.getUuid().replace(/-/g,''),TenantID:user.TenantID,InformationTypeID:typeId,Code:String(data.Code).trim(),Name:String(data.Name).trim(),DataType:String(data.DataType).toLowerCase(),IsRequired:data.IsRequired===true,OptionsJSON:JSON.stringify(this._json(data.OptionsJSON,'گزینه‌های ستون',[])),ValidationRuleJSON:JSON.stringify(this._json(data.ValidationRuleJSON,'قواعد ستون',{})),ColumnOrder:Number(data.ColumnOrder || columns.length+1),Status:data.Status || Constants.STATUS.ACTIVE,CreatedAt:now,UpdatedAt:now};
     var created=InformationTypeRepository.insertColumn(row);
-    FormService._invalidateEventTypeFormDefinitions_(user.TenantID);
+    this._invalidateFormDefinitions_(user.TenantID);
     AuditService.log({TenantID:user.TenantID,UserID:user.ID,Action:Constants.ACTION.CREATE,EntityType:'INFORMATION_TYPE_COLUMN',EntityID:created.ID,NewData:created,Reason:'افزودن ستون نوع اطلاعات'});
     return Response.success(created,{message:'ستون اطلاعات ایجاد شد.'});
   },
@@ -100,7 +106,7 @@ const InformationTypeService = {
     if(data.OptionsJSON!==undefined)patch.OptionsJSON=JSON.stringify(this._json(data.OptionsJSON,'گزینه‌های ستون',[]));
     if(data.ValidationRuleJSON!==undefined)patch.ValidationRuleJSON=JSON.stringify(this._json(data.ValidationRuleJSON,'قواعد ستون',{}));
     var updated=InformationTypeRepository.updateColumn(columnId,patch);
-    FormService._invalidateEventTypeFormDefinitions_(user.TenantID);
+    this._invalidateFormDefinitions_(user.TenantID);
     AuditService.log({TenantID:user.TenantID,UserID:user.ID,Action:Constants.ACTION.UPDATE,EntityType:'INFORMATION_TYPE_COLUMN',EntityID:columnId,OldData:existing,NewData:updated,Reason:'ویرایش ستون نوع اطلاعات'});
     return Response.success(updated,{message:'ستون اطلاعات به‌روزرسانی شد.'});
   },
@@ -108,7 +114,7 @@ const InformationTypeService = {
     var user=this._user(params), existing=InformationTypeRepository.findColumnById(columnId);
     if(!existing||String(existing.TenantID)!==String(user.TenantID))throw ErrorHandler.create(Constants.ERROR.NOT_FOUND,'ستون اطلاعات پیدا نشد.');
     var updated=InformationTypeRepository.updateColumn(columnId,{Status:'DELETED',UpdatedAt:new Date().toISOString()});
-    FormService._invalidateEventTypeFormDefinitions_(user.TenantID);
+    this._invalidateFormDefinitions_(user.TenantID);
     AuditService.log({TenantID:user.TenantID,UserID:user.ID,Action:Constants.ACTION.DELETE,EntityType:'INFORMATION_TYPE_COLUMN',EntityID:columnId,OldData:existing,NewData:updated,Reason:'حذف منطقی ستون اطلاعات'});
     return Response.success(updated,{message:'ستون اطلاعات حذف منطقی شد.'});
   }
