@@ -390,3 +390,17 @@
 - Taskهای 1 تا 8 پذیرفته و تکمیل شدند.
 - TODO5.md در هر دو مخزن برای فاز بعدی به `Ready for the next feature` بازنشانی شد.
 - هیچ کار ناتمام این فاز به‌عنوان تکمیل‌شده یا منتشرشده گزارش نشده است.
+
+
+## فاز تکمیل‌شده: پنل اطلاعات کمکی و تقویم شمسی با انتخاب ساعت (2026-11-06)
+
+### محدوده و تصمیم معماری
+- اسکرول مستقل پنل اطلاعات کمکی، هماهنگی تقویم شمسی با تم روشن/تاریک و انتخاب ساعت/دقیقه در ورودی‌های datetime-local در Frontend تکمیل و توسط مالک محصول پذیرفته شد.
+- قراردادهای Backend شامل `POST /events`، `EventService.js` و ستون `13_Events.OccurredAt` بدون تغییر باقی ماندند؛ هیچ تغییر runtime، API، permission، Sheet یا schema لازم نبود.
+- مقدار محلی datetime با قالب `YYYY-MM-DDTHH:mm` و رفتار date-only حفظ شد.
+
+### نتیجه و اعتبارسنجی
+- Frontend PR #19 و PRهای #20 تا #24 و #26 در main ادغام شدند؛ SHA ادغام نهایی #26 برابر `7e09cd3c16b75b01d04132dcf836a6fbfea770b9` است.
+- تست‌های مرورگر Chromium، Frontend checks، agent suite، cross-repository QA و comprehensive UI performance audit موفق شدند.
+- انتشار اختصاصی GitHub Pages در Run `42134933236` موفق بود و مالک محصول تست نهایی را در 2026-11-06 تأیید کرد.
+- Backend runtime و داده‌های عملیاتی تغییر نکردند. فاز با پذیرش تمام Macro-Taskها بسته شد.
