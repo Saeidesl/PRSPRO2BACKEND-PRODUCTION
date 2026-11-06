@@ -137,6 +137,15 @@
 - خروجی قابل آزمون: گزارش baseline و مقایسه تعداد درخواست/زمان آماده‌شدن منابع اصلی، بدون تغییر رفتار مجازبودن رویداد یا قرارداد ثبت.
 
 ### Task 3 — بهینه‌سازی اطلاعات وابسته و تاریخی (IN PROGRESS)
+#### Task 3 — پیاده‌سازی اولیه در شاخه کاری (در انتظار CI و بازبینی)
+
+- Frontend branch: `feat/event-dependent-data-cache`، PR #39.
+- `js/modules/events.js`: cache حافظه‌ای محدود به token/session با TTL شصت‌ثانیه برای اطلاعات مرکزی پروژه و پاسخ فرم‌های رویداد؛ TTL پانزده‌ثانیه برای workflow progress؛ ادغام درخواست‌های هم‌زمان یکسان (in-flight deduplication).
+- invalidation cache با پایان نشست، تغییر مسیرهای فرم/نوع رویداد/اطلاعات/پروژه، ثبت رویداد، اصلاح پاسخ فرم و تکمیل مرحله انجام می‌شود. generation guard مانع ذخیره پاسخ درخواست قدیمی پس از invalidation می‌شود.
+- جست‌وجوی فرم مبنا در حالت اصلاح به batchهای چهارتایی موازی تغییر کرد؛ ترتیب جدیدترین رویداد، allow-list، کنترل stale request و فیلدهای `FormVersion` و `ExpectedUpdatedAt` حفظ شده‌اند.
+- `index.html` cache-busting فایل events به‌روزرسانی شد. تست‌های `tests/event-context-filtering.test.js` برای TTL، deduplication، invalidation، batch و version guards گسترش یافت.
+- API، Router، سرویس Backend، Sheet و schema تغییر نکرده‌اند؛ این مرحله از APIهای فعلی و کنترل دسترسی Backend استفاده می‌کند. CI و تست مرورگر هنوز در حال اجرا/بررسی‌اند؛ Task 3 تکمیل اعلام نمی‌شود.
+
 
 #### Task 3 — Discovery تکمیلی و نقشه جریان داده
 
