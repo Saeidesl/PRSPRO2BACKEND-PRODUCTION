@@ -158,7 +158,7 @@
 - Task 1 تکمیل و Task 2 در وضعیت IN PROGRESS قرار گرفت.
 - تا این نقطه فقط مستندات TODO5 به‌روزرسانی می‌شود؛ هیچ تغییر اجرایی، انتشار یا مهاجرت داده انجام نشده است.
 
-#### Task 2 — Implementation progress (تکمیل‌نشده؛ در انتظار baseline احراز هویت‌شده)
+#### Task 2 — Implementation progress (در انتظار تکمیل ارزیابی و پذیرش؛ baseline احراز هویت‌شده تهیه شد)
 
 - `FormService.js`:
   - متد جدید `_definitionsForForms_(forms, tenantId)` تعریف فرم‌های چندگانه را با یک بار خواندن `FormRepository.getFields()`، `InformationTypeRepository.findByTenant()` و `InformationTypeRepository.getAllColumns()` می‌سازد.
@@ -172,3 +172,16 @@
 - CI Backend: تست‌ها و بررسی syntax در commit `8409a0d338093a9deb98c77a60b0aa024fa66af7` موفق شدند.
 
 - محدودیت baseline: اجرای browser audit روی PR به‌صورت امن انجام شد، اما Repository variable/secret مربوط به `PMS_STAGING_API_BASE_URL` تنظیم نشده بود. گزارش `pms-ui-performance-audit-167` وضعیت `blocked-no-staging-api` داشت؛ فقط صفحه ورود عمومی با زمان آماده‌شدن 199ms بررسی شد، 0 خطای Console و 0 خطای Page ثبت شد و هیچ داده‌ای از فرم ثبت رویداد یا API عملیاتی خوانده نشد. بنابراین baseline واقعی فرم هنوز ثبت نشده و Task 2 باز می‌ماند.
+
+
+#### Task 2 — گزارش سنجش احراز هویت‌شده و کنترل‌های تکمیلی (2026-11-06)
+
+- اجرای مرورگر واقعی روی Staging احراز هویت‌شده با Run شماره `42277205597` و Artifact شماره `13532194544` تکمیل شد؛ حالت اجرا `authenticated-read-only` و وضعیت `authenticated-audit-complete` بود.
+- نتایج فرم ثبت رویداد: آماده‌شدن Modal برابر `1409ms`؛ آماده‌شدن پروژه و Workflow برابر `3723ms`؛ آماده‌شدن تعریف فرم‌های متصل برابر `9207ms`؛ تعداد گزینه پروژه `2`؛ انواع رویداد مجاز `10`؛ کنترل‌های فرم متصل `2`.
+- سلامت مرورگر: `47` درخواست شبکه؛ `0` درخواست ناموفق؛ `0` خطای Console؛ `0` خطای Page؛ بدون سرریز افقی در viewport موبایل `390px`. هیچ مقداری وارد و هیچ رویدادی ثبت نشد.
+- گزارش، زمان مرورگر برای endpointهای نمونه را نیز ثبت کرده است: `GET /event-types/:id/forms = 5332ms`، `GET /projects/:id/information = 4443ms` و `GET /projects/:id/workflow-progress = 3594ms`. این اعداد زمان مشاهده‌شده در مرورگرند و به‌دلیل نبود جدول diagnostics مدیریتی، زمان خالص Backend/Google Sheets محسوب نمی‌شوند.
+- baseline قبل از تغییرات در دسترس نیست؛ بنابراین درصد بهبود یا کاهش قطعی زمان ادعا نمی‌شود. زمان `9207ms` برای تعریف فرم‌ها هنوز زیاد است و نقطه تمرکز ادامه Task 2 خواهد بود.
+- کنترل Backend روی HEAD شاخه PR #17: Backend source checks و PMS agent suite هر دو موفق؛ `179/179` تست Backend پاس، `85` فایل منبع JavaScript و manifest بررسی شدند؛ Domain Contract و QA/Release Safety بدون finding بحرانی موفق شدند. Runها: `42277904168` و `42277903928`.
+- کنترل Frontend روی HEAD شاخه PR #37: Frontend checks، frontend agent suite و Cross-repository QA موفق؛ Browser Audit احراز هویت‌شده نیز بدون خطای مرورگر تکمیل شد.
+- PRها همچنان باز و ادغام‌نشده‌اند؛ هیچ Backend deployment، Frontend deployment یا live verification بعد از ادغام انجام نشده است.
+- وضعیت Task 2: `IN PROGRESS`؛ بهینه‌سازی‌های اولیه پیاده‌سازی و تست خودکار شده‌اند، اما کاهش زمان آماده‌شدن تعریف فرم‌ها باید با سنجش تکراری/تشخیصی و سپس پذیرش عملیاتی تأیید شود.
