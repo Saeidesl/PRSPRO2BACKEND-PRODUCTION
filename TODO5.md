@@ -200,3 +200,12 @@
 - تست جدید `tests/event-form-definition-cache.test.js` سه مورد را پوشش می‌دهد: cache hit در درخواست تکراری، جداسازی Tenantها و اجبار به خواندن تازه پس از تغییر version.
 - اعتبارسنجی روی commit `6024eb418007a86b820877e801b9ad3b190fc879`: Backend source checks و PMS agent suite موفق؛ تست‌های Backend `179/179` پاس شدند. اجرای Cross-repository QA روی Frontend نیز commit Backend شاخه عملیاتی را با موفقیت بررسی کرد.
 - این کش هنوز روی Staging deploy نشده است؛ بنابراین اثر آن بر زمان واقعی endpoint هنوز اندازه‌گیری نشده و هیچ ادعای بهبود عملیاتی ثبت نمی‌شود.
+
+
+#### Task 2 — نتیجه warm endpoint و محدودیت سنجش Staging (2026-11-06)
+
+- Browser Audit روی Frontend commit `9d517bddf8edc62b4e41cef87a615618ef0c26ab` یک درخواست تکراری مستقیم به `GET /event-types/{id}/forms` اجرا کرد؛ زمان مشاهده‌شده `7634ms` بود و درخواست اول در همان اجرا `5970ms` ثبت شد.
+- این دو زمان مربوط به Backend فعلی مستقر روی Staging هستند؛ commit دارای کش `FormService` هنوز deploy نشده بود. بنابراین نتیجه، اثر کش جدید را نشان نمی‌دهد و baseline warm برای نسخه جدید محسوب نمی‌شود.
+- Browser audit در حالت read-only تکمیل شد؛ هیچ ثبت رویداد یا تغییر داده انجام نشد. diagnostics مدیریتی در پاسخ‌های حساب تست در دسترس نبود و تفکیک `accessMs`, `routerMs` و عملیات Sheet هنوز قابل تأیید نیست.
+- آخرین کنترل Backend پس از مستندسازی کش: Backend source checks و PMS agent suite روی commit `d065bc878829b072d8ec2c3c0f85e2f08c6d0f9d` موفق؛ هیچ تغییر runtime پس از commit تست‌شده `6024eb418007a86b820877e801b9ad3b190fc879` اعمال نشده است.
+- برای تأیید اثر کش: انتشار Backend شاخه `feat/event-form-performance` روی deployment آزمایشی موجود، سپس اجرای مجدد audit و مقایسه cold/warm request الزامی است. هیچ deployment یا ادغام انجام نشده است.
