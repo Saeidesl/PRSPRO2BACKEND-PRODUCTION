@@ -223,19 +223,61 @@ const FormService = {
       return Object.assign({},mapping,{EventType:{ID:type.ID,Name:type.Name,Code:type.Code,ConnectionType:type.ConnectionType}});
     }).filter(Boolean));
   },
+  _definitionsForForms_: function(forms, tenantId) {
+    var formIds=Object.create(null),fieldsByForm=Object.create(null),typesById=Object.create(null),columnsByType=Object.create(null);
+    (forms || []).forEach(function(form){formIds[String(form.ID)]=true;fieldsByForm[String(form.ID)]=[];});
+    if(!Object.keys(formIds).length)return fieldsByForm;
+
+    FormRepository.getFields().forEach(function(field){
+      var formId=String(field.FormID || '');
+      if(!formIds[formId]||String(field.TenantID)!==String(tenantId)||String(field.Status || 'ACTIVE')!=='ACTIVE')return;
+      if(!fieldsByForm[formId])fieldsByForm[formId]=[];
+      fieldsByForm[formId].push(field);
+    });
+
+    InformationTypeRepository.findByTenant(tenantId).forEach(function(type){
+      typesById[String(type.ID)]=type;
+    });
+    InformationTypeRepository.getAllColumns().forEach(function(column){
+      var typeId=String(column.InformationTypeID || '');
+      if(String(column.TenantID)!==String(tenantId)||String(column.Status || 'ACTIVE')!=='ACTIVE')return;
+      if(!columnsByType[typeId])columnsByType[typeId]=[];
+      columnsByType[typeId].push(column);
+    });
+    Object.keys(columnsByType).forEach(function(typeId){
+      columnsByType[typeId].sort(function(a,b){return Number(a.ColumnOrder || 0)-Number(b.ColumnOrder || 0);});
+    });
+
+    Object.keys(fieldsByForm).forEach(function(formId){
+      fieldsByForm[formId].sort(function(a,b){return Number(a.FieldOrder || 0)-Number(b.FieldOrder || 0);});
+      fieldsByForm[formId]=fieldsByForm[formId].map(function(field){
+        var type=typesById[String(field.InformationTypeID)];
+        if(!type)throw ErrorHandler.create(Constants.ERROR.NOT_FOUND,'نوع اطلاعات متصل به فرم پیدا نشد.');
+        if(String(type.Status || 'ACTIVE')!=='ACTIVE')throw ErrorHandler.create(Constants.ERROR.INVALID_OPERATION,'یکی از انواع اطلاعات فرم غیرفعال شده است؛ ابتدا فرم را اصلاح کنید.');
+        var result=Object.assign({},field,{InformationType:Object.assign({},type,{Columns:(columnsByType[String(type.ID)] || []).slice()})});
+        delete result.InformationType.ValidationRuleJSON;
+        result.VisibilityRule=FormService._parse(result.VisibilityRuleJSON,{});
+        return result;
+      });
+    });
+    return fieldsByForm;
+  },
   listEventTypeForms: function(eventTypeId, params) {
-    var user=this._user(params), eventType=this._eventType(eventTypeId,user.TenantID);
+    var user=this._user(params),eventType=this._eventType(eventTypeId,user.TenantID);
+    var formsById=Object.create(null);
+    FormRepository.getForms().forEach(function(form){
+      if(String(form.TenantID)===String(user.TenantID)&&String(form.Status || 'ACTIVE')==='ACTIVE')formsById[String(form.ID)]=form;
+    });
     var rows=FormRepository.findMappingsByEventType(eventTypeId).filter(function(row){
-      if(String(row.TenantID)!==String(user.TenantID)||String(row.Status || 'ACTIVE')!=='ACTIVE')return false;
-      var form=FormRepository.findForm(row.FormID);
-      return !!form && String(form.Status || 'ACTIVE')==='ACTIVE';
+      return String(row.TenantID)===String(user.TenantID)&&String(row.Status || 'ACTIVE')==='ACTIVE'&&!!formsById[String(row.FormID)];
     });
     rows.sort(function(a,b){return Number(a.FieldOrder || 0)-Number(b.FieldOrder || 0);});
+    var forms=rows.map(function(row){return formsById[String(row.FormID)];});
+    var definitions=this._definitionsForForms_(forms,user.TenantID);
     return Response.success(rows.map(function(row){
-      var form=this._form(row.FormID,user.TenantID);
-      var result=Object.assign({},row,{Form:Object.assign({},form,{Fields:this._definition(form,user.TenantID)})});
-      return result;
-    },this));
+      var form=formsById[String(row.FormID)];
+      return Object.assign({},row,{Form:Object.assign({},form,{Fields:definitions[String(form.ID)] || []})});
+    }));
   },
   assignEventType: function(eventTypeId, data, params) {
     var user=this._user(params), type=this._eventType(eventTypeId,user.TenantID);
