@@ -138,6 +138,20 @@
 
 ### Task 3 — بهینه‌سازی اطلاعات وابسته و تاریخی (IN PROGRESS)
 
+#### Task 3 — Discovery تکمیلی و نقشه جریان داده
+
+- Frontend در `js/modules/events.js`:
+  - `Events.loadEventContext(projectId, eventTypeId)` در هر بار اجرا `GET /projects/{id}/information` را دریافت می‌کند؛ سپس رویدادهای مرتبط را از آرایه `this.events` فیلتر می‌کند و برای حداکثر سه رویداد، `GET /events/{eventId}/forms` را به‌صورت موازی می‌فرستد. تغییر نوع رویداد باعث اجرای مجدد مسیر و دریافت دوباره اطلاعات مرکزی پروژه می‌شود، با اینکه منبع اطلاعات مرکزی فقط به ProjectID وابسته است.
+  - پاسخ‌های فرم تاریخی در متغیر موقت `eventContextHistoryRequests` ثبت/مدیریت می‌شوند، اما cache قابل استفاده مجدد بین تغییر نوع رویداد/بازشدن مجدد فرم هنوز وجود ندارد. باید کلید cache شامل token/session، ProjectID و EventID باشد و TTL و invalidation دقیق داشته باشد.
+  - `Events.loadWorkflowProgress(projectId)` برای پروژه‌های Draft یا فاقد WorkflowID/CurrentStepID درخواست نمی‌فرستد؛ برای پروژه‌های فعال هر بار `GET /projects/{id}/workflow-progress` را اجرا می‌کند. requestId از اعمال پاسخ قدیمی جلوگیری می‌کند اما درخواست‌های هم‌زمان/تکراری را deduplicate نمی‌کند و cache پروژه‌محور ندارد.
+  - `Events.loadAmendmentSourceEvents(projectId)` ابتدا `GET /projects/{id}/events` را می‌گیرد، رویدادها را مرتب می‌کند و سپس به‌صورت ترتیبی برای هر رویداد `GET /events/{id}/forms` می‌فرستد تا اولین فرم مجاز را بیابد؛ این مسیر در پروژه‌های پررویداد می‌تواند تعداد round-trip زیادی ایجاد کند. منطق allow-list فرم، انتخاب جدیدترین پاسخ و انتقال `FormVersion` و `UpdatedAt` به کنترل‌های اصلاح باید حفظ شود.
+- Backend در `EventService.js`:
+  - `listByProject(projectId, params)` رویدادهای پروژه را با tenant و دسترسی پروژه کنترل و سپس با `_enrichEventsBatch_` تکمیل می‌کند؛ endpoint فعلی داده timeline را برمی‌گرداند و می‌تواند منبع فهرست candidateها باقی بماند.
+  - `workflowProgress(projectId, params)` پروژه و دسترسی را مجدداً کنترل می‌کند، `_getWorkflowRuleProgress_`، فهرست انواع رویداد و نام مرحله را می‌خواند؛ cache باید در سطح درخواست/کاربر و tenant امن باشد و پس از ثبت رویداد، تغییر workflow یا تکمیل مرحله invalid شود. Cache سمت Frontend فقط برای نمایش است و اعتبارسنجی نهایی Backend را جایگزین نمی‌کند.
+- محدوده اجرای Task 3: ابتدا cache/in-flight deduplication امن برای اطلاعات مرکزی پروژه، پاسخ فرم‌های تاریخی و workflow progress؛ سپس کاهش درخواست ترتیبی حالت اصلاح با یک روش batch سازگار با APIهای موجود. ایجاد مسیر ثبت جدید یا تغییر schema/Sheet در این مرحله مجاز نیست.
+- معیارهای پذیرش: تغییر نوع رویداد نباید دوباره اطلاعات مرکزی ثابت پروژه را fetch کند؛ پاسخ‌های تاریخی و workflow برای همان نشست/پروژه از cache معتبر یا درخواست مشترک استفاده کنند؛ تغییر داده/ثبت رویداد cache را invalid کند؛ حالت اصلاح جدیدترین پاسخ مجاز را با نسخه و زمان به‌درستی بارگذاری کند؛ tenant isolation، پروژه Draft/Independent و مجوزها بدون تغییر بمانند.
+- در این مرحله فقط Discovery انجام شد؛ هنوز هیچ فایل runtime، API، Sheet یا داده عملیاتی تغییر نکرده است.
+
 - بهینه‌سازی و cache کنترل‌شده اطلاعات مرکزی پروژه و پاسخ فرم‌های قبلی.
 - کاهش درخواست‌های تکراری پنل اطلاعات مرتبط هنگام تغییر نوع رویداد.
 - بهینه‌سازی دریافت workflow progress با جلوگیری از درخواست تکراری و invalidation پس از ثبت رویداد/تکمیل مرحله.
