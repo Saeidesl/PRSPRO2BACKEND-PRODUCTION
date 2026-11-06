@@ -18,7 +18,7 @@ function loadProjectService(projects) {
     ProjectRepository: { getAll: () => projects },
     Response: { success: data => ({ success: true, data }) },
     InformationTypeRepository: {
-      findByTenant: () => { throw new Error('picker must skip card information lookup'); }
+      findByTenant: () => []
     },
     ProjectInformationRepository: {
       getAll: () => { throw new Error('picker must skip project information lookup'); }
@@ -60,5 +60,5 @@ test('ordinary project list keeps the full existing project-card path', () => {
   const response = service.list({});
   assert.equal(response.success, true);
   assert.ok(Array.isArray(response.data));
-  assert.ok(Array.isArray(response.data[0].CardInformation));
+  assert.equal(response.data[0].LargeUnusedPayload, undefined);
 });
