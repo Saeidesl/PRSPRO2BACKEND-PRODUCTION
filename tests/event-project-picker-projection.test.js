@@ -54,11 +54,11 @@ test('event picker returns a minimal tenant-scoped project projection without ca
 
 test('ordinary project list keeps the full existing project-card path', () => {
   const service = loadProjectService([
-    { ID: 'P-1', TenantID: 'TENANT-1', ProjectCode: 'PR-001', Title: 'طرح اول' }
+    { ID: 'P-1', TenantID: 'TENANT-1', ProjectCode: 'PR-001', Title: 'طرح اول', LargeUnusedPayload: 'full-list-field' }
   ]);
   service._isProjectAvailableToUser_ = () => true;
   const response = service.list({});
   assert.equal(response.success, true);
   assert.ok(Array.isArray(response.data));
-  assert.equal(response.data[0].LargeUnusedPayload, undefined);
+  assert.equal(response.data[0].LargeUnusedPayload, 'full-list-field');
 });
