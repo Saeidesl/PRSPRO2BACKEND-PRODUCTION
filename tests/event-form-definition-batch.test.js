@@ -70,10 +70,10 @@ test('event type form definitions are built with one batch read per source sheet
   const { service, calls } = loadService(fixtures);
   const response = service.listEventTypeForms('EVENT-1', {});
   assert.equal(response.success, true);
-  assert.deepEqual(response.data.map(row => row.ID), ['MAP-1', 'MAP-2']);
-  assert.deepEqual(response.data[0].Form.Fields.map(field => field.ID), ['FIELD-1', 'FIELD-2']);
-  assert.deepEqual(response.data[0].Form.Fields[0].VisibilityRule, { fieldId: 'TYPE-2', operator: 'FILLED' });
-  assert.deepEqual(response.data[0].Form.Fields[0].InformationType.Columns.map(column => column.ID), ['COL-1', 'COL-2']);
+  assert.deepEqual(Array.from(response.data, row => row.ID), ['MAP-1', 'MAP-2']);
+  assert.deepEqual(Array.from(response.data[0].Form.Fields, field => field.ID), ['FIELD-1', 'FIELD-2']);
+  assert.deepEqual(JSON.parse(JSON.stringify(response.data[0].Form.Fields[0].VisibilityRule)), { fieldId: 'TYPE-2', operator: 'FILLED' });
+  assert.deepEqual(Array.from(response.data[0].Form.Fields[0].InformationType.Columns, column => column.ID), ['COL-1', 'COL-2']);
   assert.equal(Object.hasOwn(response.data[0].Form.Fields[0].InformationType, 'ValidationRuleJSON'), false);
   assert.deepEqual(calls, { forms: 1, mappings: 1, fields: 1, types: 1, columns: 1, findForm: 0, findType: 1, findColumns: 0 });
 });
