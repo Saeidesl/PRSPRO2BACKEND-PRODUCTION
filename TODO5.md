@@ -125,7 +125,9 @@
 - چهار Macro-Task فاز مطابق تأیید مالک محصول تعریف شد.
 - *Log:* Frontend: `pages/events.html`, `js/modules/events.js` (از جمله `Events.load`, `openForm`, `loadEventForms`, `loadConfiguredForms`, `loadEventContext`, `loadWorkflowProgress`, `loadAmendmentSourceEvents`, `refreshEventTypeOptions`, `scheduleRefreshRender`), `js/core/api.js` (`get`, `getCached`, `getFresh`, in-flight GET deduplication, invalidation), `js/core/cache.js` (localStorage, TTL, metadata). Backend: `Router.js`; `ProjectService.js:list`; `EventTypeService.js:list`; `FormService.js:listEventTypeForms`, `_definition`, `getEventResponses`; `ProjectInformationService.js:list`; `EventService.js:workflowProgress`, `list`, `_enrichEventsBatch_`; `GoogleSheetsRepository.js:getAll`, `findById`, `resetRequestCache`, `_invalidateSheetRecordCache`, `_logTiming`. APIهای ردیابی‌شده: `GET /events`, `GET /projects`, `GET /event-types`, `GET /event-types/{id}/forms`, `GET /projects/{id}/information`, `GET /projects/{id}/workflow-progress`, `GET /projects/{id}/events`, `GET /events/{id}/forms`, و مسیر ثبت موجود `POST /events`. شیت‌های مرتبط: `08_Projects`, `11_EventTypes`, `13_Events`, `28_InformationTypes`, `29_InformationTypeColumns`, `30_ProjectInformation`, `31_ProjectInformationHistory`, `32_Forms`, `33_FormFields`, `34_EventTypeForms`, `35_EventFormData`. هیچ کد runtime یا داده عملیاتی تغییر نکرد.
 
-### Task 2 — Baseline & بهینه‌سازی دریافت اطلاعات اصلی (IN PROGRESS)
+### Task 2 — Baseline & بهینه‌سازی دریافت اطلاعات اصلی [x]
+
+- *Log:* Backend: `EventTypeService.js:list(params)` با پشتیبانی اختیاری `includeFormDefinitions=true` روی همان `GET /event-types`؛ استفاده مجدد از `FormService.listEventTypeForms`، حفظ tenant/filter/permission و رفتار پیش‌فرض قبلی، ایزوله‌سازی خطای هر نوع رویداد و fallback به `GET /event-types/{id}/forms`؛ تست `tests/event-type-form-prefetch.test.js`. `ProjectService.js:list(params)` و projection موجود `view=event-picker` برای کاهش payload انتخاب پروژه؛ batch/index تعریف فرم‌ها و cache tenant-scoped با TTL شصت‌ثانیه و invalidation در تغییرات فرم. Frontend: `js/modules/events.js` prefetch غیرمسدودکننده هنگام بازشدن Modal ثبت رویداد و ورود به پنل پروژه، cache موقت scoped به نشست/token و invalidation؛ در صورت آماده‌نبودن prefetch، endpoint قبلی per-event-type بدون انتظار اجرا می‌شود. تست‌ها: `tests/event-form-cache-policy.test.js`, `tests/event-form-performance-audit.test.js` و تست‌های Backend `event-form-definition-batch`, `event-project-picker-projection`, `event-form-definition-cache`, `event-type-form-prefetch`. API ثبت `POST /events` و ساختار Sheet/DB تغییر نکرد. Backend PR #18 با commit `ca703356253fcc288798512aab311676e7251ca0` ادغام شد و انتشار Apps Script توسط مالک محصول اعلام شد؛ Frontend PR #38 با commit `59a1b597033daf45e992ff7c0f573b3edf824aa7` ادغام و GitHub Pages workflow موفق شد. تست عملی مالک محصول: فرم بلافاصله نمایش داده می‌شود. Browser audit run `42284750517` روی commit Frontend فوق با conclusion=success تکمیل شد؛ audit پیشین PR snapshot قبل از انتشار Backend بود و به‌عنوان سنجش نهایی زمان تولید تفسیر نمی‌شود.
 
 - ایجاد/تکمیل اندازه‌گیری امن و قابل تکرار برای زمان بازشدن فرم، آماده‌شدن منابع اصلی، تعداد درخواست‌ها، cache hit/miss، زمان سرویس‌ها و عملیات خواندن Google Sheets.
 - تهیه baseline از محیط تست/Staging احراز هویت‌شده؛ عدم استفاده از دیتابیس یا API تولید برای تست مخرب.
@@ -134,7 +136,7 @@
 - طراحی و پیاده‌سازی سیاست TTL و stale-while-revalidate برای داده‌های مرجع، با scope امن و invalidation دقیق.
 - خروجی قابل آزمون: گزارش baseline و مقایسه تعداد درخواست/زمان آماده‌شدن منابع اصلی، بدون تغییر رفتار مجازبودن رویداد یا قرارداد ثبت.
 
-### Task 3 — بهینه‌سازی اطلاعات وابسته و تاریخی
+### Task 3 — بهینه‌سازی اطلاعات وابسته و تاریخی (IN PROGRESS)
 
 - بهینه‌سازی و cache کنترل‌شده اطلاعات مرکزی پروژه و پاسخ فرم‌های قبلی.
 - کاهش درخواست‌های تکراری پنل اطلاعات مرتبط هنگام تغییر نوع رویداد.
