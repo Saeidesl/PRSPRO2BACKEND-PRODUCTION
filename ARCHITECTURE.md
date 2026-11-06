@@ -404,3 +404,20 @@
 - تست‌های مرورگر Chromium، Frontend checks، agent suite، cross-repository QA و comprehensive UI performance audit موفق شدند.
 - انتشار اختصاصی GitHub Pages در Run `42134933236` موفق بود و مالک محصول تست نهایی را در 2026-11-06 تأیید کرد.
 - Backend runtime و داده‌های عملیاتی تغییر نکردند. فاز با پذیرش تمام Macro-Taskها بسته شد.
+
+
+## ثبت فاز تکمیل‌شده Frontend: بازگشت انتخاب‌گر نوع رویداد (2026-11-06)
+
+- تصمیم مالک محصول این بود که انتخاب‌گر سفارشی معرفی‌شده در Frontend PR #33 پذیرفته نشود و رابط انتخاب نوع رویداد به select/native picker قبلی بازگردد.
+- بازگشت در Frontend PR #34 با merge commit `e7bab337c8e68b88f7286859e9309146bac44e0a` انجام شد؛ کنترل‌های Frontend و cross-repository QA موفق شدند.
+- قابلیت انتظار گردش‌کار و انیمیشن مشترک حفظ شد. قرارداد `POST /events` و `EventTypeID` تغییری نکردند.
+- هیچ فایل اجرایی Backend، endpoint، permission، Google Sheet، schema یا داده عملیاتی در این فاز تغییر نکرد؛ نیازی به انتشار Backend نبود.
+- انتشار GitHub Pages در workflow run `42262303293` با نتیجه success تکمیل و تست نسخه منتشرشده توسط مالک محصول در 2026-11-06 تأیید شد.
+- فاز از منظر Backend صرفاً ثبت معماری و سازگاری بود و بسته شد.
+
+
+## ثبت فاز تکمیل‌شده Frontend: بازگردانی رابط انتخاب نوع رویداد (2026-11-06)
+- انتخاب‌گر سفارشی Frontend به درخواست مالک محصول پذیرفته نشد و رابط قبلی در Frontend PR #34 بازیابی شد؛ Merge Commit: `e7bab337c8e68b88f7286859e9309146bac44e0a`.
+- قرارداد `POST /events` و `EventTypeID` بدون تغییر ماندند. هیچ فایل اجرایی Backend، endpoint، permission، Google Sheet، schema یا داده عملیاتی تغییر نکرد.
+- تست‌های CI و QA مربوط به PR #34 موفق شدند. انتشار GitHub Pages در run `42262303293` موفق و نسخه منتشرشده توسط مالک محصول تأیید شد.
+- از سمت Backend هیچ انتشار یا مهاجرتی لازم نبود؛ این فاز بسته شد.
