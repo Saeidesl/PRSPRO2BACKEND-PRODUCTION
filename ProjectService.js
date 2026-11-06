@@ -297,6 +297,27 @@ const ProjectService = {
         return true;
       });
 
+    // The event form needs only project identity and workflow eligibility.
+    // Avoid building the full CardInformation projection for this read-only picker.
+    if (String((params || {}).view || '').toLowerCase() === 'event-picker') {
+      return Response.success(tenantProjects.map(function(project) {
+        return {
+          ID: project.ID,
+          ProjectCode: project.ProjectCode || '',
+          Title: project.Title || '',
+          Name: project.Name || '',
+          ProjectName: project.ProjectName || '',
+          RecordState: project.RecordState || 'ACTIVE',
+          WorkflowID: project.WorkflowID || '',
+          CurrentStepID: project.CurrentStepID || '',
+          CurrentStepName: project.CurrentStepName || '',
+          WorkflowStepName: project.WorkflowStepName || '',
+          CurrentStepStatus: project.CurrentStepStatus || '',
+          Status: project.Status || ''
+        };
+      }));
+    }
+
     // Build the project-card projection in bulk to avoid per-card API calls.
     const cardTypes = (typeof InformationTypeRepository !== 'undefined'
       ? InformationTypeRepository.findByTenant(user.TenantID) : []).filter(function(type) {
