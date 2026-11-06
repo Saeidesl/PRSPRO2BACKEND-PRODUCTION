@@ -185,3 +185,18 @@
 - کنترل Frontend روی HEAD شاخه PR #37: Frontend checks، frontend agent suite و Cross-repository QA موفق؛ Browser Audit احراز هویت‌شده نیز بدون خطای مرورگر تکمیل شد.
 - PRها همچنان باز و ادغام‌نشده‌اند؛ هیچ Backend deployment، Frontend deployment یا live verification بعد از ادغام انجام نشده است.
 - وضعیت Task 2: `IN PROGRESS`؛ بهینه‌سازی‌های اولیه پیاده‌سازی و تست خودکار شده‌اند، اما کاهش زمان آماده‌شدن تعریف فرم‌ها باید با سنجش تکراری/تشخیصی و سپس پذیرش عملیاتی تأیید شود.
+
+
+#### Task 2 — کش تعریف فرم‌های متصل در Backend (پیاده‌سازی و تست خودکار)
+
+- `FormService.js`:
+  - پاسخ `listEventTypeForms(eventTypeId, params)` پس از اعتبارسنجی Tenant و وجود نوع رویداد، با `CacheService.getScriptCache()` و TTL برابر `60` ثانیه cache می‌شود.
+  - کلید کش به‌صورت tenant + eventType + version ساخته می‌شود؛ داده یک Tenant برای Tenant دیگر قابل استفاده نیست.
+  - در صورت نبود CacheService، خطای خواندن/نوشتن کش یا عبور اندازه داده از محدودیت CacheService، مسیر اصلی محاسبه batch بدون تغییر اجرا می‌شود؛ کش صرفاً بهینه‌سازی است.
+  - `_invalidateEventTypeFormDefinitions_` با تغییر version، تمام تعریف‌های قبلی همان Tenant را بدون حذف داده عملیاتی از چرخه اعتبار خارج می‌کند.
+- ابطال کش پس از تغییرات مرتبط:
+  - `FormService.update`, `addField`, `updateField`, `removeField`, `assignEventType`, `unassignEventType`.
+  - `InformationTypeService.update`, `deactivate`, `createColumn`, `updateColumn`, `deactivateColumn` از طریق helper محافظت‌شده `_invalidateFormDefinitions_`.
+- تست جدید `tests/event-form-definition-cache.test.js` سه مورد را پوشش می‌دهد: cache hit در درخواست تکراری، جداسازی Tenantها و اجبار به خواندن تازه پس از تغییر version.
+- اعتبارسنجی روی commit `6024eb418007a86b820877e801b9ad3b190fc879`: Backend source checks و PMS agent suite موفق؛ تست‌های Backend `179/179` پاس شدند. اجرای Cross-repository QA روی Frontend نیز commit Backend شاخه عملیاتی را با موفقیت بررسی کرد.
+- این کش هنوز روی Staging deploy نشده است؛ بنابراین اثر آن بر زمان واقعی endpoint هنوز اندازه‌گیری نشده و هیچ ادعای بهبود عملیاتی ثبت نمی‌شود.
