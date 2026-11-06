@@ -18,6 +18,57 @@ const FormService = {
     if (!type || String(type.TenantID) !== String(tenantId)) throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'نوع رویداد پیدا نشد.');
     return type;
   },
+  _definitionCachePrefix_: 'PMS_EVENT_FORM_DEFINITIONS_V1',
+  _definitionCacheTtlSeconds_: 60,
+  _definitionCachePart_: function(value) {
+    return String(value || 'unknown').replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 48);
+  },
+  _definitionCacheVersionKey_: function(tenantId) {
+    return this._definitionCachePrefix_ + '_VERSION_' + this._definitionCachePart_(tenantId);
+  },
+  _getCachedEventTypeForms_: function(tenantId, eventTypeId) {
+    try {
+      if (typeof CacheService === 'undefined' || !CacheService ||
+          typeof CacheService.getScriptCache !== 'function') return null;
+      var cache = CacheService.getScriptCache();
+      var version = cache.get(this._definitionCacheVersionKey_(tenantId)) || '1';
+      var key = this._definitionCachePrefix_ + '_' +
+        this._definitionCachePart_(tenantId) + '_' +
+        this._definitionCachePart_(eventTypeId) + '_' + String(version);
+      var raw = cache.get(key);
+      if (raw === null || raw === undefined || raw === '') return null;
+      var parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : null;
+    } catch (error) {
+      return null;
+    }
+  },
+  _cacheEventTypeForms_: function(tenantId, eventTypeId, definitions) {
+    try {
+      if (typeof CacheService === 'undefined' || !CacheService ||
+          typeof CacheService.getScriptCache !== 'function') return;
+      var cache = CacheService.getScriptCache();
+      var version = cache.get(this._definitionCacheVersionKey_(tenantId)) || '1';
+      var key = this._definitionCachePrefix_ + '_' +
+        this._definitionCachePart_(tenantId) + '_' +
+        this._definitionCachePart_(eventTypeId) + '_' + String(version);
+      cache.put(key, JSON.stringify(definitions || []), this._definitionCacheTtlSeconds_);
+    } catch (error) {
+      // Cache is an optimization only; never fail a valid form-definition request.
+    }
+  },
+  _invalidateEventTypeFormDefinitions_: function(tenantId) {
+    try {
+      if (typeof CacheService === 'undefined' || !CacheService ||
+          typeof CacheService.getScriptCache !== 'function') return;
+      var version = 'v_' + (typeof Utilities !== 'undefined' && Utilities.getUuid
+        ? Utilities.getUuid()
+        : String(Date.now()));
+      CacheService.getScriptCache().put(this._definitionCacheVersionKey_(tenantId), version, 21600);
+    } catch (error) {
+      // Invalidation failures must not affect the successful configuration write.
+    }
+  },
   _definition: function(form, tenantId) {
     var fields = FormRepository.findFieldsByForm(form.ID).filter(function(row) {
       return String(row.TenantID) === String(tenantId) && String(row.Status || 'ACTIVE') === 'ACTIVE';
@@ -128,6 +179,7 @@ const FormService = {
       patch.Code=code;
     }
     var updated=FormRepository.updateForm(id,patch);
+    this._invalidateEventTypeFormDefinitions_(user.TenantID);
     AuditService.log({TenantID:user.TenantID,UserID:user.ID,Action:Constants.ACTION.UPDATE,EntityType:'FORM',EntityID:id,OldData:existing,NewData:updated,Reason:'ویرایش فرم'});
     return Response.success(updated,{message:'فرم به‌روزرسانی شد.'});
   },
@@ -146,6 +198,7 @@ const FormService = {
     var row={ID:this._id('FF'),TenantID:user.TenantID,FormID:form.ID,InformationTypeID:type.ID,FieldOrder:newFieldOrder,GroupName:String(data.GroupName || ''),LabelOverride:String(data.LabelOverride || ''),HelpText:String(data.HelpText || ''),IsRequired:data.IsRequired===true,VisibilityRuleJSON:JSON.stringify(data.VisibilityRuleJSON || {}),Status:data.Status || 'ACTIVE',CreatedAt:now,UpdatedAt:now};
     var created=FormRepository.insertField(row);
     FormRepository.updateForm(form.ID,{Version:Number(form.Version || 1)+1,UpdatedAt:now});
+    this._invalidateEventTypeFormDefinitions_(user.TenantID);
     AuditService.log({TenantID:user.TenantID,UserID:user.ID,Action:Constants.ACTION.CREATE,EntityType:'FORM_FIELD',EntityID:created.ID,NewData:created,Reason:'افزودن فیلد متصل به اطلاعات مرکزی'});
     return Response.success(created,{message:'فیلد به فرم اضافه شد.'});
   },
@@ -192,6 +245,7 @@ const FormService = {
     if(data.VisibilityRuleJSON!==undefined)patch.VisibilityRuleJSON=JSON.stringify(data.VisibilityRuleJSON);
     var updated=FormRepository.updateField(id,patch);
     FormRepository.updateForm(form.ID,{Version:Number(form.Version || 1)+1,UpdatedAt:patch.UpdatedAt});
+    this._invalidateEventTypeFormDefinitions_(user.TenantID);
     AuditService.log({TenantID:user.TenantID,UserID:user.ID,Action:Constants.ACTION.UPDATE,EntityType:'FORM_FIELD',EntityID:id,OldData:existing,NewData:updated,Reason:'ویرایش فیلد فرم'});
     return Response.success(updated,{message:'فیلد فرم به‌روزرسانی شد.'});
   },
@@ -208,6 +262,7 @@ const FormService = {
     var now=new Date().toISOString();
     var updated=FormRepository.updateField(id,{Status:'DELETED',UpdatedAt:now});
     FormRepository.updateForm(form.ID,{Version:Number(form.Version || 1)+1,UpdatedAt:now});
+    this._invalidateEventTypeFormDefinitions_(user.TenantID);
     AuditService.log({TenantID:user.TenantID,UserID:user.ID,Action:Constants.ACTION.DELETE,EntityType:'FORM_FIELD',EntityID:id,OldData:existing,NewData:updated,Reason:'حذف منطقی فیلد فرم'});
     return Response.success(updated,{message:'فیلد فرم حذف منطقی شد.'});
   },
@@ -264,6 +319,8 @@ const FormService = {
   },
   listEventTypeForms: function(eventTypeId, params) {
     var user=this._user(params),eventType=this._eventType(eventTypeId,user.TenantID);
+    var cachedDefinitions=this._getCachedEventTypeForms_(user.TenantID,eventTypeId);
+    if(cachedDefinitions!==null)return Response.success(cachedDefinitions);
     var formsById=Object.create(null);
     FormRepository.getForms().forEach(function(form){
       if(String(form.TenantID)===String(user.TenantID)&&String(form.Status || 'ACTIVE')==='ACTIVE')formsById[String(form.ID)]=form;
@@ -274,10 +331,12 @@ const FormService = {
     rows.sort(function(a,b){return Number(a.FieldOrder || 0)-Number(b.FieldOrder || 0);});
     var forms=rows.map(function(row){return formsById[String(row.FormID)];});
     var definitions=this._definitionsForForms_(forms,user.TenantID);
-    return Response.success(rows.map(function(row){
+    var result=rows.map(function(row){
       var form=formsById[String(row.FormID)];
       return Object.assign({},row,{Form:Object.assign({},form,{Fields:definitions[String(form.ID)] || []})});
-    }));
+    });
+    this._cacheEventTypeForms_(user.TenantID,eventTypeId,result);
+    return Response.success(result);
   },
   assignEventType: function(eventTypeId, data, params) {
     var user=this._user(params), type=this._eventType(eventTypeId,user.TenantID);
@@ -290,6 +349,7 @@ const FormService = {
     var now=new Date().toISOString();
     var row={ID:existing?existing.ID:this._id('ETF'),TenantID:user.TenantID,EventTypeID:type.ID,FormID:form.ID,IsRequired:data.IsRequired!==false,FieldOrder:Number(data.FieldOrder || 0),Status:'ACTIVE',CreatedBy:existing?existing.CreatedBy:user.ID,CreatedAt:existing?existing.CreatedAt:now,UpdatedAt:now};
     var created=existing?FormRepository.updateMapping(existing.ID,row):FormRepository.insertMapping(row);
+    this._invalidateEventTypeFormDefinitions_(user.TenantID);
     AuditService.log({TenantID:user.TenantID,UserID:user.ID,Action:Constants.ACTION.CREATE,EntityType:'EVENT_TYPE_FORM',EntityID:created.ID,NewData:created,Reason:'اتصال فرم به نوع رویداد'});
     return Response.success(created,{message:'فرم به نوع رویداد متصل شد.'});
   },
@@ -297,6 +357,7 @@ const FormService = {
     var user=this._user(params), row=FormRepository.findMapping(id);
     if(!row||String(row.TenantID)!==String(user.TenantID))throw ErrorHandler.create(Constants.ERROR.NOT_FOUND,'اتصال فرم پیدا نشد.');
     var updated=FormRepository.updateMapping(id,{Status:'DELETED',UpdatedAt:new Date().toISOString()});
+    this._invalidateEventTypeFormDefinitions_(user.TenantID);
     AuditService.log({TenantID:user.TenantID,UserID:user.ID,Action:Constants.ACTION.DELETE,EntityType:'EVENT_TYPE_FORM',EntityID:id,OldData:row,NewData:updated,Reason:'قطع اتصال فرم از نوع رویداد'});
     return Response.success(updated,{message:'اتصال فرم حذف شد.'});
   },
