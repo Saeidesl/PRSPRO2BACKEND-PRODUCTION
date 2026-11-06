@@ -157,3 +157,18 @@
 - شروع فاز: 2026-11-06.
 - Task 1 تکمیل و Task 2 در وضعیت IN PROGRESS قرار گرفت.
 - تا این نقطه فقط مستندات TODO5 به‌روزرسانی می‌شود؛ هیچ تغییر اجرایی، انتشار یا مهاجرت داده انجام نشده است.
+
+#### Task 2 — Implementation progress (تکمیل‌نشده؛ در انتظار baseline احراز هویت‌شده)
+
+- `FormService.js`:
+  - متد جدید `_definitionsForForms_(forms, tenantId)` تعریف فرم‌های چندگانه را با یک بار خواندن `FormRepository.getFields()`، `InformationTypeRepository.findByTenant()` و `InformationTypeRepository.getAllColumns()` می‌سازد.
+  - `listEventTypeForms(eventTypeId, params)` اکنون فرم‌ها را با یک بار `FormRepository.getForms()` و mappingها را با یک بار `findMappingsByEventType()` index می‌کند؛ lookup جداگانه هر فرم/فیلد/نوع اطلاعات/ستون حذف شد.
+  - ترتیب mapping، فیلدها و ستون‌ها، فیلتر TenantID/Status، خطاهای نوع اطلاعات غیرفعال/ناموجود، VisibilityRule و حذف ValidationRuleJSON از پاسخ حفظ شد. قرارداد API و snapshot پاسخ تغییر نکرد.
+- `ProjectService.js:list(params)`:
+  - حالت خواندنی `params.view === 'event-picker'` افزوده شد؛ projection سبک شامل `ID, ProjectCode, Title, Name, ProjectName, RecordState, WorkflowID, CurrentStepID, CurrentStepName, WorkflowStepName, CurrentStepStatus, Status` برمی‌گرداند.
+  - این حالت قبل از ساخت CardInformation برمی‌گردد و خواندن انواع اطلاعات/ستون‌ها/اطلاعات پروژه برای picker را حذف می‌کند. فیلترهای tenant، دسترسی و Draft بدون تغییر باقی ماندند.
+- APIهای موجود حفظ شدند: `GET /event-types/{id}/forms` و `GET /projects?view=event-picker` (پارامتر view در query string؛ همان `GET /projects` و همان مجوزها). هیچ مسیر ثبت جدید یا شیت/مهاجرتی اضافه نشده است.
+- تست‌های جدید: `tests/event-form-definition-batch.test.js` و `tests/event-project-picker-projection.test.js`.
+- CI Backend: تست‌ها و بررسی syntax در commit `8409a0d338093a9deb98c77a60b0aa024fa66af7` موفق شدند.
+
+- محدودیت baseline: اجرای browser audit روی PR به‌صورت امن انجام شد، اما Repository variable/secret مربوط به `PMS_STAGING_API_BASE_URL` تنظیم نشده بود. گزارش `pms-ui-performance-audit-155` وضعیت `blocked-no-staging-api` داشت؛ فقط صفحه ورود عمومی با زمان آماده‌شدن 151ms بررسی شد و هیچ داده‌ای از فرم ثبت رویداد یا API عملیاتی خوانده نشد. بنابراین baseline واقعی فرم هنوز ثبت نشده و Task 2 باز می‌ماند.
