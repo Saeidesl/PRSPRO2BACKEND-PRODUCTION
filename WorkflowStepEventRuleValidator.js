@@ -6,6 +6,7 @@ const WorkflowStepEventRuleValidator = {
     const seen = Object.create(null);
     const groups = Object.create(null);
     const strictOrders = Object.create(null);
+    const displayOrders = Object.create(null);
     let stepSequenceMode = '';
     return rules.map(function(input, index) {
       const rule = input || {};
@@ -35,6 +36,7 @@ const WorkflowStepEventRuleValidator = {
       const groupKey = String(rule.GroupKey || '').trim();
       const groupOrder = Number(rule.GroupOrder || 0);
       const eventOrder = Number(rule.EventOrder || 0);
+      const displayOrder = Number(rule.DisplayOrder || index + 1);
       if (sequence === 'STRICT' && (!Number.isInteger(eventOrder) || eventOrder < 1 || groupKey || groupOrder)) {
         throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'در ترتیب اجباری، ترتیب هر رویداد باید یکتا و بدون گروه باشد.');
       }
@@ -43,7 +45,16 @@ const WorkflowStepEventRuleValidator = {
         strictOrders[String(eventOrder)] = true;
       }
       if (sequence === 'FREE' && (groupKey || groupOrder || eventOrder)) {
-        throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'در ترتیب آزاد، شماره ترتیب و گروه نباید تعیین شود.');
+        throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'در ترتیب آزاد، شماره ترتیب اجرایی و گروه نباید تعیین شود.');
+      }
+      if (sequence === 'FREE') {
+        if (!Number.isInteger(displayOrder) || displayOrder < 1) {
+          throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'ترتیب نمایش هر رویداد باید عدد صحیح مثبت باشد.');
+        }
+        if (displayOrders[String(displayOrder)]) {
+          throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'شماره ترتیب نمایش رویداد تکراری است.');
+        }
+        displayOrders[String(displayOrder)] = true;
       }
       if (sequence === 'GROUPED') {
         if (!groupKey || !Number.isInteger(groupOrder) || groupOrder < 1 || eventOrder !== 0) {
@@ -68,6 +79,7 @@ const WorkflowStepEventRuleValidator = {
         GroupKey: groupKey,
         GroupOrder: groupOrder,
         EventOrder: eventOrder,
+        DisplayOrder: displayOrder,
         AllowRepeat: rule.AllowRepeat === true || String(rule.AllowRepeat).toLowerCase() === 'true' || String(rule.AllowRepeat) === '1'
       };
     });
