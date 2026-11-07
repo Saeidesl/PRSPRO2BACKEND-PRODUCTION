@@ -156,10 +156,147 @@ const TelegramBotService = {
     return { ok: true, tenantId: tenantId, registered: true };
   },
 
+  _parseNotificationJson_: function(value, fallback) {
+    if (value === undefined || value === null || String(value).trim() === '') return fallback;
+    try { return JSON.parse(String(value)); } catch (error) { return fallback; }
+  },
+
+  _notificationAttachmentLabel_: function(value, tenantId, projectId) {
+    const references = Array.isArray(value) ? value : [value];
+    return references.map(function(reference) {
+      if (!reference || typeof reference !== 'object') return String(reference || '').trim();
+      const attachmentId = String(reference.AttachmentID || reference.ID || '').trim();
+      if (!attachmentId || typeof AttachmentRepository === 'undefined' ||
+          typeof AttachmentRepository.findById !== 'function') {
+        return String(reference.FileName || 'پیوست ثبت‌شده').trim();
+      }
+      const attachment = AttachmentRepository.findById(attachmentId);
+      if (!attachment ||
+          String(attachment.TenantID) !== String(tenantId) ||
+          String(attachment.Status || '').toUpperCase() === 'DELETED' ||
+          (projectId && String(attachment.EntityType) === 'PROJECT' &&
+            String(attachment.EntityID) !== String(projectId))) {
+        return 'پیوست ثبت‌شده';
+      }
+      return String(attachment.FileName || 'پیوست ثبت‌شده').trim();
+    }).filter(Boolean).join('، ');
+  },
+
+  _formatNotificationValue_: function(value, dataType, tenantId, projectId) {
+    if (value === undefined || value === null || value === '') return '';
+    const type = String(dataType || '').toLowerCase();
+    if (type === 'image' || type === 'file') {
+      return this._notificationAttachmentLabel_(value, tenantId, projectId);
+    }
+    if (Array.isArray(value)) {
+      return value.map(function(item, index) {
+        const formatted = this._formatNotificationValue_(item, '', tenantId, projectId);
+        return formatted ? (index + 1) + ') ' + formatted : '';
+      }, this).filter(Boolean).join('\n');
+    }
+    if (typeof value === 'object') {
+      if (value.AttachmentID || value.ID && (value.FileName || value.MimeType)) {
+        return this._notificationAttachmentLabel_(value, tenantId, projectId);
+      }
+      return Object.keys(value).map(function(key) {
+        const formatted = this._formatNotificationValue_(value[key], '', tenantId, projectId);
+        return formatted ? key + ': ' + formatted : '';
+      }, this).filter(Boolean).join('؛ ');
+    }
+    return String(value).trim();
+  },
+
+  _formatNotificationForms_: function(event, tenantId) {
+    if (typeof FormRepository === 'undefined' ||
+        typeof FormRepository.findResponsesByEvent !== 'function') return [];
+    const responses = FormRepository.findResponsesByEvent(event.ID) || [];
+    const projectId = String(event.ProjectID || '');
+    return responses.filter(function(row) {
+      return String(row.TenantID) === String(tenantId) &&
+        String(row.EventID) === String(event.ID);
+    }).map(function(row) {
+      const definition = this._parseNotificationJson_(row.DefinitionSnapshotJSON, {});
+      const values = this._parseNotificationJson_(row.ResponseJSON, {});
+      const fields = Array.isArray(definition.Fields) ? definition.Fields : [];
+      const lines = [];
+      fields.forEach(function(field) {
+        const info = field.InformationType || {};
+        const key = String(field.InformationTypeID || info.ID || '');
+        if (!key || !Object.prototype.hasOwnProperty.call(values, key)) return;
+        const value = values[key];
+        if (value === undefined || value === null || value === '' ||
+            (Array.isArray(value) && !value.length)) return;
+        const label = String(field.LabelOverride || info.Name || info.Code || 'فیلد');
+        const columns = Array.isArray(info.Columns)
+          ? info.Columns.filter(function(column) {
+              return String(column.Status || 'ACTIVE').toUpperCase() === 'ACTIVE';
+            })
+          : [];
+        if (columns.length) {
+          const cardinality = String(info.Cardinality || 'SINGLE').toUpperCase();
+          const rows = cardinality === 'MULTIPLE'
+            ? (Array.isArray(value) ? value : [])
+            : (value && typeof value === 'object' ? [value] : []);
+          if (!rows.length) return;
+          lines.push(label + ':');
+          rows.forEach(function(dataRow, index) {
+            const cells = columns.map(function(column) {
+              const cell = dataRow ? dataRow[String(column.Code)] : '';
+              const formatted = this._formatNotificationValue_(
+                cell, column.DataType, tenantId, projectId
+              );
+              return formatted ? String(column.Name || column.Code) + ': ' + formatted : '';
+            }, this).filter(Boolean);
+            if (cells.length) lines.push('  ردیف ' + (index + 1) + ' — ' + cells.join(' | '));
+          }, this);
+          return;
+        }
+        const formatted = this._formatNotificationValue_(
+          value, info.DataType, tenantId, projectId
+        );
+        if (formatted) lines.push(label + ': ' + formatted);
+      }, this);
+      if (!lines.length && Object.keys(values).length) {
+        Object.keys(values).forEach(function(key) {
+          const formatted = this._formatNotificationValue_(values[key], '', tenantId, projectId);
+          if (formatted) lines.push(key + ': ' + formatted);
+        }, this);
+      }
+      return {
+        name: String(definition.Name || definition.Code || 'فرم اطلاعات'),
+        lines: lines
+      };
+    }, this).filter(function(form) { return form.lines.length > 0; });
+  },
+
+  _splitNotificationMessage_: function(text, limit) {
+    limit = Math.max(500, Number(limit) || 3800);
+    const chunks = [];
+    let current = '';
+    String(text || '').split('\n').forEach(function(line) {
+      line = String(line);
+      while (line.length > limit) {
+        if (current) { chunks.push(current); current = ''; }
+        chunks.push(line.slice(0, limit));
+        line = line.slice(limit);
+      }
+      if (!line) return;
+      if (current && current.length + line.length + 1 > limit) {
+        chunks.push(current);
+        current = line;
+      } else {
+        current += (current ? '\n' : '') + line;
+      }
+    });
+    if (current) chunks.push(current);
+    return chunks;
+  },
+
   notifyEvent: function(event, project, eventType, department, performedUser, tenantId) {
-    if (!event || !tenantId || !project) return { sent: 0, status: 'NOT_APPLICABLE' };
-    if (String(project.NotifyEnabled).toLowerCase() === 'false' ||
-        String(project.NotifyEnabled) === '0') {
+    if (!event || !tenantId) return { sent: 0, status: 'NOT_APPLICABLE' };
+    if (event.ProjectID && !project) return { sent: 0, status: 'PROJECT_NOT_AVAILABLE' };
+    if (project && (String(project.NotifyEnabled).toLowerCase() === 'false' ||
+        String(project.NotifyEnabled) === '0')) {
       return { sent: 0, status: 'PROJECT_NOTIFICATIONS_DISABLED' };
     }
 
@@ -178,31 +315,68 @@ const TelegramBotService = {
       return { sent: 0, status: 'NOT_CONFIGURED' };
     }
 
-    const projectCode = String(project.ProjectCode || project.ID || '-');
-    const projectTitle = String(project.Title || project.Name || '');
+    const projectCode = project
+      ? String(project.ProjectCode || project.ID || '-')
+      : '';
+    const projectTitle = project ? String(project.Title || project.Name || '') : '';
     const eventName = String(eventType && (eventType.Name || eventType.Code) || 'رویداد');
     const departmentName = String(department && (department.Name || department.Code) || '');
     const performerName = String(performedUser && (performedUser.Name || performedUser.Username) || '');
-    const description = String(event.Description || '').trim();
-    const text = [
+    const variants = this._parseNotificationJson_(event.VariantDetailsJSON, []);
+    const variantLines = Array.isArray(variants) ? variants.map(function(item, index) {
+      const parts = [];
+      if (item.Color) parts.push('رنگ: ' + item.Color);
+      if (item.Size) parts.push('سایز: ' + item.Size);
+      if (item.VariantQuantity !== undefined && item.VariantQuantity !== null &&
+          String(item.VariantQuantity) !== '') parts.push('تعداد: ' + item.VariantQuantity);
+      return parts.length ? 'ردیف ' + (index + 1) + ': ' + parts.join(' | ') : '';
+    }).filter(Boolean) : [];
+    const lines = [
       '🔔 ثبت رویداد جدید در سامانه مدیریت تولید',
-      'پروژه: ' + projectCode + (projectTitle ? ' — ' + projectTitle : ''),
-      'رویداد: ' + eventName,
+      'پروژه: ' + (project
+        ? projectCode + (projectTitle ? ' — ' + projectTitle : '')
+        : 'رویداد مستقل (بدون پروژه)'),
+      'نوع رویداد: ' + eventName,
       departmentName ? 'واحد: ' + departmentName : '',
       performerName ? 'ثبت‌کننده/انجام‌دهنده: ' + performerName : '',
-      event.OccurredAt ? 'زمان: ' + event.OccurredAt : '',
-      description ? 'توضیحات: ' + description : ''
-    ].filter(Boolean).join('\n');
+      event.OccurredAt ? 'زمان وقوع: ' + event.OccurredAt : '',
+      event.CreatedAt ? 'زمان ثبت: ' + event.CreatedAt : '',
+      event.ID ? 'شناسه رویداد: ' + event.ID : '',
+      String(event.Description || '').trim() ? 'توضیحات: ' + String(event.Description).trim() : ''
+    ].filter(Boolean);
+    if (variantLines.length) lines.push('ترکیب رنگ/سایز:\n' + variantLines.join('\n'));
+    else {
+      if (event.Color) lines.push('رنگ: ' + event.Color);
+      if (event.Size) lines.push('سایز: ' + event.Size);
+      if (event.VariantQuantity !== undefined && event.VariantQuantity !== null &&
+          String(event.VariantQuantity) !== '') lines.push('تعداد: ' + event.VariantQuantity);
+    }
+
+    const forms = this._formatNotificationForms_(event, tenantId);
+    forms.forEach(function(form) {
+      lines.push('فرم: ' + form.name + '\n' + form.lines.join('\n'));
+    });
+    const message = lines.join('\n');
+    const chunks = this._splitNotificationMessage_(message, 3800);
 
     let sent = 0;
+    let failed = 0;
     recipients.forEach(function(chatId) {
-      try {
-        if (TelegramBotService.sendMessage(chatId, text).ok) sent += 1;
-      } catch (error) {
-        console.warn('Telegram notification failed: ' + String(error && error.message || error));
-      }
+      chunks.forEach(function(chunk, index) {
+        try {
+          if (TelegramBotService.sendMessage(chatId,
+              (chunks.length > 1 ? '[' + (index + 1) + '/' + chunks.length + ']\n' : '') + chunk).ok) {
+            sent += 1;
+          } else {
+            failed += 1;
+          }
+        } catch (error) {
+          failed += 1;
+          console.warn('Telegram notification failed: ' + String(error && error.message || error));
+        }
+      });
     });
-    return { sent: sent, status: sent ? 'SENT' : 'FAILED' };
+    return { sent: sent, failed: failed, chunks: chunks.length, status: sent && !failed ? 'SENT' : (sent ? 'PARTIAL' : 'FAILED') };
   },
 
   setWebhook: function() {
