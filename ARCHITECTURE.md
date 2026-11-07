@@ -737,3 +737,48 @@
 - STRICT و GROUPED و مسیرهای موجود API حفظ شدند.
 - هیچ Sheet یا API موازی ایجاد نشد و مهاجرت مخرب یا حذف داده انجام نشد.
 - فاز در تاریخ 2026-11-07 با تأیید مالک محصول بسته شد.
+
+
+## 2026-11-07 — پشتیبانی چندتصویری در اطلاعات مرکزی فرم رویداد
+
+### هدف و دامنه
+- امکان انتخاب، پیش‌نمایش، حذف پیش از ثبت و ذخیره هم‌زمان چند تصویر در همه فیلدهای تصویری اطلاعات مرکزی، شامل فیلدهای مستقل و ستون‌های تصویری جداول.
+- دامنه از طریق فرم‌های متصل به رویداد پروژه و با حفظ مسیرهای عملیاتی موجود پیاده‌سازی شد.
+- حداکثر ۲۰ تصویر برای هر فیلد؛ سقف حجم هر تصویر مطابق تنظیم موجود سرور ۱۰ مگابایت است؛ upload به‌صورت ترتیبی انجام می‌شود.
+- هیچ API route، فرم، Sheet یا مسیر ذخیره‌سازی موازی ایجاد نشد. اطلاعات همچنان در ساختارهای موجود و فایل‌ها در Google Drive نگهداری می‌شوند.
+
+### قرارداد داده و سازگاری
+- مقدار جدید هر فیلد یا ستون `DataType=image` به‌صورت آرایه‌ای از referenceهای امن Attachment ذخیره می‌شود.
+- object تک‌تصویر قدیمی همچنان معتبر و قابل نمایش باقی می‌ماند.
+- نوع `file` همچنان تک‌فایل است و آرایه برای آن پذیرفته نمی‌شود.
+- Backend برای هر reference شناسه پیوست، tenant، پروژه، entity، نوع پیوست، وضعیت فعال و MIME تصویری را بررسی می‌کند؛ metadata معتبر از رکورد سرور خوانده می‌شود و payload کلاینت مرجع اعتماد نیست.
+- `AttachmentType=INFORMATION` برای تصاویر اطلاعات مرکزی استفاده می‌شود؛ مسیر موجود `PROFILE` فقط برای تصویر نمایه پروژه و مطابق رفتار فعلی حفظ شده است.
+- داده در `30_ProjectInformation.ValueJSON`، تاریخچه در `31_ProjectInformationHistory` و snapshot پاسخ فرم رویداد در `34_EventFormData` ثبت می‌شود؛ metadata پیوست در `15_Attachments` باقی می‌ماند.
+
+### نقشه Backend
+- `ProjectInformationService.js` — تابع `_scalar` پذیرش object قدیمی یا آرایه حداکثر ۲۰ reference تصویر را با کنترل AttachmentID، TenantID، EntityType، EntityID، AttachmentType، Status و MIME انجام می‌دهد؛ آرایه برای `file` رد می‌شود. اعتبارسنجی اطلاعات مرکزی از مسیر `_validate` و ذخیره از مسیر `save` باقی مانده است.
+- `FormService.js` — `prepareEventResponses(eventTypeId, responses, tenantId, projectId)` پاسخ‌های فرم را اعتبارسنجی می‌کند؛ `saveEventResponses(event, responses, user, params)` snapshot پاسخ را ذخیره و اطلاعات غیرخالی را از مسیر موجود به اطلاعات پروژه منتقل می‌کند.
+- `AttachmentService.js` و `AttachmentValidator.js` — کنترل دسترسی، مالکیت، MIME و حجم فایل و ذخیره فایل در Google Drive؛ metadata در شیت موجود `15_Attachments`.
+- `Router.js` — مسیرهای موجود حفظ شده‌اند: `POST /projects/:projectId/attachments` برای upload، `POST /events` برای ثبت رویداد و `GET /attachments/:attachmentId/download` برای دریافت تصویر با مجوز موجود.
+- شیت، ستون یا API جدیدی اضافه نشد؛ سقف JSON، idempotency مبتنی بر `SourceEventID`، تاریخچه و tenant isolation حفظ شدند.
+
+### نقشه Frontend
+- `pages/events.html` — صفحه موجود ثبت رویداد.
+- `js/modules/events.js`:
+  - `createFieldInput` و `renderConfiguredForms` ورودی‌های تصویری مستقل و ستون‌های تصویری جدول را به انتخاب چندفایل مجهز می‌کنند.
+  - `addConfiguredFormRow` برای ردیف‌های تصویری جدول و `hydrateAmendmentForm` برای سازگاری با مقادیر آرایه‌ای و object قدیمی استفاده می‌شوند.
+  - `collectConfiguredFormResponses` پاسخ‌ها را از همان جریان ثبت رویداد جمع‌آوری می‌کند.
+  - `uploadConfiguredFormImages` و `uploadConfiguredFormFile` فایل‌ها را ترتیبی از مسیر موجود upload می‌کنند؛ cache فایل‌های uploadشده از بارگذاری تکراری در retry جلوگیری می‌کند.
+  - `hasStoredFormAttachment`, `renderEventInformationValue`, `renderEventFormValue`, `openEventImageAttachment`, `openDetails`, `loadEventContext` اعتبارسنجی، preview و نمایش تصاویر را مدیریت می‌کنند.
+- `js/modules/project-detail.js` — `prepareProjectFormImages`, `renderProjectFormValue`, `renderInformationValue` آرایه تصاویر و سلول‌های تصویری جداول را در صفحه پروژه نمایش می‌دهند.
+- `index.html` — نسخه cache-busting فایل‌های تغییرکرده به `20261107-multi-image-information-1` به‌روزرسانی شد.
+- تمام درخواست‌های Frontend از لایه موجود `PMS.Api` استفاده می‌کنند.
+
+### آزمون، ادغام و انتشار
+- Backend: تست‌های `tests/information-file-types.test.js` شامل legacy single image، آرایه معتبر، سقف ۲۰، رد آرایه برای file، tenant/project mismatch، MIME نامعتبر، فیلد مستقل و ستون تصویری جدول؛ ۱۸۷ تست Backend موفق و بررسی syntax/manifest موفق.
+- Frontend: تست‌های `tests/information-file-types.test.js` برای انتخاب چندتصویر، upload، حذف قبل از ثبت، فیلد مستقل، سلول جدول، نمایش رویداد و صفحه پروژه؛ syntax، رگرسیون، asset/CSS و Browser Audit موفق.
+- Backend PR #21 با squash در commit `97edde109f50afd6c7427372b98001468cdfedd4` روی `main` ادغام شد. انتشار Production از `.github/workflows/sync-apps-script.yml` با `phase=push_and_deploy` در Run `42395069816` و Job `128470562296` موفق شد؛ push به Apps Script و deploy وب‌اپ هر دو موفق بودند.
+- Frontend PR #43 با squash در commit `23a50b3441360d8147bf7c599829a13909a80326` روی `main` ادغام شد؛ GitHub Pages deploy در Run `42393860547` موفق بود. آخرین commit گزارش Performance Audit در زمان پذیرش `9b83ccd1bba9f4a511e29f2537dc8a82ffa0a8f2` بود.
+- مالک محصول آزمون عملی نسخه منتشرشده را انجام داد و موفقیت قابلیت را تأیید کرد.
+- در این فاز هیچ مهاجرت داده، حذف داده، تغییر destructive یا تغییر در مخازن توسعه انجام نشد.
+- فاز در تاریخ 2026-11-07 با تأیید مالک محصول بسته شد.
