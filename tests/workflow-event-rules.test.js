@@ -71,7 +71,7 @@ test('free display order is independent from event execution order and validates
     Constants: { ERROR: { VALIDATION_ERROR: 'VALIDATION_ERROR' } }
   };
   vm.runInNewContext(read('WorkflowStepEventRuleValidator.js') +
-    '\\nthis.result = WorkflowStepEventRuleValidator;', context);
+    '\nthis.result = WorkflowStepEventRuleValidator;', context);
   const validate = context.result.validate;
   const rules = validate([
     { EventTypeID: 'EVT_A', SequenceMode: 'FREE', EventOrder: 0, DisplayOrder: 2 },
