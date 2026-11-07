@@ -25,7 +25,10 @@ const EventTypeRepository = {
         cache.remove(this.CACHE_KEY);
       }
     } catch (error) {
-      // Cache is optional; fall back to the authoritative Sheets repository.
+      // Remove malformed cache entries when possible, then use authoritative Sheets data.
+      try {
+        if (cache) cache.remove(this.CACHE_KEY);
+      } catch (removeError) {}
       return this.getAll();
     }
 
