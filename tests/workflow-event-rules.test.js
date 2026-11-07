@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
+const vm = require('node:vm');
 const read = (name) => fs.readFileSync(path.join(__dirname, '..', name), 'utf8');
 
 test('workflow event rule schema is additive and version-aware', () => {
@@ -56,8 +57,34 @@ test('free display order is versioned, cloned and returned without changing stri
   const service = read('WorkflowService.js');
   const events = read('EventService.js');
   assert.match(repository, /DisplayOrder/);
-  assert.match(repository, /DisplayOrder: item\\.DisplayOrder/);
-  assert.match(service, /Number\\(a\\.DisplayOrder \\|\\| 0\\)/);
-  assert.match(events, /displayOrder: Number\\(rule\\.DisplayOrder \\|\\| index \\+ 1\\)/);
-  assert.match(events, /return Number\\(a\\.DisplayOrder \\|\\| 0\\) - Number\\(b\\.DisplayOrder \\|\\| 0\\)/);
+  assert.ok(repository.includes('DisplayOrder: item.DisplayOrder'));
+  assert.ok(service.includes('Number(a.DisplayOrder || 0)'));
+  assert.ok(events.includes('displayOrder: Number(rule.DisplayOrder || index + 1)'));
+  assert.ok(events.includes('return Number(a.DisplayOrder || 0) - Number(b.DisplayOrder || 0)'));
+});
+
+
+test('free display order is independent from event execution order and validates uniqueness', () => {
+  const context = {
+    Validator: { required() {}, id() {} },
+    ErrorHandler: { create(code, message) { return new Error(message); } },
+    Constants: { ERROR: { VALIDATION_ERROR: 'VALIDATION_ERROR' } }
+  };
+  vm.runInNewContext(read('WorkflowStepEventRuleValidator.js') +
+    '\\nthis.result = WorkflowStepEventRuleValidator;', context);
+  const validate = context.result.validate;
+  const rules = validate([
+    { EventTypeID: 'EVT_A', SequenceMode: 'FREE', EventOrder: 0, DisplayOrder: 2 },
+    { EventTypeID: 'EVT_B', SequenceMode: 'FREE', EventOrder: 0, DisplayOrder: 1 }
+  ]);
+  assert.equal(rules[0].DisplayOrder, 2);
+  assert.equal(rules[1].DisplayOrder, 1);
+  assert.equal(rules[0].EventOrder, 0);
+  assert.throws(() => validate([
+    { EventTypeID: 'EVT_A', SequenceMode: 'FREE', EventOrder: 0, DisplayOrder: 1 },
+    { EventTypeID: 'EVT_B', SequenceMode: 'FREE', EventOrder: 0, DisplayOrder: 1 }
+  ]), /شماره ترتیب نمایش رویداد تکراری است/);
+  assert.throws(() => validate([
+    { EventTypeID: 'EVT_A', SequenceMode: 'FREE', EventOrder: 0, DisplayOrder: 0 }
+  ]), /ترتیب نمایش هر رویداد باید عدد صحیح مثبت باشد/);
 });
