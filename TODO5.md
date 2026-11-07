@@ -24,11 +24,10 @@
 - نتیجه: تغییر لازم در این فاز فقط در Frontend است؛ Backend باید بدون تغییر runtime باقی بماند.
 - *Log:* `Router.js`: مسیرهای موجود `POST /events` و `POST /projects/:projectId/attachments`؛ `EventService.js:create/_createUnlocked_`؛ `AttachmentService.js`؛ شیت‌های `13_Events`, `15_Attachments`, `30_ProjectInformation`, `31_ProjectInformationHistory`, `34_EventFormData`. مبنای Backend `776b2e75848d5d74201607191499a2f2c1bd6ad5`.
 
-### Task 2 — هماهنگی قراردادها و مستندات Backend (IN PROGRESS)
-- هیچ کد اجرایی Backend تغییر نکند، مگر آنکه آزمون integration نیاز واقعی و اثبات‌شده‌ای را نشان دهد.
-- بازبینی سازگاری درخواست/پاسخ upload و POST/PUT رویداد با وضعیت‌هایی که Frontend نمایش می‌دهد.
-- مستندسازی نتیجه نهایی در ARCHITECTURE پس از پذیرش فاز؛ TODO5 تا زمان بسته‌شدن کامل فاز حفظ شود.
-
+### Task 2 — هماهنگی قراردادها و مستندات Backend [x]
+- قراردادهای موجود upload پیوست، ثبت رویداد، اصلاح پاسخ فرم و idempotency با مراحل UI تطبیق داده شدند؛ هیچ ناسازگاری نیازمند تغییر Backend مشاهده نشد.
+- Backend runtime، APIها، مجوزها و ساختار داده عمداً بدون تغییر باقی ماندند.
+- *Log:* `Router.js`: `POST /projects/:projectId/attachments` با `ATTACHMENT_UPLOAD` و `POST /events` با `EVENT_CREATE`؛ `EventService.js:create/_createUnlocked_` و idempotency؛ `AttachmentService.js` و کنترل tenant/مالکیت. Frontend وضعیت upload را از پاسخ همین API موجود و مراحل ثبت/refresh را از نتیجه `POST/PUT` و `reloadEvents()` دریافت می‌کند. هیچ endpoint، Sheet، schema، permission یا کد اجرایی Backend تغییر نکرد.
 ### Task 3 — Cross-repository QA و پذیرش انتشار Frontend
 - اجرای QA بین‌مخزنی و بررسی اینکه UI فقط وضعیت واقعی APIهای موجود را منعکس می‌کند.
 - Backend deployment فقط در صورت تغییر runtime لازم است؛ در غیر این صورت صریحاً عدم نیاز به انتشار Backend ثبت شود.
