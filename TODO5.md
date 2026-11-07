@@ -28,7 +28,8 @@
 - قراردادهای موجود upload پیوست، ثبت رویداد، اصلاح پاسخ فرم و idempotency با مراحل UI تطبیق داده شدند؛ هیچ ناسازگاری نیازمند تغییر Backend مشاهده نشد.
 - Backend runtime، APIها، مجوزها و ساختار داده عمداً بدون تغییر باقی ماندند.
 - *Log:* `Router.js`: `POST /projects/:projectId/attachments` با `ATTACHMENT_UPLOAD` و `POST /events` با `EVENT_CREATE`؛ `EventService.js:create/_createUnlocked_` و idempotency؛ `AttachmentService.js` و کنترل tenant/مالکیت. Frontend وضعیت upload را از پاسخ همین API موجود و مراحل ثبت/refresh را از نتیجه `POST/PUT` و `reloadEvents()` دریافت می‌کند. هیچ endpoint، Sheet، schema، permission یا کد اجرایی Backend تغییر نکرد.
-### Task 3 — Cross-repository QA و پذیرش انتشار Frontend
+
+### Task 3 — Cross-repository QA و پذیرش انتشار Frontend (IN PROGRESS)
 - اجرای QA بین‌مخزنی و بررسی اینکه UI فقط وضعیت واقعی APIهای موجود را منعکس می‌کند.
 - Backend deployment فقط در صورت تغییر runtime لازم است؛ در غیر این صورت صریحاً عدم نیاز به انتشار Backend ثبت شود.
 - تأیید انتشار Frontend و تست نسخه زنده توسط مالک محصول؛ سپس بستن فاز طبق پروتکل.
