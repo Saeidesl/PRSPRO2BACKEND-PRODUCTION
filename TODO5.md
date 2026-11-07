@@ -51,7 +51,7 @@
 - هیچ تغییر DB/API route جدیدی انجام نشد.
 - *Log:* `ProjectInformationService.js` تابع `_scalar` اکنون آرایه حداکثر ۲۰ reference تصویر را با کنترل AttachmentID، TenantID، EntityType، EntityID، AttachmentType، Status و MIME به metadata معتبر تبدیل می‌کند؛ مقدار قدیمی object حفظ شده و آرایه برای `file` رد می‌شود. `tests/information-file-types.test.js` آزمون‌های سازگاری legacy، سقف تعداد، MIME و مالکیت و اعتبارسنجی فیلد مستقل و ستون تصویری جدول را پوشش می‌دهد. GitHub Actions اجرای ۵۵ موفق شد: ۱۸۷ تست Backend پاس و ۰ تست ناموفق؛ بررسی syntax تعداد ۸۵ فایل Apps Script و manifest نیز موفق بود.
 
-### Task 3 — Frontend: انتخاب چندتصویر، پیش‌نمایش و نمایش مقادیر (IN PROGRESS) [ ]
+### Task 3 — Frontend: انتخاب چندتصویر، پیش‌نمایش و نمایش مقادیر [x]
 - در `js/modules/events.js` تمام ورودی‌های `image`، چه مستقل و چه ستون جدول، به انتخاب چند فایل مجهز شده‌اند؛ پیش‌نمایش و حذف هر تصویر پیش از ثبت و کنترل تعداد/حجم/MIME اعمال شده است.
 - `collectConfiguredFormResponses` آرایه referenceها را از همان API موجود بارگذاری می‌کند؛ بارگذاری ترتیبی و cache هر File برای جلوگیری از بارگذاری تکراری حفظ شده است.
 - `hydrateAmendmentForm` با آرایه تصویر و داده تک‌تصویر قدیمی سازگار شده است.
@@ -59,8 +59,8 @@
 - نسخه cache-busting فایل‌های تغییرکرده در `index.html` به‌روز شده است.
 - *Log:* `js/modules/events.js`: توابع `createFieldInput`, `renderConfiguredForms`, `addConfiguredFormRow`, `hydrateAmendmentForm`, `collectConfiguredFormResponses`, `hasStoredFormAttachment`, `uploadConfiguredFormImages`, `uploadConfiguredFormFile`, `renderEventInformationValue`, `renderEventFormValue`, `openEventImageAttachment`, `openDetails`, `loadEventContext`. انتخاب تصویر تا ۲۰ فایل، پیش‌نمایش و حذف قبل از ثبت، بارگذاری ترتیبی از `POST /projects/:projectId/attachments` و استفاده از `AttachmentType=INFORMATION` (تصویر پروفایل فقط برای اولین فایل انتخاب‌شده) انجام می‌شود. `js/modules/project-detail.js`: `prepareProjectFormImages`, `renderProjectFormValue`, `renderInformationValue` برای نمایش آرایه تصویر و سلول‌های جدولی گسترش یافت. `index.html` نسخه assetها را به‌روز کرد. `tests/information-file-types.test.js` آزمون‌های قراردادی Frontend را گسترش داد.
 
-### Task 4 — Integration QA, Regression & Release Readiness [ ]
-- تست‌های Backend/Frontend برای قرارداد آرایه و سازگاری legacy افزوده/به‌روزرسانی شوند.
-- تست‌های خودکار، syntax، CI، کنترل API request/response، دسترسی ATTACHMENT_UPLOAD/VIEW، ذخیره و بازیابی تصاویر و عدم ایجاد تغییر DB اجرا شوند.
-- تغییرات دو مخزن از نظر قرارداد reference و نسخه asset هماهنگ شوند؛ PR/ادغام و انتشار فقط پس از عبور بررسی‌ها و طبق گردش‌کار عملیاتی انجام شود.
-- وضعیت GitHub، Backend deployment، Frontend deployment و live verification جداگانه گزارش شود؛ هیچ انتشار تأییدنشده‌ای عملیاتی اعلام نشود.
+### Task 4 — Integration QA, Regression & Release Readiness (IN PROGRESS) [ ]
+- تست‌های خودکار Backend و کنترل syntax/manifest با موفقیت اجرا شدند؛ ۱۸۷ تست پاس و ۰ ناموفق. آزمون‌های قراردادی Frontend و بررسی syntax نیز موفق شدند.
+- آزمون عملی مرورگر هنوز لازم است: انتخاب چند تصویر در فیلد مستقل و ستون جدول، حذف تصویر، ثبت رویداد، مشاهده جزئیات/اطلاعات مرکزی/صفحه پروژه و اصلاح رویداد.
+- PRهای دو مخزن باز و قابل ادغام هستند؛ هیچ ادغامی به `main`، انتشار Backend/Frontend یا تغییر داده عملیاتی انجام نشده است.
+- پس از آزمون عملی و تأیید مالک محصول، ادغام و انتشار از مسیر عملیاتی جداگانه انجام خواهد شد؛ وضعیت GitHub، Backend deployment، Frontend deployment و live verification جداگانه ثبت می‌شود.
