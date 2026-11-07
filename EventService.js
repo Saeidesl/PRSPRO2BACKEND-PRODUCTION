@@ -935,7 +935,9 @@ const EventService = {
       throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'پروژه مورد نظر پیدا نشد.');
     }
     const progress = this._getWorkflowRuleProgress_(project, user.TenantID);
-    const eventTypes = EventTypeRepository.getAll().filter(function(item) {
+    const eventTypes = (typeof EventTypeRepository.getAllCached === 'function'
+      ? EventTypeRepository.getAllCached()
+      : EventTypeRepository.getAll()).filter(function(item) {
       return String(item.TenantID) === String(user.TenantID);
     });
     const names = Object.create(null);
