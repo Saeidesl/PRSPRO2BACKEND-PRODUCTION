@@ -49,7 +49,7 @@
 - اعمال سقف ۲۰ تصویر و حفظ سقف فعلی JSON، idempotency، تاریخچه و tenant isolation.
 - افزودن تست‌های واحد برای آرایه معتبر، آرایه خالی، تعداد بیش از حد، پیوست نامعتبر/متعلق به پروژه یا tenant دیگر، MIME غیرتصویری و سازگاری مقدار قدیمی.
 - هیچ تغییر DB/API route جدیدی انجام نشد.
-- *Log:* `ProjectInformationService.js` تابع `_scalar` اکنون آرایه حداکثر ۲۰ reference تصویر را با کنترل AttachmentID، TenantID، EntityType، EntityID، AttachmentType، Status و MIME به metadata معتبر تبدیل می‌کند؛ مقدار قدیمی object حفظ شده و آرایه برای `file` رد می‌شود. `tests/information-file-types.test.js` آزمون‌های سازگاری legacy، سقف تعداد، MIME و مالکیت و اعتبارسنجی فیلد مستقل و ستون تصویری جدول را پوشش می‌دهد. GitHub Actions در اجرای ۵۵ در حال اجرای تست‌ها و کنترل syntax است.
+- *Log:* `ProjectInformationService.js` تابع `_scalar` اکنون آرایه حداکثر ۲۰ reference تصویر را با کنترل AttachmentID، TenantID، EntityType، EntityID، AttachmentType، Status و MIME به metadata معتبر تبدیل می‌کند؛ مقدار قدیمی object حفظ شده و آرایه برای `file` رد می‌شود. `tests/information-file-types.test.js` آزمون‌های سازگاری legacy، سقف تعداد، MIME و مالکیت و اعتبارسنجی فیلد مستقل و ستون تصویری جدول را پوشش می‌دهد. GitHub Actions اجرای ۵۵ موفق شد: ۱۸۷ تست Backend پاس و ۰ تست ناموفق؛ بررسی syntax تعداد ۸۵ فایل Apps Script و manifest نیز موفق بود.
 
 ### Task 3 — Frontend: انتخاب چندتصویر، پیش‌نمایش و نمایش مقادیر (IN PROGRESS) [ ]
 - در `js/modules/events.js` تمام ورودی‌های `image`، چه مستقل و چه ستون جدول، به انتخاب چند فایل مجهز شده‌اند؛ پیش‌نمایش و حذف هر تصویر پیش از ثبت و کنترل تعداد/حجم/MIME اعمال شده است.
