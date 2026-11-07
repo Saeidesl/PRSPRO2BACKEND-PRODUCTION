@@ -608,9 +608,9 @@ const WorkflowService = {
       .filter(function(rule) { return String(rule.TenantID) === String(user.TenantID) && String(rule.Status || 'ACTIVE').toUpperCase() === 'ACTIVE'; });
     rules.sort(function(a, b) {
       const mode = String(a.SequenceMode || 'STRICT').toUpperCase();
-      if (mode === 'STRICT') return Number(a.EventOrder || 0) - Number(b.EventOrder || 0);
-      if (mode === 'GROUPED') return Number(a.GroupOrder || 0) - Number(b.GroupOrder || 0);
-      return Number(a.DisplayOrder || 0) - Number(b.DisplayOrder || 0);
+      return mode === 'FREE'
+        ? Number(a.DisplayOrder || 0) - Number(b.DisplayOrder || 0)
+        : 0;
     });
     return Response.success({ workflowId: workflowId, workflowVersion: requestedVersion, stepId: stepId, items: rules, total: rules.length });
   },
