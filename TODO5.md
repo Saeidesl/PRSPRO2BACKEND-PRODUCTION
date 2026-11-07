@@ -48,7 +48,8 @@
 - تعریف Taskهای اجرایی و آزمون.
 - *Log:* Frontend main HEAD=`33383e8472ab60e524896bd22ba7eed069ed7809` و Backend main HEAD=`ccf8dae0a816212b2e612a9f05254481f8b4569e` بررسی شد؛ هر دو TODO5 روی Ready for the next feature بودند. شاخه کاری هم‌نام در هر دو مخزن از همین HEADها ایجاد شد. نقاط اجرایی: `js/modules/events.js: Events.openForm, renderConfiguredForms, updateFormMode, applyConfiguredFormVisibility`؛ `css/events.css: .event-form-mode*`؛ `index.html` برای cache-busting. مسیر ثبت `POST /events` و سرویس‌های Backend خارج از محدوده تغییر هستند.
 
-### Task 2 — حذف حالت سریع و تثبیت ثبت کامل (IN PROGRESS)
+### Task 2 — حذف حالت سریع و تثبیت ثبت کامل [x]
+- *Log:* تغییر صرفاً نمایشی/فرانت‌اندی بود؛ در Backend هیچ فایل اجرایی، تابع، API، Router، permission، Sheet یا schema تغییر نکرد. قرارداد فعلی `POST /events` و `EventService.create` حفظ شد. Cross-repository QA Run `42362016270` با بررسی Frontend و Backend موفق شد.
 - حذف انتخاب‌گر quick/full و متن راهنما از HTML مودال ساخته‌شده در `Events.openForm`.
 - حذف state، listener و منطق مخفی‌سازی اختصاصی quick/full؛ نمایش پیش‌فرض همه فیلدها.
 - حفظ VisibilityRule و requiredness واقعی هر فیلد.
@@ -56,7 +57,7 @@
 - به‌روزرسانی نسخه asset و اجرای تست‌های مرتبط.
 - خروجی قابل آزمون: فرم ثبت رویداد تنها یک حالت داشته باشد و همه فیلدهای مجاز فرم کامل را نمایش دهد.
 
-### Task 3 — Regression، سازگاری و آماده‌سازی ادغام
+### Task 3 — Regression، سازگاری و آماده‌سازی ادغام (IN PROGRESS)
 - افزودن/به‌روزرسانی تست‌های رگرسیون برای نبود quick/full و نمایش همیشگی فیلدهای اختیاری.
 - اجرای تست‌های کامل Frontend، بررسی syntax و تست‌های مرتبط با ثبت رویداد.
 - بررسی عدم تغییر قرارداد `POST /events`، payload، Backend، مجوزها و ساختار داده.
