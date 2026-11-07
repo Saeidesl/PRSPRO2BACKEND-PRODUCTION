@@ -805,3 +805,26 @@
 - Frontend مربوط به همین قابلیت در PR #44 و commit `d9bf675612e3deffadcdf723080cb4606143c452` ادغام شد و GitHub Pages deploy در Run `42397792898` موفق بود.
 - کاربر تست عملیاتی نسخه منتشرشده را موفق اعلام کرد.
 - زمان‌بندی دقیق هر درخواست در محیط زنده اندازه‌گیری نشده است؛ این سند ادعای حذف قطعی تمام تأخیر عددی را ثبت نمی‌کند.
+
+
+## 2026-11-07 — مودال مرحله‌به‌مرحله پیشرفت ثبت رویداد (ثبت سازگاری Backend)
+
+### هدف و محدوده
+- مودال پیشرفت ثبت رویداد در Frontend به مسیرهای عملیاتی موجود متصل شد تا وضعیت آپلود پیوست، ثبت رویداد و تازه‌سازی فهرست را نمایش دهد.
+- بررسی قراردادها نشان داد تغییر اجرایی Backend لازم نیست؛ Backend runtime و داده‌های عملیاتی بدون تغییر باقی ماندند.
+- مالک محصول نسخه عملیاتی Frontend را تست و موفقیت را تأیید کرد؛ فاز در تاریخ 2026-11-07 بسته شد.
+
+### قراردادهای Backend حفظ‌شده
+- `Router.js`: `POST /projects/:projectId/attachments` با مجوز `ATTACHMENT_UPLOAD` و `POST /events` با مجوز `EVENT_CREATE`.
+- `EventService.js:create/_createUnlocked_`: ثبت رویداد و idempotency موجود حفظ شدند.
+- `AttachmentService.js`: کنترل tenant/مالکیت و ذخیره پیوست در مسیر موجود حفظ شدند.
+- مسیر اصلاح پاسخ فرم `PUT /events/:eventId/forms/:formId` و refresh سمت Frontend از مسیرهای موجود استفاده می‌کنند.
+- شیت‌های `13_Events`, `15_Attachments`, `30_ProjectInformation`, `31_ProjectInformationHistory`, `34_EventFormData` بدون تغییر باقی ماندند.
+- هیچ endpoint، Sheet، ستون، schema، permission، migration یا داده عملیاتی تغییر نکرد.
+
+### آزمون، ادغام و انتشار
+- Backend PR #23 صرفاً مستندات را به‌روزرسانی کرد و با squash در commit `12e463dc6123e6d005a6efbd7fa5ca58637324af` روی `main` ادغام شد.
+- Frontend PR #45 در commit `4a34154b857b06345c923d8b1ec69937a8db1209` ادغام و GitHub Pages در Run `42400576366` با موفقیت منتشر شد.
+- Frontend checks، cross-repository QA و agent suite موفق شدند؛ ۲۰۱ تست Frontend از ۲۰۱ تست موفق شدند.
+- چون Backend runtime تغییر نکرد، انتشار Apps Script/Backend لازم نبود.
+- مالک محصول تست نسخه زنده را موفق اعلام کرد.
