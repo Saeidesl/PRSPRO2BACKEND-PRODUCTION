@@ -1,6 +1,6 @@
 ## 🎯 Current Objective
 
-حذف دوگانه‌سازی «ثبت سریع» و «ثبت کامل» از فرم ثبت رویداد و ارائه فقط یک تجربه واحد با نمایش همیشگی تمام فیلدهای مجاز فرم؛ حفظ مسیرهای فعلی ثبت، قواعد اعتبارسنجی، فرم‌های متصل، اطلاعات چندردیفی، فایل‌ها/تصاویر، اصلاح فرم و کنترل‌های دسترسی.
+افزودن امکان تعیین ترتیب نمایشی مستقل برای رویدادهای هر مرحله در حالت «ترتیب آزاد» Workflow؛ ترتیب انتخاب‌شده فقط نحوه نمایش فهرست رویدادها را کنترل کند و هیچ محدودیتی بر ترتیب ثبت/اجرای رویدادها ایجاد نکند. حفظ رفتار فعلی حالت‌های STRICT و GROUPED، نسخه‌بندی Workflow، tenant isolation و APIهای موجود.
 
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
 
@@ -40,6 +40,22 @@
 - هیچ API، شیت، داده عملیاتی یا مسیر ایجاد موازی اضافه/حذف نشود.
 
 ## 📋 Macro-Task Queue & Implementation Log
+
+### نقشه فنی تکمیلی — ترتیب نمایشی رویدادهای FREE
+- WorkflowStepEventRuleValidator.js → WorkflowStepEventRuleValidator.validate اکنون برای FREE مقدار EventOrder=0 و بدون گروه را الزام می‌کند؛ فیلد مستقل DisplayOrder باید افزوده شود تا معنای ترتیب اجرایی از ترتیب نمایشی جدا بماند.
+- WorkflowStepEventRuleRepository.js در REQUIRED_COLUMNS ستون‌های شیت 37_WorkflowStepEventRules را تضمین می‌کند؛ cloneWorkflowVersion نیز باید DisplayOrder را در نسخه پیش‌نویس حفظ کند.
+- DatabaseSetup.js → APP_CONFIG.SHEETS.WORKFLOW_STEP_EVENT_RULES.headers ساختار شیت ۳۷ را تعریف می‌کند؛ افزودن ستون فقط افزایشی است و داده‌های قبلی نباید حذف یا بازنویسی شوند.
+- WorkflowService.getStepEventRules/saveStepEventRules از APIهای فعلی GET/PUT /workflows/:id/steps/:stepId/event-rules استفاده می‌کنند؛ مسیر جدیدی لازم نیست.
+- EventService._getWorkflowRuleProgress_ قواعد را مرتب و به progress تبدیل می‌کند؛ در FREE باید مرتب‌سازی با DisplayOrder انجام شود، درحالی‌که کنترل ثبت همچنان بدون ترتیب اجباری باقی بماند. workflowProgress باید displayOrder را در خروجی حفظ کند.
+
+
+### Task 4 — تنظیم ترتیب نمایش رویدادها در حالت ترتیب آزاد Workflow (IN PROGRESS)
+- کشف انجام شد: در UI فعلی EventOrder فقط برای STRICT نمایش داده می‌شود؛ در FREE مخفی و با مقدار صفر ارسال می‌شود. Backend نیز FREE را با EventOrder=0 اعتبارسنجی می‌کند و آن را به‌عنوان ترتیب اجرایی نمی‌پذیرد. در نتیجه ترتیب فعلی FREE از ترتیب ذخیره/دریافت داده تبعیت می‌کند و کنترل دستی ندارد.
+- تصمیم فنی: افزودن DisplayOrder مستقل به همان شیت 37_WorkflowStepEventRules؛ در حالت FREE ترتیب نمایشی با این فیلد تعیین شود و EventOrder همچنان صفر بماند. هیچ Sheet یا API موازی ایجاد نمی‌شود.
+- محدوده اجرا: UI تنظیم رویداد مرحله، اعتبارسنجی و ذخیره Backend، clone نسخه Workflow، خروجی progress و مرتب‌سازی فهرست انتخاب رویداد.
+- حفظ سازگاری: برای داده‌های قدیمی فاقد DisplayOrder، ترتیب فعلی رکوردها به‌عنوان fallback استفاده شود؛ STRICT و GROUPED و قواعد ثبت/تکمیل مرحله تغییر نکنند.
+- خروجی قابل آزمون: مدیر بتواند برای رویدادهای مرحله در حالت FREE عدد ترتیب نمایش مستقل تعیین کند؛ پس از ذخیره و بازگشایی، ترتیب حفظ شود و همان ترتیب در فهرست انتخاب رویداد نمایش داده شود، بدون اجبار به ثبت رویدادها به همان ترتیب.
+
 
 ### Task 1 — Discovery & Planning [x]
 - بررسی TODO5 و ARCHITECTURE هر دو مخزن، وضعیت main و commitهای HEAD.
