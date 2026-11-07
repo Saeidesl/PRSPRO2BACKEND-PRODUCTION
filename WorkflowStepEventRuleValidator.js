@@ -36,7 +36,9 @@ const WorkflowStepEventRuleValidator = {
       const groupKey = String(rule.GroupKey || '').trim();
       const groupOrder = Number(rule.GroupOrder || 0);
       const eventOrder = Number(rule.EventOrder || 0);
-      const displayOrder = Number(rule.DisplayOrder || index + 1);
+      const displayOrder = rule.DisplayOrder === undefined || rule.DisplayOrder === null || rule.DisplayOrder === ''
+        ? index + 1
+        : Number(rule.DisplayOrder);
       if (sequence === 'STRICT' && (!Number.isInteger(eventOrder) || eventOrder < 1 || groupKey || groupOrder)) {
         throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'در ترتیب اجباری، ترتیب هر رویداد باید یکتا و بدون گروه باشد.');
       }
