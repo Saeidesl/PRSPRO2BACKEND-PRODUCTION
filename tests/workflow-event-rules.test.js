@@ -11,7 +11,7 @@ test('workflow event rule schema is additive and version-aware', () => {
   assert.match(schema, /name: '37_WorkflowStepEventRules'/);
   assert.match(schema, /WorkflowType[\s\S]*LifecycleState[\s\S]*PublishedVersion[\s\S]*DraftVersion/);
   assert.match(schema, /WorkflowVersion/);
-  assert.match(schema, /EventOrder[\\s\\S]*DisplayOrder/);
+  assert.ok(schema.includes("'EventOrder','DisplayOrder'"));
 });
 
 test('workflow event rule APIs are permission-protected and tenant-scoped', () => {
