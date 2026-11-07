@@ -828,3 +828,20 @@
 - Frontend checks، cross-repository QA و agent suite موفق شدند؛ ۲۰۱ تست Frontend از ۲۰۱ تست موفق شدند.
 - چون Backend runtime تغییر نکرد، انتشار Apps Script/Backend لازم نبود.
 - مالک محصول تست نسخه زنده را موفق اعلام کرد.
+
+
+## 2026-11-07 — سازگاری Backend برای میانبر تاریخچه رویدادهای پروژه
+
+### تصمیم معماری و قرارداد
+- قابلیت میانبر «رویدادهای ثبت‌شده برای این پروژه» در Frontend و روی کارت پروژه در صفحه «رویدادها» پیاده‌سازی شد؛ Backend runtime تغییر نکرد.
+- Frontend از مسیر موجود `GET /events` استفاده می‌کند؛ فیلتر پروژه با فیلد موجود `ProjectID` در همان رابط تاریخچه اعمال می‌شود.
+- `Router.js`: مسیر `GET /events` با `AccessControlService.require(params, 'EVENT_VIEW')` به `EventService.list(params)` متصل است.
+- tenant scoping و کنترل مجوز سرور دست‌نخورده باقی می‌مانند؛ Frontend فقط داده‌ای را فیلتر می‌کند که API مجاز برگردانده است.
+- شیت موجود `13_Events` و ساختار داده آن بدون تغییر باقی ماند؛ هیچ API، permission، Sheet، ستون، schema، migration یا داده‌ای اضافه/حذف/تغییر نکرد.
+- انتشار جدید Apps Script لازم نبود.
+
+### آزمون، ادغام و پذیرش
+- Backend PR #26 صرفاً مستندات سازگاری را ثبت کرد؛ Frontend PR #49 با squash در commit `9c0bed3be00e265d361b446129614a1f21945b45` ادغام شد.
+- ۲۰۸ تست Frontend، Agent Suite، Cross-repository QA و Browser/Performance audit پیش از ادغام موفق شدند.
+- GitHub Pages انتشار Frontend موفق شد؛ مالک محصول در 2026-11-07 تست نسخه زنده را تأیید کرد.
+- تأیید شد که دکمه در صفحه رویدادها کنار CTA ثبت رویداد است، تاریخچه همان پروژه را در همان صفحه فیلتر می‌کند و مجوزهای مشاهده/tenant سرور حفظ می‌شوند.
