@@ -27,7 +27,8 @@
 - عدم تغییر runtime، API، شیت و داده؛ ثبت دقیق نتیجه سازگاری.
 - *Log:* `Router.js`: مسیر GET `/events` با `AccessControlService.require(params, 'EVENT_VIEW')` به `EventService.list(params)` متصل است. Frontend فقط رویدادهای برگشتی از همین API مجاز را با فیلد موجود `ProjectID` فیلتر می‌کند؛ tenant scoping و مجوز سرور دست‌نخورده‌اند. هیچ API، شیت، ستون یا schema جدیدی نیاز نیست.
  
-### Task 3 — Cross-repository QA و ثبت نتیجه انتشار
+### Task 3 — Cross-repository QA و ثبت نتیجه انتشار [x]
 - تطبیق رفتار دکمه روی کارت پروژه در صفحه رویدادها با API موجود `GET /events`، مجوز `EVENT_VIEW`، tenant scoping و فیلد `ProjectID`.
 - در صورت عدم تغییر Backend runtime، انتشار Apps Script لازم نیست و این موضوع صریحاً ثبت شود.
 - نتیجه تست نسخه عملیاتی Frontend پس از انتشار از مالک محصول دریافت شود.
+- *Log:* Frontend PR #49 با squash در commit `9c0bed3be00e265d361b446129614a1f21945b45` روی `main` ادغام و GitHub Pages با موفقیت منتشر شد. ۲۰۸ تست Frontend، Agent Suite، Cross-repository QA و Browser/Performance audit پیش از ادغام موفق شدند؛ مالک محصول در 2026-11-07 تست نسخه زنده را موفق تأیید کرد. Backend PR #26 صرفاً مستندات سازگاری را ثبت کرد و ادغام شد؛ `Router.js:GET /events`، `AccessControlService.require(..., 'EVENT_VIEW')`، `EventService.list(params)`، فیلتر `ProjectID` و شیت `13_Events` بدون تغییر ماندند. هیچ Backend runtime، API، Sheet، schema یا داده‌ای تغییر نکرد؛ بنابراین انتشار Apps Script لازم نبود.
