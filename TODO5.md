@@ -1,6 +1,6 @@
 ## 🎯 Current Objective
 
-افزودن پشتیبانی سازگار از انتخاب و ثبت هم‌زمان چند تصویر در فیلدهای مستقلِ نوع داده «تصویر» در اطلاعات مرکزی که از طریق فرم متصل به رویداد تکمیل می‌شوند؛ بدون ایجاد API، فرم یا مسیر ذخیره‌سازی موازی.
+افزودن پشتیبانی سازگار از انتخاب و ثبت هم‌زمان چند تصویر در تمام فیلدهای تصویری اطلاعات مرکزی، شامل فیلدهای مستقل و ستون‌های تصویری جداول که از طریق فرم متصل به رویداد تکمیل می‌شوند؛ بدون ایجاد API، فرم یا مسیر ذخیره‌سازی موازی.
 
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
 
@@ -20,7 +20,7 @@
 - پاسخ فرم در مسیر اصلی `POST /events` ثبت می‌شود؛ API ثبت رویداد و ساختار فرم تغییر موازی نخواهد داشت.
 - Backend: `Router.js` مسیرهای پیوست و رویداد را مدیریت می‌کند؛ `AttachmentService.js` مالکیت و دسترسی را کنترل و metadata را در `15_Attachments` ثبت می‌کند.
 - `FormService.prepareEventResponses(eventTypeId, responses, tenantId, projectId)` پاسخ‌ها را اعتبارسنجی می‌کند؛ `FormService.saveEventResponses(event, responses, user, params)` snapshot فرم را در `34_EventFormData` ثبت و مقدارهای غیرخالی را به اطلاعات جاری پروژه منتقل می‌کند.
-- `ProjectInformationService._scalar(value, dataType, rules, options, label, context)` در حال حاضر برای `image/file` یک object حاوی AttachmentID می‌پذیرد؛ `_validate(type, columns, value, context)` مقدار اطلاعات مرکزی را اعتبارسنجی می‌کند.
+- `ProjectInformationService._scalar(value, dataType, rules, options, label, context)` در نسخه جدید برای `image` یک object قدیمی یا آرایه‌ای تا ۲۰ reference تصویر می‌پذیرد؛ برای `file` همچنان فقط object مجاز است؛ `_validate(type, columns, value, context)` مقدار اطلاعات مرکزی را اعتبارسنجی می‌کند.
 - مقدار جاری در `30_ProjectInformation.ValueJSON` و تاریخچه در `31_ProjectInformationHistory` نگهداری می‌شود. برای اطلاعات تصویری، backend metadata معتبر را از `15_Attachments` بازیابی می‌کند و metadata ارسالی کلاینت مرجع نیست.
 - `ProjectInformationService.save` سقف طول JSON برابر ۴۵۰۰۰ کاراکتر و idempotency مبتنی بر `SourceEventID` را اعمال می‌کند.
 - تعریف تعدادپذیری `Cardinality=MULTIPLE` فعلی برای ردیف‌های جدولی است و در اطلاعات بدون ستون مجاز نیست؛ نباید برای چندتصویری به‌اشتباه از آن استفاده شود.
@@ -29,8 +29,8 @@
 - آزمون‌های پایه: Backend و Frontend هر دو `tests/information-file-types.test.js` دارند؛ Backend با `node --test tests/*.test.js` و CI موجود بررسی می‌شود.
 
 ### تصمیم سازگاری داده
-- قرارداد جدید برای فیلد مستقل `DataType=image`: مقدار جدید به‌صورت آرایه‌ای از referenceهای امن پیوست ذخیره می‌شود؛ مقدار قدیمی تک‌تصویر (object) همچنان خوانده و نمایش داده می‌شود.
-- این قابلیت فقط برای فیلد مستقل تصویر است؛ `file` و تصویرهای داخل ستون‌های جدول در این تسک رفتار تک‌فایل فعلی خود را حفظ می‌کنند.
+- قرارداد جدید برای هر فیلد/ستون `DataType=image`: مقدار جدید به‌صورت آرایه‌ای از referenceهای امن پیوست ذخیره می‌شود؛ مقدار قدیمی تک‌تصویر (object) همچنان خوانده و نمایش داده می‌شود.
+- این قرارداد برای فیلد مستقل تصویر و ستون تصویر در جداول تک‌ردیفی و چندردیفی اعمال می‌شود؛ نوع `file` همچنان تک‌فایل می‌ماند.
 - تعداد تصاویر هر فیلد حداکثر ۲۰ و حجم هر تصویر مطابق محدودیت موجود سرور (۱۰ مگابایت) خواهد بود؛ بارگذاری با کنترل خطا و بدون درخواست موازی سنگین انجام می‌شود.
 - فقط پروژه‌محور؛ محدودیت فعلی ثبت فایل در رویداد مستقل حفظ می‌شود.
 - هیچ Sheet یا ستون جدیدی لازم نیست؛ referenceها در همان `ValueJSON` و snapshot پاسخ فرم ذخیره می‌شوند.
@@ -43,19 +43,21 @@
 - شاخه کاری هم‌نام در هر دو مخزن از `main` ایجاد شد؛ تغییر runtime یا داده عملیاتی انجام نشد.
 - *Log:* Backend: `ProjectInformationService.js` توابع `_scalar`, `_validate`, `save`؛ `FormService.js` توابع `prepareEventResponses`, `saveEventResponses`؛ `AttachmentService.js` و مسیرهای موجود Router؛ شیت‌های `15_Attachments`, `30_ProjectInformation`, `31_ProjectInformationHistory`, `34_EventFormData`. Frontend: `js/modules/events.js` توابع `renderConfiguredForms`, `createFieldInput`, `collectConfiguredFormResponses`, `uploadConfiguredFormFile`, `openDetails`, `displayValue`, `loadEventContext`; `js/modules/project-detail.js`؛ `index.html`. آزمون‌های پایه `tests/information-file-types.test.js` در هر دو مخزن. هر دو شاخه کاری از main ایجاد شدند.
 
-### Task 2 — Backend: اعتبارسنجی و ذخیره چندتصویری (IN PROGRESS) [ ]
+### Task 2 — Backend: اعتبارسنجی و ذخیره چندتصویری [x]
 - توسعه اعتبارسنجی آرایه تصویر در `ProjectInformationService._validate` با استفاده مجدد از `_scalar` برای اعتبارسنجی مستقل هر AttachmentID، tenant، پروژه، نوع پیوست، وضعیت و MIME.
 - حفظ کامل پشتیبانی از object تک‌تصویر قدیمی و جلوگیری از پذیرش آرایه برای نوع `file` یا ساختارهای جدولی خارج از محدوده.
 - اعمال سقف ۲۰ تصویر و حفظ سقف فعلی JSON، idempotency، تاریخچه و tenant isolation.
 - افزودن تست‌های واحد برای آرایه معتبر، آرایه خالی، تعداد بیش از حد، پیوست نامعتبر/متعلق به پروژه یا tenant دیگر، MIME غیرتصویری و سازگاری مقدار قدیمی.
-- هیچ تغییر DB/API route جدیدی پیش‌بینی نشده است.
+- هیچ تغییر DB/API route جدیدی انجام نشد.
+- *Log:* `ProjectInformationService.js` تابع `_scalar` اکنون آرایه حداکثر ۲۰ reference تصویر را با کنترل AttachmentID، TenantID، EntityType، EntityID، AttachmentType، Status و MIME به metadata معتبر تبدیل می‌کند؛ مقدار قدیمی object حفظ شده و آرایه برای `file` رد می‌شود. `tests/information-file-types.test.js` آزمون‌های سازگاری legacy، سقف تعداد، MIME و مالکیت و اعتبارسنجی فیلد مستقل و ستون تصویری جدول را پوشش می‌دهد. GitHub Actions در اجرای ۵۵ در حال اجرای تست‌ها و کنترل syntax است.
 
-### Task 3 — Frontend: انتخاب چندتصویر، پیش‌نمایش و نمایش مقادیر (IN PROGRESS NEXT) [ ]
-- در `js/modules/events.js` ورودی مستقل `image` به انتخاب چند فایل مجهز شود؛ پیش‌نمایش همه تصاویر، حذف انتخاب پیش از ثبت و کنترل تعداد/حجم/MIME ارائه شود.
-- `collectConfiguredFormResponses` آرایه referenceها را از طریق همان API موجود بارگذاری کند؛ retry/خطا و جلوگیری از بارگذاری دوباره فایل‌های تأییدشده حفظ شود.
-- `hydrateAmendmentForm` و فرم‌های اصلاحی با آرایه تصویر و داده تک‌تصویر قدیمی سازگار شوند.
-- در جزئیات رویداد، پنل اطلاعات مرکزی و صفحه اطلاعات پروژه، تصاویر به شکل گالری کوچک با لینک/پیش‌نمایش امن نمایش داده شوند؛ مقدارهای متنی/فایلی و سایر فرم‌ها بدون تغییر بمانند.
-- نسخه cache-busting فایل‌های تغییرکرده در `index.html` به‌روز شود.
+### Task 3 — Frontend: انتخاب چندتصویر، پیش‌نمایش و نمایش مقادیر (IN PROGRESS) [ ]
+- در `js/modules/events.js` تمام ورودی‌های `image`، چه مستقل و چه ستون جدول، به انتخاب چند فایل مجهز شده‌اند؛ پیش‌نمایش و حذف هر تصویر پیش از ثبت و کنترل تعداد/حجم/MIME اعمال شده است.
+- `collectConfiguredFormResponses` آرایه referenceها را از همان API موجود بارگذاری می‌کند؛ بارگذاری ترتیبی و cache هر File برای جلوگیری از بارگذاری تکراری حفظ شده است.
+- `hydrateAmendmentForm` با آرایه تصویر و داده تک‌تصویر قدیمی سازگار شده است.
+- جزئیات رویداد، پنل اطلاعات مرکزی، پاسخ فرم‌های پروژه و صفحه اطلاعات پروژه تصاویر را با پیش‌نمایش امن نمایش می‌دهند؛ ستون‌های تصویری جدول نیز پوشش داده شده‌اند.
+- نسخه cache-busting فایل‌های تغییرکرده در `index.html` به‌روز شده است.
+- *Log:* `js/modules/events.js`: توابع `createFieldInput`, `renderConfiguredForms`, `addConfiguredFormRow`, `hydrateAmendmentForm`, `collectConfiguredFormResponses`, `hasStoredFormAttachment`, `uploadConfiguredFormImages`, `uploadConfiguredFormFile`, `renderEventInformationValue`, `renderEventFormValue`, `openEventImageAttachment`, `openDetails`, `loadEventContext`. انتخاب تصویر تا ۲۰ فایل، پیش‌نمایش و حذف قبل از ثبت، بارگذاری ترتیبی از `POST /projects/:projectId/attachments` و استفاده از `AttachmentType=INFORMATION` (تصویر پروفایل فقط برای اولین فایل انتخاب‌شده) انجام می‌شود. `js/modules/project-detail.js`: `prepareProjectFormImages`, `renderProjectFormValue`, `renderInformationValue` برای نمایش آرایه تصویر و سلول‌های جدولی گسترش یافت. `index.html` نسخه assetها را به‌روز کرد. `tests/information-file-types.test.js` آزمون‌های قراردادی Frontend را گسترش داد.
 
 ### Task 4 — Integration QA, Regression & Release Readiness [ ]
 - تست‌های Backend/Frontend برای قرارداد آرایه و سازگاری legacy افزوده/به‌روزرسانی شوند.
