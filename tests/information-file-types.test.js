@@ -24,7 +24,10 @@ function loadInformationTypeValidator() {
 
 function loadProjectInformationService(attachment) {
   const context = {
-    AttachmentRepository: { findById: id => attachment && String(attachment.ID) === String(id) ? attachment : null },
+    AttachmentRepository: { findById: id => {
+      const items = Array.isArray(attachment) ? attachment : (attachment ? [attachment] : []);
+      return items.find(item => String(item.ID) === String(id)) || null;
+    } },
     AttachmentValidator: { FILE_TYPES: { 'image/png': ['png'], 'application/pdf': ['pdf'] } },
     ErrorHandler: { create: (_code, message) => new Error(message) },
     Constants: { ERROR: { VALIDATION_ERROR: 'VALIDATION_ERROR', NOT_FOUND: 'NOT_FOUND' } },
@@ -63,4 +66,33 @@ test('image fields reject non-image files and attachments outside the current pr
 test('only active INFORMATION attachments can be referenced', () => {
   const attachment = { ID: 'A1', TenantID: 'T1', EntityType: 'PROJECT', EntityID: 'P1', AttachmentType: 'PROJECT_DOCUMENT', Status: 'ACTIVE', FileName: 'spec.pdf', MimeType: 'application/pdf', FileSize: 123 };
   assert.throws(() => loadProjectInformationService(attachment)._scalar({ AttachmentID: 'A1' }, 'file', {}, [], 'فایل', { projectId: 'P1', tenantId: 'T1' }), /به این پروژه تعلق ندارد/);
+});
+
+
+test('image fields accept up to 20 validated attachment references and retain legacy single-image values', () => {
+  const attachments = Array.from({length: 21}, (_, index) => ({
+    ID: 'IMG' + (index + 1), TenantID: 'T1', EntityType: 'PROJECT', EntityID: 'P1',
+    AttachmentType: 'INFORMATION', Status: 'ACTIVE', FileName: 'image-' + index + '.png',
+    MimeType: 'image/png', FileSize: 123
+  }));
+  const service = loadProjectInformationService(attachments);
+  const context = {projectId: 'P1', tenantId: 'T1'};
+  const values = service._scalar(attachments.slice(0, 20).map(item => ({AttachmentID:item.ID})), 'image', {}, [], 'تصاویر', context);
+  assert.equal(values.length, 20);
+  assert.equal(values[0].AttachmentID, 'IMG1');
+  assert.equal(service._scalar({AttachmentID:'IMG1'}, 'image', {}, [], 'تصویر', context).AttachmentID, 'IMG1');
+  assert.throws(() => service._scalar(attachments.map(item => ({AttachmentID:item.ID})), 'image', {}, [], 'تصاویر', context), /حداکثر ۲۰ تصویر/);
+});
+
+test('multiple references are rejected for file fields and invalid image references are rejected', () => {
+  const attachments = [
+    {ID:'IMG1',TenantID:'T1',EntityType:'PROJECT',EntityID:'P1',AttachmentType:'INFORMATION',Status:'ACTIVE',FileName:'one.png',MimeType:'image/png',FileSize:123},
+    {ID:'PDF1',TenantID:'T1',EntityType:'PROJECT',EntityID:'P1',AttachmentType:'INFORMATION',Status:'ACTIVE',FileName:'doc.pdf',MimeType:'application/pdf',FileSize:123},
+    {ID:'IMG2',TenantID:'T2',EntityType:'PROJECT',EntityID:'P1',AttachmentType:'INFORMATION',Status:'ACTIVE',FileName:'other.png',MimeType:'image/png',FileSize:123}
+  ];
+  const service = loadProjectInformationService(attachments);
+  const context = {projectId:'P1',tenantId:'T1'};
+  assert.throws(() => service._scalar([{AttachmentID:'IMG1'}], 'file', {}, [], 'فایل', context), /فقط یک فایل/);
+  assert.throws(() => service._scalar([{AttachmentID:'PDF1'}], 'image', {}, [], 'تصاویر', context), /فقط تصویر مجاز است/);
+  assert.throws(() => service._scalar([{AttachmentID:'IMG2'}], 'image', {}, [], 'تصاویر', context), /به این پروژه تعلق ندارد/);
 });
