@@ -707,3 +707,33 @@
 - Backend در این فاز تغییر اجرایی نداشت؛ هیچ API، Router، permission، Sheet، schema یا داده عملیاتی تغییر نکرد.
 - آزمون‌های CI، QA بین‌مخزنی و auditهای مرورگر نهایی موفق شدند؛ تست عملیاتی مالک محصول نیز موفق اعلام شد.
 - Task 4 در هر دو مخزن به‌صورت [x] ثبت شده بود؛ TODO5 پس از آرشیو به عبارت Ready for the next feature بازنشانی شد.
+
+
+## 2026-11-07 — ترتیب نمایشی مستقل رویدادهای Workflow در حالت FREE
+
+### هدف و تصمیم معماری
+- برای هر مرحله Workflow در حالت Sequence Mode برابر `FREE` امکان تعیین ترتیب نمایشی رویدادها فراهم شد.
+- ترتیب نمایشی از ترتیب اجرایی مستقل است: `DisplayOrder` فقط ترتیب فهرست و نمایش را تعیین می‌کند؛ `EventOrder` در حالت FREE همچنان صفر می‌ماند و هیچ اجبار ترتیبی برای ثبت رویداد ایجاد نمی‌کند.
+- ساختار داده موجود توسعه داده شد؛ Sheet یا API موازی ساخته نشد. رفتار حالت‌های `STRICT` و `GROUPED` حفظ شد.
+- برای رکوردهای قدیمی فاقد `DisplayOrder`، fallback بر اساس ترتیب قبلی رکوردها در نظر گرفته شد.
+
+### نقشه فنی و تغییرات
+- `DatabaseSetup.js` — در `APP_CONFIG.SHEETS.WORKFLOW_STEP_EVENT_RULES.headers` ستون افزایشی `DisplayOrder` به شیت `37_WorkflowStepEventRules` اضافه شد؛ ستون‌ها و داده‌های قبلی حذف یا بازنویسی نشدند.
+- `WorkflowStepEventRuleRepository.js` — ستون به `REQUIRED_COLUMNS` اضافه شد و `cloneWorkflowVersion` مقدار آن را هنگام نسخه‌برداری Workflow حفظ می‌کند.
+- `WorkflowStepEventRuleValidator.js` — در FREE مقدار `DisplayOrder` باید عدد صحیح مثبت و در همان مرحله یکتا باشد؛ مقدارهای legacy فاقد آن با ترتیب ورودی سازگار می‌شوند. شرط `EventOrder=0` و نبود گروه حفظ شد.
+- `WorkflowService.js` — APIهای موجود `GET/PUT /workflows/:id/steps/:stepId/event-rules` حفظ شدند؛ خروجی و ذخیره قواعد FREE بر اساس `DisplayOrder` مرتب می‌شود و سایر حالت‌ها ترتیب قبلی خود را حفظ می‌کنند.
+- `EventService.js` — تابع `_getWorkflowRuleProgress_` قواعد را در FREE بر اساس `DisplayOrder`، در STRICT بر اساس `EventOrder` و در GROUPED بر اساس `GroupOrder` مرتب می‌کند؛ فیلد `displayOrder` به workflow progress اضافه شد.
+- `tests/workflow-event-rules.test.js` — پوشش schema افزایشی، اعتبارسنجی ترتیب مثبت/یکتا، و استقلال DisplayOrder از EventOrder اضافه شد.
+
+### ادغام، آزمون و انتشار
+- Backend PR #20 با squash merge در commit `a20612a2389b5e55a66f37a8238a8eb3f941d5fe` ادغام شد؛ اصلاح سازگاری حفظ ترتیب STRICT/GROUPED در commit `d7b6d50d2abf50cdceeee40ff3bcee4540984a53` روی main قرار گرفت.
+- Backend CI و Agent Suite موفق شدند؛ آزمون‌های سرویس و قرارداد اجرا شدند.
+- Backend deployment workflow Run `42364626304` (Run #18) موفق شد؛ push سورس به Apps Script و انتشار Web App هر دو با موفقیت پایان یافتند.
+- مالک محصول تست عملیاتی ذخیره/بازگشایی ترتیب و نمایش مرتب‌شده در فهرست رویدادها را موفق اعلام کرد.
+
+### نتیجه پذیرش
+- ترتیب نمایش در FREE قابل تنظیم و ماندگار است.
+- ترتیب ثبت رویدادها آزاد باقی می‌ماند.
+- STRICT و GROUPED و مسیرهای موجود API حفظ شدند.
+- هیچ Sheet یا API موازی ایجاد نشد و مهاجرت مخرب یا حذف داده انجام نشد.
+- فاز در تاریخ 2026-11-07 با تأیید مالک محصول بسته شد.
