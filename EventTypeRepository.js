@@ -15,7 +15,12 @@ const EventTypeRepository = {
   // Shared short-lived read cache for high-frequency event registration lookups.
   // Raw rows are cached; tenant and permission filtering remains in each service.
   getAllCached: function() {
-    const cache = CacheService.getScriptCache();
+    let cache = null;
+    try {
+      cache = CacheService.getScriptCache();
+    } catch (error) {
+      return this.getAll();
+    }
     const cached = cache.get(this.CACHE_KEY);
     if (cached) {
       try {
@@ -29,7 +34,7 @@ const EventTypeRepository = {
     const records = this.getAll();
     try {
       const serialized = JSON.stringify(records);
-      if (serialized.length <= 95000) {
+      if (serialized.length <= 30000) {
         cache.put(this.CACHE_KEY, serialized, this.CACHE_TTL_SECONDS);
       }
     } catch (error) {
