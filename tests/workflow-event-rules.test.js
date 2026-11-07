@@ -10,6 +10,7 @@ test('workflow event rule schema is additive and version-aware', () => {
   assert.match(schema, /name: '37_WorkflowStepEventRules'/);
   assert.match(schema, /WorkflowType[\s\S]*LifecycleState[\s\S]*PublishedVersion[\s\S]*DraftVersion/);
   assert.match(schema, /WorkflowVersion/);
+  assert.match(schema, /EventOrder[\\s\\S]*DisplayOrder/);
 });
 
 test('workflow event rule APIs are permission-protected and tenant-scoped', () => {
@@ -36,6 +37,9 @@ test('workflow event rule validator enforces requirement, source and ordering co
   assert.match(validator, /SequenceMode/);
   assert.match(validator, /strictOrders/);
   assert.match(validator, /stepSequenceMode/);
+  assert.match(validator, /displayOrders/);
+  assert.match(validator, /DisplayOrder/);
+  assert.match(validator, /ترتیب نمایش/);
 });
 test('project workflow lookups and assignment only use published workflow versions', () => {
   const projects = read('ProjectService.js');
@@ -44,4 +48,16 @@ test('project workflow lookups and assignment only use published workflow versio
   assert.ok(projects.includes('Number(item.PublishedVersion || 0) > 0'));
   assert.ok(projects.includes('Number(workflow.PublishedVersion || 0) > 0'));
   assert.match(projects, /WorkflowVersion: workflowVersion/);
+});
+
+
+test('free display order is versioned, cloned and returned without changing strict execution order', () => {
+  const repository = read('WorkflowStepEventRuleRepository.js');
+  const service = read('WorkflowService.js');
+  const events = read('EventService.js');
+  assert.match(repository, /DisplayOrder/);
+  assert.match(repository, /DisplayOrder: item\\.DisplayOrder/);
+  assert.match(service, /Number\\(a\\.DisplayOrder \\|\\| 0\\)/);
+  assert.match(events, /displayOrder: Number\\(rule\\.DisplayOrder \\|\\| index \\+ 1\\)/);
+  assert.match(events, /return Number\\(a\\.DisplayOrder \\|\\| 0\\) - Number\\(b\\.DisplayOrder \\|\\| 0\\)/);
 });
