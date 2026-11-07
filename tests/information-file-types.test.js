@@ -96,3 +96,21 @@ test('multiple references are rejected for file fields and invalid image referen
   assert.throws(() => service._scalar([{AttachmentID:'PDF1'}], 'image', {}, [], 'تصاویر', context), /فقط تصویر مجاز است/);
   assert.throws(() => service._scalar([{AttachmentID:'IMG2'}], 'image', {}, [], 'تصاویر', context), /به این پروژه تعلق ندارد/);
 });
+
+
+test('central information validates multiple images in standalone and table image columns', () => {
+  const attachments = [
+    {ID:'IMG1',TenantID:'T1',EntityType:'PROJECT',EntityID:'P1',AttachmentType:'INFORMATION',Status:'ACTIVE',FileName:'one.png',MimeType:'image/png',FileSize:123},
+    {ID:'IMG2',TenantID:'T1',EntityType:'PROJECT',EntityID:'P1',AttachmentType:'INFORMATION',Status:'ACTIVE',FileName:'two.png',MimeType:'image/png',FileSize:123}
+  ];
+  const service = loadProjectInformationService(attachments);
+  const context = {projectId:'P1',tenantId:'T1'};
+  const refs = [{AttachmentID:'IMG1'},{AttachmentID:'IMG2'}];
+  const standalone = service._validate({Cardinality:'SINGLE',DataType:'image'}, [], refs, context);
+  assert.equal(standalone.length, 2);
+  const table = service._validate({Cardinality:'MULTIPLE'}, [
+    {Code:'DesignImages',Name:'تصاویر طرح',DataType:'image',Status:'ACTIVE',IsRequired:true}
+  ], [{DesignImages:refs}], context);
+  assert.equal(table[0].DesignImages.length, 2);
+  assert.deepEqual(Array.from(service._validate({Cardinality:'SINGLE',DataType:'image'}, [], [], context)), []);
+});
