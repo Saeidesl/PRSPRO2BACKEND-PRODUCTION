@@ -64,3 +64,15 @@
 - بررسی سازگاری Frontend/Backend و سلامت مجوزها، tenant isolation، Google Drive و Sheets؛ سپس ادغام و انتشار فقط طبق workflow عملیاتی و پس از موفقیت تست‌ها.
 - گزارش جداگانه GitHub merge، Backend deployment، Frontend deployment و live verification؛ توقف برای آزمون مالک محصول.
 
+
+
+#### Task 2 — Implementation progress (2026-11-07)
+
+- Frontend `js/modules/events.js`: دکمه بلافاصله پس از اعتبارسنجی همگام وارد حالت آماده‌سازی/ثبت می‌شود؛ وضعیت در صورت پاسخ نامعتبر جمع‌آوری فرم یا تاریخ نامعتبر بازیابی می‌شود.
+- پیش‌خوانی فایل‌ها هنگام انتخاب در handlerهای فیلد مستقل و ستون جدول به `getConfiguredFormFileData` منتقل شد؛ Promise خواندن هر File در همان input نگهداری و در upload مجدداً استفاده می‌شود تا FileReader برای همان فایل دوباره اجرا نشود.
+- `uploadConfiguredFormImages`: آپلود تصاویر در batchهای حداکثر ۳تایی با `Promise.all` انجام می‌شود؛ نتایج به ترتیب انتخاب بازچینی و فقط تصویر اول در صورت فعال بودن گزینه به‌عنوان `PROFILE` ذخیره می‌شود. سقف ۲۰ تصویر و APIهای موجود حفظ شده‌اند.
+- متن وضعیت Submit برای پوشش آماده‌سازی و ارسال فایل‌ها اصلاح شد؛ `index.html` cache-busting ماژول رویداد را به `20261107-event-submit-latency-1` تغییر داد.
+- تست جدید `tests/event-submit-latency.test.js` اضافه شد. پنج تست قدیمی که نسخه ثابت قبلی فایل رویداد را assert می‌کردند، در فایل‌های `event-history-project-cards.test.js`, `event-queue-project-cards.test.js`, `event-type-loading-state.test.js`, `project-picker.test.js`, `workflow-management.test.js` به نسخه جدید همگام شدند.
+- PR Frontend #44 برای CI و بازبینی ایجاد شد: https://github.com/Saeidesl/PRSPRO2-PRODUCTION/pull/44 . اجرای اولیه Frontend checks به‌دلیل پنج assertion قدیمی cache-busting شکست خورد؛ همه پنج reference در تست‌ها اصلاح شده‌اند و نتیجه اجرای مجدد هنوز در انتظار است.
+- Backend در این Task تغییر runtime نداشته است: `Router.js`, `EventService.js`, `AttachmentService.js`, API `POST /events` و API موجود upload بدون تغییر مانده‌اند؛ هیچ Sheet/schema/داده‌ای تغییر نکرده است.
+- وضعیت Task 2: `IN PROGRESS` تا تکمیل CI و بررسی رگرسیون. هیچ merge، Backend deployment، Frontend deployment یا live verification انجام نشده است.
