@@ -174,7 +174,7 @@
 - پذیرش مالک محصول: در 2026-11-07 کاربر تست عملیاتی را تأیید کرد؛ شامل انتخاب پروژه، تغییر چندباره نوع رویداد، بارگذاری پاسخ معتبر در حالت اصلاح، تازه‌سازی پیشرفت Workflow و ثبت رویداد.
 - وضعیت: Task 3 تکمیل و پذیرفته شد. هیچ تغییر Backend deployment یا مهاجرت داده‌ای لازم نبود.
 
-### Task 4 — بهینه‌سازی نمایش، یکپارچه‌سازی کش و Regression (IN PROGRESS)
+### Task 4 — بهینه‌سازی نمایش، یکپارچه‌سازی کش و Regression [x]
 
 - کاهش رندرهای تکراری فرم، picker و پنل اطلاعات؛ حفظ نمایش فوری cache و refresh پس‌زمینه.
 - مدیریت loading/error/empty state و جلوگیری از پرش UI در دسکتاپ و موبایل.
@@ -182,6 +182,19 @@
 - آزمون قرارداد API، مجوزها، tenant isolation، Draft/Independent، ثبت سریع/کامل، فرم چندردیفی، فایل، اصلاح فرم، Snapshot، تاریخچه و Idempotency.
 - مقایسه نهایی با baseline و ثبت زمان‌ها/تعداد درخواست‌ها و نتایج آزمون؛ هیچ ادعای سرعت بدون اندازه‌گیری ثبت نشود.
 - خروجی قابل آزمون: فرم ثبت رویداد سریع‌تر و پایدارتر، بدون رگرسیون در ثبت و صحت داده.
+
+
+#### Task 4 — تکمیل، ادغام، انتشار و پذیرش عملیاتی (2026-11-07)
+
+- Frontend: در `js/modules/events.js`، تابع `fillSelect` امضای داده گزینه‌ها را بررسی می‌کند و در صورت یکسان‌بودن فهرست، از بازسازی غیرضروری DOM جلوگیری می‌کند؛ در نتیجه انتخاب و تمرکز کنترل‌ها پایدار می‌ماند. رندر فهرست پروژه‌های اخیر نیز در صورت یکسان‌بودن markup یا وضعیت خالی، `container.innerHTML` را دوباره جایگزین نمی‌کند.
+- تست‌های رگرسیون در `tests/event-form-cache-policy.test.js` برای جلوگیری از بازسازی فهرست گزینه‌های بدون تغییر و حفظ DOM انتخابگر پروژه اخیر افزوده شدند. بررسی‌های وابسته به نسخه asset در `tests/event-history-project-cards.test.js`, `tests/event-queue-project-cards.test.js`, `tests/event-type-loading-state.test.js`, `tests/project-picker.test.js` و `tests/workflow-management.test.js` با نسخه جدید هماهنگ شدند.
+- `index.html`: نسخه asset ماژول رویداد به `js/modules/events.js?v=20261107-event-render-stability-1` به‌روزرسانی شد.
+- Backend در Task 4 تغییر اجرایی نداشت؛ API، Router، مجوزها، Sheetها و schema دست‌نخورده ماندند. تغییرات صرفاً در Frontend عملیاتی اعمال شد و هیچ مهاجرت یا عملیات داده‌ای انجام نشد.
+- اعتبارسنجی روی PR #40 و commit نهایی آن `dca5c910cb1e871f33b1b2afb1b66d88dcd200f1`: Frontend checks در Run `42291350765`، Frontend Agent Suite در Run `42291355688`، Cross-repository QA در Run `42291355696` و Browser UI Performance Audit در Run `42291355683` موفق شدند. تست‌های رگرسیون، بررسی syntax و کنترل asset/CSS نیز موفق بودند.
+- ادغام: Frontend PR #40 با روش squash در commit `f944b3e694c5c8704bd933f11953d0e57e10625a` به شاخه `main` ادغام شد.
+- انتشار: GitHub Pages build/deployment در Run `42292239790` و انتشار Frontend در Run `42292240360` موفق شدند. بررسی‌های پس از ادغام Frontend checks در Run `42292240480`، Cross-repository QA در Run `42292240397`، Frontend Agent Suite در Run `42292240352` و Comprehensive UI Performance Audit در Run `42292240374` همگی با نتیجه success پایان یافتند.
+- پذیرش مالک محصول: در 2026-11-07 کاربر تست عملیاتی تسک را موفق اعلام کرد؛ بنابراین پایداری انتخابگرها و رفتار فرم پس از تغییرات تأیید شد.
+- *Log:* Frontend: `js/modules/events.js` — `fillSelect` و رندر انتخابگر پروژه‌های اخیر؛ `tests/event-form-cache-policy.test.js` و پنج فایل تست asset ذکرشده؛ `index.html` برای cache-busting. APIهای موجود و مسیر ثبت `POST /events` بدون تغییر باقی ماندند. Backend: هیچ فایل runtime، تابع، API، Sheet یا schema تغییر نکرد. ادغام PR #40 در commit `f944b3e694c5c8704bd933f11953d0e57e10625a` و انتشار موفق GitHub Pages در Runهای فوق ثبت شد. تست عملیاتی مالک محصول موفق بود.
 
 ### Implementation Log
 
