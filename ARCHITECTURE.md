@@ -845,3 +845,26 @@
 - ۲۰۸ تست Frontend، Agent Suite، Cross-repository QA و Browser/Performance audit پیش از ادغام موفق شدند.
 - GitHub Pages انتشار Frontend موفق شد؛ مالک محصول در 2026-11-07 تست نسخه زنده را تأیید کرد.
 - تأیید شد که دکمه در صفحه رویدادها کنار CTA ثبت رویداد است، تاریخچه همان پروژه را در همان صفحه فیلتر می‌کند و مجوزهای مشاهده/tenant سرور حفظ می‌شوند.
+
+
+## 2026-11-07 — بهینه‌سازی بارگذاری فهرست انواع رویداد
+
+### هدف و نتیجه پذیرش
+- هدف: کاهش تأخیر دریافت انواع رویداد بدون تغییر ظاهر، ترتیب، رفتار انتخاب‌گر، قواعد گردش‌کار، مجوزها یا مسیرهای ثبت.
+- مالک محصول آزمون نسخه عملیاتی را موفق اعلام کرد؛ فاز با تأیید صریح ایشان بسته شد.
+
+### پیاده‌سازی Backend
+- شیت منبع همچنان `11_EventTypes` و repository مرجع `EventTypeRepository.js` است.
+- `EventTypeRepository.getAllCached()` داده خام را با ScriptCache و کلید `PMS_EVENT_TYPES_READ_V1` به مدت ۶۰ ثانیه نگه می‌دارد؛ محدودیت اندازه رعایت می‌شود و در خطا/داده نامعتبر به خواندن اصلی Sheets بازمی‌گردد.
+- `EventTypeRepository.invalidateReadCache()` پس از موفقیت عملیات `insert`، `update` و `delete` کش را باطل می‌کند.
+- `EventTypeService.js:list` و `EventService.js:workflowProgress` از خواندن کش‌شده استفاده می‌کنند. فیلترهای tenant/permission همچنان در لایه Service اعمال می‌شوند.
+- قرارداد API، ساختار Sheet و schema تغییر نکردند.
+
+### Frontend و سازگاری
+- رفتار اصلی `js/modules/events.js` و `index.html` به baseline قبلی بازگردانده شد؛ منطق انتخاب‌گر، `refreshEventTypeOptions` و انتظار پاسخ `workflow-progress` تغییر نکرد.
+- کش مرورگر موجود در `PMS.Api.getCached('/event-types', ...)` و in-flight deduplication در `js/core/api.js` حفظ شدند؛ مسیر موازی یا API جدیدی ایجاد نشد.
+
+### آزمون و انتشار
+- کاربر تأیید کرد انتقال کد Backend به Apps Script از workflow موجود انجام شده است؛ این انتقال به‌تنهایی به‌معنای deploy وب‌اپ نیست.
+- کاربر پس از بررسی نسخه عملیاتی، موفقیت تست افزایش سرعت را تأیید کرد.
+- نتیجه پذیرش: حفظ رفتار قبلی و عملکرد موفق کش کوتاه‌مدت در استفاده عملیاتی.
