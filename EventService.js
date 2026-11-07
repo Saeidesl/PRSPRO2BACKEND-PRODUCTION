@@ -768,9 +768,9 @@ const EventService = {
           String(rule.Status || 'ACTIVE').toUpperCase() === 'ACTIVE';
       }).sort(function(a, b) {
         const mode = String(a.SequenceMode || 'STRICT').toUpperCase();
-        return mode === 'STRICT'
-          ? Number(a.EventOrder || 0) - Number(b.EventOrder || 0)
-          : Number(a.GroupOrder || 0) - Number(b.GroupOrder || 0);
+        if (mode === 'STRICT') return Number(a.EventOrder || 0) - Number(b.EventOrder || 0);
+        if (mode === 'GROUPED') return Number(a.GroupOrder || 0) - Number(b.GroupOrder || 0);
+        return Number(a.DisplayOrder || 0) - Number(b.DisplayOrder || 0);
       });
     if (!rules.length) {
       return { configured: false, rules: [], completed: [], remaining: [], sequenceMode: 'FREE', stageComplete: true };
@@ -791,7 +791,7 @@ const EventService = {
     }
     const completed = [];
     const remaining = [];
-    const normalized = rules.map(function(rule) {
+    const normalized = rules.map(function(rule, index) {
       const mode = String(rule.RequirementMode || 'REQUIRED').toUpperCase();
       const source = mode === 'REFERENCE' ? sourceEvents : projectEvents;
       const matchingEvents = source.filter(function(item) {
@@ -807,6 +807,7 @@ const EventService = {
         dataSource: String(rule.DataSource || 'NEW_EVENT').toUpperCase(),
         sequenceMode: String(rule.SequenceMode || 'STRICT').toUpperCase(),
         eventOrder: Number(rule.EventOrder || 0),
+        displayOrder: Number(rule.DisplayOrder || index + 1),
         groupKey: String(rule.GroupKey || ''),
         groupOrder: Number(rule.GroupOrder || 0),
         allowRepeat: allowRepeat,
