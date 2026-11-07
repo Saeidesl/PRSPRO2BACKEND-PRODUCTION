@@ -1,7 +1,8 @@
 const EventTypeRepository = {
 
   SHEET_NAME: '11_EventTypes',
-
+  CACHE_KEY: 'PMS_EVENT_TYPES_READ_V1',
+  CACHE_TTL_SECONDS: 60,
 
   getAll: function() {
 
@@ -9,6 +10,38 @@ const EventTypeRepository = {
       this.SHEET_NAME
     );
 
+  },
+
+  // Shared short-lived read cache for high-frequency event registration lookups.
+  // Raw rows are cached; tenant and permission filtering remains in each service.
+  getAllCached: function() {
+    const cache = CacheService.getScriptCache();
+    const cached = cache.get(this.CACHE_KEY);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (error) {
+        cache.remove(this.CACHE_KEY);
+      }
+    }
+
+    const records = this.getAll();
+    try {
+      const serialized = JSON.stringify(records);
+      if (serialized.length <= 95000) {
+        cache.put(this.CACHE_KEY, serialized, this.CACHE_TTL_SECONDS);
+      }
+    } catch (error) {
+      // Cache is an optimization only; repository reads remain authoritative.
+    }
+    return records;
+  },
+
+  invalidateReadCache: function() {
+    try {
+      CacheService.getScriptCache().remove(this.CACHE_KEY);
+    } catch (error) {}
   },
 
 
@@ -68,31 +101,37 @@ const EventTypeRepository = {
 
   insert: function(eventType) {
 
-    return GoogleSheetsRepository.insert(
+    const created = GoogleSheetsRepository.insert(
       this.SHEET_NAME,
       eventType
     );
+    this.invalidateReadCache();
+    return created;
 
   },
 
 
   update: function(id, data) {
 
-    return GoogleSheetsRepository.updateById(
+    const updated = GoogleSheetsRepository.updateById(
       this.SHEET_NAME,
       id,
       data
     );
+    this.invalidateReadCache();
+    return updated;
 
   },
 
 
   delete: function(id) {
 
-    return GoogleSheetsRepository.deleteById(
+    const deleted = GoogleSheetsRepository.deleteById(
       this.SHEET_NAME,
       id
     );
+    this.invalidateReadCache();
+    return deleted;
 
   }
 
