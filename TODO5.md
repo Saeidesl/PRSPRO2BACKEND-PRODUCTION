@@ -31,6 +31,7 @@
 
 - [x] **Task 1 — Discovery & Planning:** بررسی مخازن عملیاتی، شاخه‌ها، TODO5 و ARCHITECTURE؛ ردیابی زنجیره نمایش فهرست رویدادها و تشخیص خواندن مجدد شیت انواع رویداد در دو مسیر پرتکرار.
 - [ ] **Task 2 — بهینه‌سازی کش خواندن انواع رویداد (IN PROGRESS):** کش مشترک کوتاه‌مدت ScriptCache برای داده خام انواع رویداد؛ استفاده مجدد در مسیرهای فهرست و پیشرفت گردش‌کار؛ بی‌اعتبارسازی پس از create/update/delete؛ حفظ کامل فیلتر tenant/permission و قراردادهای فعلی.
+  - *Implementation Log (pending validation):* در `EventTypeRepository.js` توابع `getAllCached` و `invalidateReadCache`، کلید `PMS_EVENT_TYPES_READ_V1` و TTL برابر ۶۰ ثانیه اضافه شد؛ cache فقط داده خام شیت `11_EventTypes` را نگه می‌دارد و در خطا/داده نامعتبر به `GoogleSheetsRepository.getAll` برمی‌گردد. توابع `insert`، `update` و `delete` کش را باطل می‌کنند. در `EventTypeService.js:list` و `EventService.js:workflowProgress` از مسیر cache استفاده شد. API، فیلتر tenant/permission و منطق انتخاب‌گر تغییر نکرده‌اند.
 - [ ] **Task 3 — آزمون و سنجش عملیاتی:** بررسی سازگاری پاسخ‌ها، invalidation، جداسازی tenant، رفتار فرم و قواعد گردش‌کار؛ اجرای تست‌های در دسترس؛ مقایسه زمان مسیرهای `/event-types` و `/projects/:id/workflow-progress`؛ انتشار فقط پس از تأیید صحت.
 
 ### معیارهای پذیرش
