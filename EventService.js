@@ -1423,8 +1423,10 @@ const EventService = {
       }
     }
 
-    // Notifications are best-effort: Telegram outages must never undo a saved production event.
-    if (project && typeof TelegramBotService !== 'undefined' &&
+    // Notify both project-linked and independent events only after every
+    // persistence/integration step and the idempotency completion marker succeed.
+    // Telegram is best-effort: its outage must never undo a saved production event.
+    if (typeof TelegramBotService !== 'undefined' &&
         typeof TelegramBotService.notifyEvent === 'function') {
       try {
         TelegramBotService.notifyEvent(
