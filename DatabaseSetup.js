@@ -149,7 +149,7 @@ const APP_CONFIG = {
       headers: [
         'ID','TenantID','WorkflowID','WorkflowVersion','WorkflowStepID',
         'EventTypeID','RequirementMode','DataSource','SequenceMode',
-        'GroupKey','GroupOrder','EventOrder','Status','CreatedAt','UpdatedAt','AllowRepeat'
+        'GroupKey','GroupOrder','EventOrder','DisplayOrder','Status','CreatedAt','UpdatedAt','AllowRepeat'
       ]
     },
 
