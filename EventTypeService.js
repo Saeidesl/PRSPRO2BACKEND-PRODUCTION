@@ -275,7 +275,9 @@ const EventTypeService = {
       PermissionService.hasPermission(user.ID, 'EVENT_TYPE_MANAGE');
     const departmentId = String(user.DepartmentID || '');
 
-    const eventTypes = EventTypeRepository.getAll();
+    const eventTypes = typeof EventTypeRepository.getAllCached === 'function'
+      ? EventTypeRepository.getAllCached()
+      : EventTypeRepository.getAll();
 
     const filtered = eventTypes.filter(function(eventType) {
       if (String(eventType.TenantID) !== String(user.TenantID)) {
