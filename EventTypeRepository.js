@@ -18,27 +18,26 @@ const EventTypeRepository = {
     let cache = null;
     try {
       cache = CacheService.getScriptCache();
-    } catch (error) {
-      return this.getAll();
-    }
-    const cached = cache.get(this.CACHE_KEY);
-    if (cached) {
-      try {
+      const cached = cache.get(this.CACHE_KEY);
+      if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed)) return parsed;
-      } catch (error) {
         cache.remove(this.CACHE_KEY);
       }
+    } catch (error) {
+      // Cache is optional; fall back to the authoritative Sheets repository.
+      return this.getAll();
     }
 
     const records = this.getAll();
     try {
       const serialized = JSON.stringify(records);
-      if (serialized.length <= 30000) {
+      // Keep well below Apps Script CacheService's per-item byte limit.
+      if (serialized.length <= 20000) {
         cache.put(this.CACHE_KEY, serialized, this.CACHE_TTL_SECONDS);
       }
     } catch (error) {
-      // Cache is an optimization only; repository reads remain authoritative.
+      // Cache write failures must never affect event-type reads.
     }
     return records;
   },
