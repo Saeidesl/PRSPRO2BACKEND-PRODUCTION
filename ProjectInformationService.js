@@ -31,13 +31,21 @@ const ProjectInformationService = {
     if(value===undefined||value===null||value==='')return '';
     var type=String(dataType || 'text').toLowerCase(), text=String(value);
     if(type==='image'||type==='file'){
-      if(!value||typeof value!=='object'||Array.isArray(value))throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR,label+' باید از طریق انتخاب و بارگذاری فایل ثبت شود.');
-      var id=String(value.AttachmentID || value.ID || ''), attachment=AttachmentRepository.findById(id);
       var projectId=context&&String(context.projectId || ''), tenantId=context&&String(context.tenantId || '');
-      if(!attachment||String(attachment.TenantID)!==tenantId||String(attachment.EntityType).toUpperCase()!=='PROJECT'||String(attachment.EntityID)!==projectId||(String(attachment.AttachmentType || '').toUpperCase()!=='INFORMATION' && !(type==='image' && String(attachment.AttachmentType || '').toUpperCase()==='PROFILE'))||String(attachment.Status || 'ACTIVE').toUpperCase()!=='ACTIVE')throw ErrorHandler.create(Constants.ERROR.NOT_FOUND,'فایل انتخاب‌شده به این پروژه تعلق ندارد یا قابل استفاده نیست.');
-      var mime=String(attachment.MimeType || '').toLowerCase();
-      if(!AttachmentValidator.FILE_TYPES[mime]||(type==='image'&&mime.indexOf('image/')!==0))throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR,type==='image'?'برای این فیلد فقط تصویر مجاز است.':'نوع فایل انتخاب‌شده مجاز نیست.');
-      return {AttachmentID:String(attachment.ID),FileName:String(attachment.FileName || ''),MimeType:mime,FileSize:Number(attachment.FileSize || 0),AttachmentType:String(attachment.AttachmentType || 'INFORMATION').toUpperCase()};
+      var normalizeAttachment=function(item){
+        if(!item||typeof item!=='object'||Array.isArray(item))throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR,label+' باید از طریق انتخاب و بارگذاری فایل ثبت شود.');
+        var id=String(item.AttachmentID || item.ID || ''),attachment=AttachmentRepository.findById(id);
+        if(!attachment||String(attachment.TenantID)!==tenantId||String(attachment.EntityType).toUpperCase()!=='PROJECT'||String(attachment.EntityID)!==projectId||(String(attachment.AttachmentType || '').toUpperCase()!=='INFORMATION' && !(type==='image' && String(attachment.AttachmentType || '').toUpperCase()==='PROFILE'))||String(attachment.Status || 'ACTIVE').toUpperCase()!=='ACTIVE')throw ErrorHandler.create(Constants.ERROR.NOT_FOUND,'فایل انتخاب‌شده به این پروژه تعلق ندارد یا قابل استفاده نیست.');
+        var mime=String(attachment.MimeType || '').toLowerCase();
+        if(!AttachmentValidator.FILE_TYPES[mime]||(type==='image'&&mime.indexOf('image/')!==0))throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR,type==='image'?'برای این فیلد فقط تصویر مجاز است.':'نوع فایل انتخاب‌شده مجاز نیست.');
+        return {AttachmentID:String(attachment.ID),FileName:String(attachment.FileName || ''),MimeType:mime,FileSize:Number(attachment.FileSize || 0),AttachmentType:String(attachment.AttachmentType || 'INFORMATION').toUpperCase()};
+      };
+      if(Array.isArray(value)){
+        if(type!=='image')throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR,'برای این فیلد فقط یک فایل مجاز است.');
+        if(value.length>20)throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR,'حداکثر ۲۰ تصویر برای هر فیلد مجاز است.');
+        return value.map(normalizeAttachment);
+      }
+      return normalizeAttachment(value);
     }
     if(type==='text'||type==='textarea'||type==='select'){
       if(rules.minLength!==undefined&&text.length<Number(rules.minLength))throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR,label+' کوتاه‌تر از حد مجاز است.');
