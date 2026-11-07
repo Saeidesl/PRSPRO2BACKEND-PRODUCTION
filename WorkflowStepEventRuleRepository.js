@@ -2,7 +2,7 @@ const WorkflowStepEventRuleRepository = {
   SHEET_NAME: '37_WorkflowStepEventRules',
   REQUIRED_COLUMNS: [
     'ID','TenantID','WorkflowID','WorkflowVersion','WorkflowStepID','EventTypeID',
-    'RequirementMode','DataSource','SequenceMode','GroupKey','GroupOrder','EventOrder',
+    'RequirementMode','DataSource','SequenceMode','GroupKey','GroupOrder','EventOrder','DisplayOrder',
     'Status','CreatedAt','UpdatedAt','AllowRepeat'
   ],
 
@@ -57,6 +57,7 @@ const WorkflowStepEventRuleRepository = {
         GroupKey: item.GroupKey,
         GroupOrder: item.GroupOrder,
         EventOrder: item.EventOrder,
+        DisplayOrder: item.DisplayOrder,
         AllowRepeat: item.AllowRepeat === true || String(item.AllowRepeat).toLowerCase() === 'true' || String(item.AllowRepeat) === '1',
         Status: 'ACTIVE',
         CreatedAt: now,
