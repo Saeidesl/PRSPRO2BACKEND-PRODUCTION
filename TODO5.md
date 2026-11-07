@@ -22,10 +22,11 @@
 - مشخص شد قابلیت با `GET /events` موجود و فیلتر `ProjectID` سمت Frontend انجام‌پذیر است؛ تغییر Backend runtime لازم نیست.
 - *Log:* `Router.js:GET /events`، سرویس/مخزن فعلی رویداد و شیت `13_Events`؛ قرارداد `ProjectID` بدون تغییر. مبنای Backend `5838f1ccca5959d87fbdfe8dbb7561ef7414400e` و Frontend `1126b6be3908ae0ddf590747586b78c53bbeb53f`.
 
-### Task 2 — تأیید سازگاری قرارداد Backend (IN PROGRESS)
+### Task 2 — تأیید سازگاری قرارداد Backend [x]
 - بررسی نهایی مجوز مشاهده، tenant scoping و پاسخ `GET /events` در برابر فیلتر Frontend.
 - عدم تغییر runtime، API، شیت و داده؛ ثبت دقیق نتیجه سازگاری.
-
+- *Log:* `Router.js`: مسیر GET `/events` با `AccessControlService.require(params, 'EVENT_VIEW')` به `EventService.list(params)` متصل است. Frontend فقط رویدادهای برگشتی از همین API مجاز را با فیلد موجود `ProjectID` فیلتر می‌کند؛ tenant scoping و مجوز سرور دست‌نخورده‌اند. هیچ API، شیت، ستون یا schema جدیدی نیاز نیست.
+ 
 ### Task 3 — Cross-repository QA و ثبت نتیجه انتشار
 - تطبیق رفتار Frontend با API موجود و اجرای QA یکپارچه.
 - در صورت عدم تغییر Backend runtime، انتشار Apps Script لازم نیست و این موضوع صریحاً ثبت شود.
