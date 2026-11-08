@@ -32,7 +32,7 @@ const GoogleDriveStorage = {
   },
 
 
-  uploadBase64: function(data) {
+  uploadBase64: function(data, destinationFolder) {
 
     if (!data) {
 
@@ -139,7 +139,7 @@ const GoogleDriveStorage = {
       );
 
     const folder =
-      this.getRootFolder_();
+      destinationFolder || this.getRootFolder_();
 
     const file =
       folder.createFile(blob);
@@ -174,14 +174,12 @@ const GoogleDriveStorage = {
 
   uploadBase64ToTenant: function(data, tenantId) {
     Validator.required(tenantId, 'شناسه سازمان');
-    const uploaded = this.uploadBase64(data);
     const safeTenant = String(tenantId).replace(/[^A-Za-z0-9_-]/g, '_');
     const folderName = 'TENANT_' + safeTenant;
     const root = this.getRootFolder_();
     const folders = root.getFoldersByName(folderName);
     const folder = folders.hasNext() ? folders.next() : root.createFolder(folderName);
-    this.getFile(uploaded.storageKey).moveTo(folder);
-    return uploaded;
+    return this.uploadBase64(data, folder);
   },
 
 
