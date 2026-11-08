@@ -9,7 +9,7 @@
 ### مخازن و شاخه عملیاتی
 - Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`
 - Frontend: `Saeidesl/PRSPRO2-PRODUCTION`
-- شاخه کاری مشترک: `feat/pdf-template-background-20261108`
+- شاخه کاری قبلی: `feat/pdf-template-background-20261108`؛ شاخه فعال اصلاح چاپ: `fix/print-page-size-mobile-20261108`
 - Backend baseline از main: `8f850258599a6437251c83c3994fa910120c05b7`
 - Frontend baseline از main: `4fcae36435120c5f489986765b6613b8db38e3b2`
 - هر دو مخزن پیش از شروع دارای `TODO5.md = Ready for the next feature` و `ARCHITECTURE.md` بودند؛ فاز قبلی بسته شده بود.
@@ -39,7 +39,7 @@
 - `loadOutputOptions()`, `resolveOutput()`, `renderOutputDocument()`, `printOutput()`: انتخاب پروژه/قالب، دریافت داده، ساخت پیش‌نمایش و چاپ مرورگر.
 - `css/print-template-library.css`: استایل کتابخانه، محیط طراحی، پیش‌نمایش و چاپ.
 - `PMS.Api` مسیر انحصاری درخواست‌های Frontend است.
-- در خروجی فعلی، یک `article.pt-print-page` از ابعاد و المان‌های تعریف ساخته می‌شود؛ renderer فعلی چندصفحه‌ای نیست و پس‌زمینه PDF ندارد.
+- در خروجی فعلی، یک `article.pt-print-page` از ابعاد و المان‌های تعریف ساخته می‌شود؛ renderer خروجی چندصفحه‌ای است؛ `loadOutputPdfPages` پس‌زمینه PDF را به تصویر تبدیل می‌کند و `renderOutputDocument` برای هر صفحه یک `article.pt-print-page` با ابعاد واقعی می‌سازد. چاپ از `printOutput` و CSS `@page` صفحه‌بندی می‌شود؛ پایداری اندازه چاپ موبایل در Task 3 در حال اصلاح است.
 - قابلیت جدید باید در همین ماژول و همان تعریف قالب توسعه یابد؛ ایجاد صفحه/کتابخانه/جریان موازی ممنوع است.
 
 ### تصمیمات فنی و الزامات طراحی
@@ -58,9 +58,10 @@
 
 - [x] **Task 1 — Discovery & Planning**: بررسی شاخه‌ها، آخرین commitها، TODO5/ARCHITECTURE و معماری فعلی قالب/چاپ در دو مخزن.
   - *Log:* هر دو مخزن عملیاتی در دسترس بودند. آخرین commitهای main هنگام شروع: Backend `8f850258599a6437251c83c3994fa910120c05b7` و Frontend `4fcae36435120c5f489986765b6613b8db38e3b2`؛ هر دو TODO5 آماده فاز بعد و ARCHITECTURE موجود بود. شاخه `feat/pdf-template-background-20261108` جداگانه از همین baselineها در هر دو مخزن ساخته شد. مسیرهای اصلی Backend: `PrintTemplateService.js`, `PrintTemplateRepository.js`, `PrintTemplateValidator.js`, `Router.js`, شیت `36_PrintTemplates`; مسیر اصلی Frontend: `js/modules/print-designer.js`, `css/print-template-library.css` و API موجود `/print-templates`. محدودیت فعلی DefinitionJSON برابر 45,000 نویسه است؛ PDF باید مستقل ذخیره شود. renderer فعلی خروجی یک صفحه HTML با `renderOutputDocument` و چاپ مرورگر با `printOutput` دارد؛ پس‌زمینه PDF و صفحات چندگانه ندارد.
-- [ ] **Task 2 — PDF Asset و نمایش چندصفحه‌ای در طراح** (IN PROGRESS): انتخاب/آپلود امن PDF، ذخیره فایل مستقل، ثبت metadata در Definition و نمایش صفحات واقعی PDF در همان محیط طراحی؛ حفظ ابعاد و ترتیب صفحات.
+- [x] **Task 2 — PDF Asset و نمایش چندصفحه‌ای در طراح**: انتخاب/آپلود امن PDF، ذخیره فایل مستقل، ثبت metadata در Definition و نمایش صفحات واقعی PDF در همان محیط طراحی؛ حفظ ابعاد و ترتیب صفحات.
   - *Implementation checkpoint (2026-11-08):* در Backend، GoogleDriveStorage.uploadBase64ToTenant(data, tenantId) فایل را مستقیماً در پوشه TENANT_<TenantID> زیر پوشه اصلی Drive ذخیره می‌کند؛ MIME مجاز و امضای واقعی %PDF- بررسی می‌شود. PrintTemplateRepository.HEADERS به‌صورت additive شامل PdfStorageKey, PdfFileName, PdfMimeType, PdfFileSize, PdfPageCount شده است. PrintTemplateService.uploadPdf/downloadPdf فایل را با کنترل Tenant به قالب متصل می‌کند و StorageKey را به Frontend افشا نمی‌کند. مسیرهای API: POST /print-templates/:id/pdf با مجوز SYSTEM_SETTINGS و GET /print-templates/:id/pdf با SYSTEM_SETTINGS یا PROJECT_VIEW. در Frontend، pages/print-designer.html کنترل انتخاب PDF، index.html کتابخانه PDF.js نسخه ثابت 3.11.174، js/modules/print-designer.js بارگذاری/نمایش صفحات و اختصاص pageIndex به المان‌ها، و css/print-template-library.css صفحه‌بندی/پس‌زمینه را اضافه می‌کنند. فایل حداکثر ۱۰ مگابایت و سند حداکثر ۵۰ صفحه است؛ رندر صفحات با IntersectionObserver به‌صورت lazy انجام می‌شود. فایل PDF در Drive می‌ماند و فقط metadata/ابعاد صفحات در Google Sheets/Definition ثبت می‌شود. فایل قبلی هنگام جایگزینی حذف نمی‌شود.
   - *Static QA:* Syntax check پنج فایل JS تغییرکرده PASS شد؛ آزمون mock برای اعتبارسنجی صفحه مقصد، رد فایل PDF با امضای نامعتبر، ذخیره در پوشه Tenant و جلوگیری از دسترسی Tenant دیگر PASS شد.
-  - *Pending verification:* هنوز Backend یا Frontend deploy نشده و آزمون زنده GAS/Drive/API و مرورگر (موبایل/دسکتاپ) اجرا نشده است؛ بنابراین Task 2 تا انجام آزمون یکپارچه در وضعیت IN PROGRESS باقی می‌ماند.
-- [ ] **Task 3 — لایه‌گذاری داده و تولید PDF نهایی**: اتصال عناصر به منابع داده فعلی، تعیین صفحه مقصد هر عنصر، پیش‌نمایش پروژه و ترکیب اطلاعات با PDF اصلی برای خروجی PDF/چاپ چندصفحه‌ای.
+  - *Acceptance Log (2026-11-08):* Frontend PR #57 با squash در commit `f088d6b3445b061461308c420cb86546ef99c818` روی main ادغام شد. Frontend GitHub Pages deployment Run `42474033571` با conclusion=success پایان یافت؛ CI، cross-repository QA و frontend agent suite نیز موفق شدند. کاربر نسخه عملیاتی را آزمایش و Task 2 را تأیید کرد. مشاهده مستقیم سایت از محیط دستیار ممکن نبود؛ تأیید عملیاتی بر اساس تست و تأیید Product Owner ثبت شد.
+  - *Log:* Backend: `GoogleDriveStorage.uploadBase64ToTenant`, `PrintTemplateRepository.HEADERS` و `PrintTemplateService.uploadPdf/downloadPdf`؛ metadata در `36_PrintTemplates` و endpointهای `POST/GET /print-templates/:id/pdf`. Frontend: `pages/print-designer.html`, `index.html`, `js/modules/print-designer.js` (PDF.js، بارگذاری صفحات، `pageIndex`، `loadOutputPdfPages`, `renderOutputDocument`, `printOutput`)، `css/print-template-library.css` و `tests/print-template-library.test.js`. PR #57 پس‌زمینه PDF را به خروجی و صفحات چاپ متصل کرد؛ PDF در Drive مستقل از Sheet باقی می‌ماند.
+- [ ] **Task 3 — اصلاح ابعاد فیزیکی صفحه و پایداری چاپ PDF (IN PROGRESS)**: اصلاح چاپ چندصفحه‌ای PDF در مرورگرهای موبایل و دسکتاپ؛ جلوگیری از شکستن یک صفحه PDF بین چند برگ چاپی؛ هماهنگی ابعاد واقعی صفحه، CSS `@page` و اندازه کاغذ مقصد؛ حفظ نسبت و جایگاه پس‌زمینه و عناصر روی تمام صفحات.
 - [ ] **Task 4 — آزمون، ادغام و تحویل عملیاتی**: تست فایل‌های تک/چندصفحه‌ای، داده/تصویر/جدول، قالب‌های قدیمی، tenant access، حجم/خطاها، رگرسیون و انتشار مطابق workflow موجود؛ سپس ارائه دستور تست به Product Owner و توقف تا تأیید.
