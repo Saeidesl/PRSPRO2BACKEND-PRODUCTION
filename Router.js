@@ -278,7 +278,7 @@ const Router = {
       AccessControlService.require(params, 'SYSTEM_SETTINGS');
       return PrintTemplateService.sources(params);
     }
-    const printTemplatePdfMatch = path.match(/^\\/print-templates\\/([^/]+)\\/pdf$/);
+    const printTemplatePdfMatch = path.match(/^\/print-templates\/([^/]+)\/pdf$/);
     if (printTemplatePdfMatch) {
       this.requireAny(params, ['SYSTEM_SETTINGS', 'PROJECT_VIEW']);
       return PrintTemplateService.downloadPdf(decodeURIComponent(printTemplatePdfMatch[1]), params);
@@ -523,7 +523,7 @@ const Router = {
       AccessControlService.require(params, 'SYSTEM_SETTINGS');
       return PrintTemplateService.create(body, params);
     }
-    const printTemplatePdfUploadMatch = path.match(/^\\/print-templates\\/([^/]+)\\/pdf$/);
+    const printTemplatePdfUploadMatch = path.match(/^\/print-templates\/([^/]+)\/pdf$/);
     if (printTemplatePdfUploadMatch) {
       AccessControlService.require(params, 'SYSTEM_SETTINGS');
       return PrintTemplateService.uploadPdf(decodeURIComponent(printTemplatePdfUploadMatch[1]), body, params);
