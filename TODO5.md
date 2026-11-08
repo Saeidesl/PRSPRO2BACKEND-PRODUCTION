@@ -74,5 +74,6 @@
 
 - [x] **Task 1 — Discovery & Planning**: بررسی مسیر فعلی Frontend و قراردادهای Backend انجام شد.
   - *Log:* شاخه کاری `feat/event-form-a4-modal-20261108` در Backend از آخرین main با commit `5247d9872509f6e9e2a26a5b3f0607444c441a1a` ساخته شد. نمایش A4 صرفاً تغییر تجربه Frontend است؛ مسیر `POST /events`، پاسخ‌های `35_EventFormData`، پیوست‌ها و شیت‌های عملیاتی بدون تغییر می‌مانند.
-- [ ] **Task 2 — حفظ سازگاری Backend (IN PROGRESS)**: عدم تغییر قراردادهای موجود و بررسی سازگاری با payload فرم‌ها.
-- [ ] **Task 3 — آزمون مشترک و تحویل**: همراه با آزمون Frontend تأیید شود که Backend بدون تغییر، همان payload فعلی را می‌پذیرد.
+- [x] **Task 2 — حفظ سازگاری Backend**: تصمیم شد هیچ تغییر اجرایی Backend لازم نیست و قراردادهای موجود حفظ می‌شوند.
+  - *Log:* مسیر `POST /events`، قرارداد پاسخ فرم و ذخیره موجود در `35_EventFormData`، آپلود پیوست و کنترل‌های tenant بدون تغییر می‌مانند؛ تجربه A4 فقط در Frontend و با همان DOM/submit موجود اجرا شده است. تغییر اجرایی Backend یا انتشار Apps Script در دامنه این قابلیت نیست.
+- [ ] **Task 3 — آزمون مشترک و تحویل (IN PROGRESS)**: همراه با آزمون Frontend تأیید شود که Backend بدون تغییر، همان payload فعلی را می‌پذیرد.
