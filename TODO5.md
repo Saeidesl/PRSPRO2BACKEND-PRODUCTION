@@ -76,3 +76,5 @@
 - *QA checkpoint (2026-11-08):* تغییرات تنظیم حاشیه در PR #33 روی شاخه `docs/print-margin-controls-20261108` ثبت شده‌اند؛ HEAD: `a9f400a44490093c774e2112ea5e71b3b7d6b1ba`. این PR فقط شامل TODO5.md است و کد اجرایی Backend تغییر نکرده؛ در نتیجه اجرای تست Backend لازم نیست. PR هنوز ادغام نشده و Task 3 باز است؛ ادغام و انتشار منوط به تأیید صریح Product Owner است.
 
 - *Documentation merge checkpoint (2026-11-08):* Backend PR #33 صرفاً مستندات TODO5 را با squash در main ادغام کرد؛ merge commit `2c8dfbc150b78cdee7808f87fa61fccc487c6c28`. هیچ کد اجرایی Backend، API، مجوز، Google Sheets یا داده عملیاتی تغییر نکرد؛ بنابراین Backend deployment لازم نیست.
+
+- *Print margin bugfix coordination (2026-11-08):* کاربر تأیید کرد تنظیمات فاصله در UI دیده می‌شوند اما روی پیش‌نمایش و چاپ اثر ندارند. بررسی نشان داد مشکل در لایه Frontend است؛ Backend، API، مجوزها، Google Sheets و داده عملیاتی نیاز به تغییر ندارند. اصلاح فقط در Frontend PR #61 روی شاخه `fix/print-margin-live-apply-20261108` انجام شده و منتظر تکمیل CI/تأیید ادغام است. هیچ deployment بک‌اندی برای این اصلاح لازم نیست.
