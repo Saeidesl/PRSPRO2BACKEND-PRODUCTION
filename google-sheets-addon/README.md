@@ -21,7 +21,7 @@
 - `PMS_PROJECT_QUANTITY`
 - `PMS_PROJECT_CREATED_AT`
 - `PMS_PROJECT_UPDATED_AT`
-- اطلاعات مرکزی: `PMS_INFO_<InformationTypeID>` یا `PMS_INFO_<InformationTypeCode>`
+- اطلاعات مرکزی: `PMS_INFO_<InformationTypeID>` 
 
 نمونه: سلول B4 را انتخاب کنید، از Data > Named ranges نام `PMS_PROJECT_TITLE` را برای آن ثبت کنید. ظاهر سلول، ادغام، اندازه، فرمت و تنظیمات چاپ آزادانه توسط کاربر تعیین می‌شود.
 
