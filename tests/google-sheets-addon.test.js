@@ -36,6 +36,7 @@ test('Generation always creates a Drive copy and writes named ranges on the copy
   assert.match(code, /sourceFile\.makeCopy\(copyName, folder\)/);
   assert.match(code, /SpreadsheetApp\.openById\(copyFile\.getId\(\)\)/);
   assert.match(code, /target\.getNamedRanges\(\)/);
+  assert.match(code, /if \(!hasSupportedMapping\)/);
   assert.match(code, /range\.setValue\(values\[name\]/);
   assert.match(code, /PMS_INFO_/);
 });
