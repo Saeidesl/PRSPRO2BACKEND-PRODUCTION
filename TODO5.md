@@ -1,6 +1,8 @@
 ## 🎯 Current Objective
 
-ارسال اعلان تلگرام پس از ثبت موفق تمام رویدادهای PMS، شامل رویدادهای متصل به پروژه و رویدادهای مستقل، همراه با جزئیات واقعی ثبت‌شده؛ بدون ایجاد مسیر ثبت موازی و بدون وابسته‌کردن موفقیت ثبت رویداد به در دسترس بودن تلگرام.
+پشتیبانی معماری Backend از فاز UI فرم A4 در Frontend؛ در این فاز هیچ تغییر اجرایی Backend/API/Sheet پیش‌بینی نشده است.
+
+**یادداشت حفظ سابقه:** فاز اعلان تلگرام در Task 4 متوقف‌شده به درخواست مالک محصول است؛ کد ادغام‌شده در main حذف یا rollback نمی‌شود و انتشار Apps Script و آزمون نسخه زنده آن همچنان در انتظار اقدام جداگانه است.
 
 دامنه تأییدشده مالک محصول:
 - رویدادهای پروژه‌ای و مستقل هر دو اعلان شوند.
@@ -64,5 +66,13 @@
   - *Log:* `TelegramBotService.js` — توابع `_parseNotificationJson_`, `_notificationAttachmentLabel_`, `_formatNotificationValue_`, `_formatNotificationForms_`, `_splitNotificationMessage_` و `notifyEvent` اضافه/تکمیل شدند. پاسخ‌ها فقط از `FormRepository.findResponsesByEvent` و ردیف‌های همان `TenantID/EventID` خوانده می‌شوند؛ metadata پیوست با `AttachmentRepository.findById` و tenant/status/project کنترل می‌شود؛ هیچ token یا StorageKey در پیام درج نمی‌شود. قالب پیام شامل پروژه یا برچسب رویداد مستقل، نوع رویداد، واحد، ثبت‌کننده، زمان‌ها، توضیحات، ترکیب‌ها و فرم‌های ثبت‌شده است.
 - [x] **Task 3 — اتصال امن به چرخه ثبت و جلوگیری از اعلان تکراری**: اعلان هر دو نوع رویداد از مسیر موجود، پس از ذخیره نهایی و تکمیل idempotency ارسال می‌شود؛ replay اعلان جدید ایجاد نمی‌کند و خطای تلگرام best-effort است.
   - *Log:* `EventService.js:_createUnlocked_` — شرط قبلی `if (project)` حذف شد و همان فراخوانی `TelegramBotService.notifyEvent` برای رویداد مستقل نیز فعال شد؛ ترتیب بعد از ذخیره رویداد/فرم، اتصال تأمین، تغییر پروژه، Audit و ثبت `IdempotencyStatus=COMPLETED` حفظ شد. `NotifyEnabled=false` فقط اعلان پروژه‌ای را متوقف می‌کند؛ رویداد مستقل به پروژه وابسته نیست. مسیر `Router.js:POST /events` و payload موجود تغییر نکردند.
-- [ ] **Task 4 — آزمون، سازگاری و تحویل عملیاتی (IN PROGRESS)**: CI، آزمون‌های Backend و بازبینی قرارداد/ایمنی؛ سپس ادغام PR پس از مجوز لازم، انتشار Apps Script و تست نسخه زنده. تفکیک GitHub، Apps Script deployment و تأیید نسخه زنده الزامی است.
+- [ ] **Task 4 — آزمون، سازگاری و تحویل عملیاتی (PAUSED BY PRODUCT OWNER)**: CI، آزمون‌های Backend و بازبینی قرارداد/ایمنی؛ سپس ادغام PR پس از مجوز لازم، انتشار Apps Script و تست نسخه زنده. تفکیک GitHub، Apps Script deployment و تأیید نسخه زنده الزامی است.
   - *Log:* `tests/telegram-notification.test.js` — پوشش اعلان رویداد مستقل، چند مقصد یک Tenant، پاسخ فرم چندردیفی، نام canonical تصویر، رد داده Tenant دیگر، `NotifyEnabled=false`، قطعه‌بندی پیام بلند و نبود تنظیمات. Backend unit tests، syntax/manifest و هر دو Agent Suite در GitHub Actions موفق شدند. PR Backend #29 با روش squash در `main` ادغام شد (merge commit: `6642f9acf12046c2062c99d31885f27e030b215b`). کد در GitHub main تأیید شد؛ انتشار Apps Script و آزمون نسخه زنده هنوز انجام نشده‌اند.
+
+
+## فاز 2026-11-08 — نمایش فرم‌های متصل در برگه A4
+
+- [x] **Task 1 — Discovery & Planning**: بررسی مسیر فعلی Frontend و قراردادهای Backend انجام شد.
+  - *Log:* شاخه کاری `feat/event-form-a4-modal-20261108` در Backend از آخرین main با commit `5247d9872509f6e9e2a26a5b3f0607444c441a1a` ساخته شد. نمایش A4 صرفاً تغییر تجربه Frontend است؛ مسیر `POST /events`، پاسخ‌های `35_EventFormData`، پیوست‌ها و شیت‌های عملیاتی بدون تغییر می‌مانند.
+- [ ] **Task 2 — حفظ سازگاری Backend (IN PROGRESS)**: عدم تغییر قراردادهای موجود و بررسی سازگاری با payload فرم‌ها.
+- [ ] **Task 3 — آزمون مشترک و تحویل**: همراه با آزمون Frontend تأیید شود که Backend بدون تغییر، همان payload فعلی را می‌پذیرد.
