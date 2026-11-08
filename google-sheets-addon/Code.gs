@@ -85,6 +85,21 @@ function pmsGenerateProjectCopy(projectId) {
   var infoRows = Array.isArray(infoResponse) ? infoResponse :
     (infoResponse && Array.isArray(infoResponse.items) ? infoResponse.items : []);
 
+  // Fail before creating a Drive copy if the source template has no usable PMS mapping.
+  var sourceMappings = source.getNamedRanges().filter(function(namedRange) {
+    return namedRange.getName().indexOf('PMS_') === 0;
+  });
+  var hasSupportedMapping = sourceMappings.some(function(namedRange) {
+    var name = namedRange.getName();
+    var range = namedRange.getRange();
+    return range.getNumRows() === 1 && range.getNumColumns() === 1 &&
+      (/^PMS_PROJECT_(ID|CODE|TITLE|DESCRIPTION|STATUS|QUANTITY|CREATED_AT|UPDATED_AT)$/.test(name) ||
+       /^PMS_INFO_[A-Za-z0-9_]+$/.test(name));
+  });
+  if (!hasSupportedMapping) {
+    throw new Error('در قالب هیچ Named Range معتبر PMS پیدا نشد. ابتدا نگاشت سلول‌ها را تعریف کنید.');
+  }
+
   var sourceFile = DriveApp.getFileById(source.getId());
   var parents = sourceFile.getParents();
   var folder = parents.hasNext() ? parents.next() : DriveApp.getRootFolder();
