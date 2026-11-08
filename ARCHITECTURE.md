@@ -868,3 +868,26 @@
 - کاربر تأیید کرد انتقال کد Backend به Apps Script از workflow موجود انجام شده است؛ این انتقال به‌تنهایی به‌معنای deploy وب‌اپ نیست.
 - کاربر پس از بررسی نسخه عملیاتی، موفقیت تست افزایش سرعت را تأیید کرد.
 - نتیجه پذیرش: حفظ رفتار قبلی و عملکرد موفق کش کوتاه‌مدت در استفاده عملیاتی.
+
+
+## 2026-11-08 — سازگاری Backend برای نمایش فرم‌های رویداد در مودال A4
+
+### هدف و تصمیم معماری
+- هدف فاز، نمایش فرم‌های متصل به نوع رویداد در Frontend به شکل برگه A4 و مودال تمام‌صفحه بود.
+- بررسی معماری نشان داد تغییر اجرایی Backend لازم نیست؛ هیچ مسیر موازی، endpoint، migration، Sheet یا ستون جدیدی ایجاد نشد.
+- قراردادهای موجود ثبت رویداد، پاسخ فرم و پیوست بدون تغییر حفظ شدند.
+
+### مسیرها و قراردادهای حفظ‌شده
+- Frontend فرم‌های متصل را از `GET /event-types/:eventTypeId/forms` دریافت می‌کند.
+- ثبت رویداد همچنان از `Router.js: POST /events` به `EventService.create(body, params)` و مسیر موجود `EventService.js:_createUnlocked_` متصل است.
+- پاسخ فرم‌ها از قرارداد فعلی و شیت `35_EventFormData` (نام منطقی `EVENT_FORM_DATA`) ذخیره می‌شوند.
+- فایل‌ها/تصاویر از مسیر موجود `POST /projects/:projectId/attachments` استفاده می‌کنند؛ اعتبارسنجی tenant و مالکیت، مجوزها و منطق idempotency دست‌نخورده باقی ماندند.
+- هیچ فایل runtime در Backend، API، permission، schema، Sheet یا داده عملیاتی در این فاز تغییر نکرد.
+
+### آزمون، ادغام و پذیرش
+- GitHub Actions cross-repository QA، Backend unit/integration tests، Apps Script manifest/source validation و بررسی قراردادها موفق شدند.
+- Frontend PR #55 با squash در `Saeidesl/PRSPRO2-PRODUCTION:main` ادغام شد؛ merge commit `1219557e076b953e2fd25834315613aaffb760f8`.
+- Backend PR #30 صرفاً مستندات سازگاری را با squash در `Saeidesl/PRSPRO2BACKEND-PRODUCTION:main` ادغام کرد؛ merge commit `e65ef9861ef958e362adf51881ef58c36d85572d`.
+- Product Owner تست نسخه عملیاتی شامل بازشدن مودال A4، فیلد اجباری، تصویر، جدول چندردیفی و ثبت موفق رویداد را تأیید کرد.
+- چون Backend runtime تغییر نکرد، انتشار جدید Google Apps Script لازم نبود.
+- تسک مستقل اعلان تلگرام و وضعیت `PAUSED BY PRODUCT OWNER` آن خارج از دامنه این فاز است و بدون تغییر حفظ می‌شود.
