@@ -39,7 +39,7 @@
 - `loadOutputOptions()`, `resolveOutput()`, `renderOutputDocument()`, `printOutput()`: انتخاب پروژه/قالب، دریافت داده، ساخت پیش‌نمایش و چاپ مرورگر.
 - `css/print-template-library.css`: استایل کتابخانه، محیط طراحی، پیش‌نمایش و چاپ.
 - `PMS.Api` مسیر انحصاری درخواست‌های Frontend است.
-- در خروجی فعلی، یک `article.pt-print-page` از ابعاد و المان‌های تعریف ساخته می‌شود؛ renderer خروجی چندصفحه‌ای است؛ `loadOutputPdfPages` پس‌زمینه PDF را به تصویر تبدیل می‌کند و `renderOutputDocument` برای هر صفحه یک `article.pt-print-page` با ابعاد واقعی می‌سازد. چاپ از `printOutput` و CSS `@page` صفحه‌بندی می‌شود؛ پایداری اندازه چاپ موبایل در Task 3 در حال اصلاح است.
+- در خروجی فعلی، یک `article.pt-print-page` از ابعاد و المان‌های تعریف ساخته می‌شود؛ renderer خروجی چندصفحه‌ای است؛ `loadOutputPdfPages` پس‌زمینه PDF را به تصویر تبدیل می‌کند و `renderOutputDocument` برای هر صفحه یک `article.pt-print-page` با ابعاد واقعی می‌سازد. چاپ از `printOutput` انجام می‌شود؛ در Task 3، تنظیمات حاشیه کاربر در `pages/print-output.html` و `PrintDesigner.loadOutputMargins/saveOutputMargins/resetOutputMargins/refreshOutputPreview` پیاده‌سازی می‌شود و در `localStorage` همین دستگاه نگهداری می‌شود. چهار مقدار بالا/پایین/راست/چپ بر حسب میلی‌متر روی تمام قالب‌ها اعمال شده و `renderOutputDocument` صفحه را با حفظ نسبت در محدوده امن Letter/A4 مقیاس می‌کند.
 - قابلیت جدید باید در همین ماژول و همان تعریف قالب توسعه یابد؛ ایجاد صفحه/کتابخانه/جریان موازی ممنوع است.
 
 ### تصمیمات فنی و الزامات طراحی
@@ -70,3 +70,5 @@
 
 
 - *Product requirement update (2026-11-08):* کاربر درخواست کرد فاصله بالا/پایین/طرفین در صفحه «تولید و چاپ اسناد» قابل تنظیم باشد تا برای هر فرم نیازی به تغییر کد نباشد. تصمیم پیاده‌سازی: کنترل‌های حاشیه بر حسب میلی‌متر در همان صفحه خروجی چاپ، با مقادیر قابل ویرایش و ذخیره خودکار در مرورگر همان دستگاه؛ تنظیمات در چاپ همه قالب‌ها اعمال می‌شود و به قالب یا داده پروژه وابسته نیست. این کار بدون تغییر Backend/API/Google Sheets انجام می‌شود.
+
+- *Implementation round 3 (2026-11-08):* صفحه `pages/print-output.html` چهار ورودی حاشیه برحسب میلی‌متر و دکمه بازنشانی دارد؛ `PrintDesigner.initOutput` مقدارها را بارگذاری و کنترل‌ها را متصل می‌کند. `PMS_PRINT_OUTPUT_MARGINS_V1` در localStorage مرورگر ذخیره می‌شود، بنابراین تغییر کد یا ذخیره جداگانه برای هر فرم لازم نیست. `saveOutputMargins` و `resetOutputMargins` پیش‌نمایش موجود را بدون بارگذاری دوباره PDF به‌روز می‌کنند؛ `renderOutputDocument` ضریب fit را بر اساس محدوده امن 203×272mm و مجموع حاشیه‌ها محاسبه می‌کند. `css/print-template-library.css` کنترل‌ها را responsive کرده و لایه چاپ را به حاشیه‌های تنظیم‌شده منتقل می‌کند. هیچ تغییر Backend/API/Google Sheets/داده عملیاتی لازم نیست.
