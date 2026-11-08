@@ -891,3 +891,50 @@
 - Product Owner تست نسخه عملیاتی شامل بازشدن مودال A4، فیلد اجباری، تصویر، جدول چندردیفی و ثبت موفق رویداد را تأیید کرد.
 - چون Backend runtime تغییر نکرد، انتشار جدید Google Apps Script لازم نبود.
 - تسک مستقل اعلان تلگرام و وضعیت `PAUSED BY PRODUCT OWNER` آن خارج از دامنه این فاز است و بدون تغییر حفظ می‌شود.
+## 2026-11-08 — فاز تبدیل هوشمند PDF و تصاویر فرم‌های کارخانه به قالب هوشمند PMS
+
+### وضعیت نهایی فاز
+- بنا به دستور صریح Product Owner در 2026-11-08، Task 4 و کل فاز بسته شدند.
+- **محدودیت پذیرش:** آزمون نهایی با PDF/تصویر واقعی کارخانه و تأیید نتیجه آن در گفتگو ثبت نشده است. بنابراین بسته‌شدن این فاز یک تصمیم مدیریتی برای پایان فاز است، نه ادعای موفقیت آزمون میدانی یا تأیید دقت OCR روی تمام فرم‌های واقعی.
+- هیچ داده عملیاتی حذف یا مهاجرت داده‌ای انجام نشد.
+
+### هدف و معماری حفظ‌شده
+- تبدیل PDF متنی، PDF اسکن‌شده و تصاویر JPG/JPEG/PNG/WebP به پس‌زمینه قالب هوشمند، با پیشنهاد خودکار محل فیلدها و bindingهای موجود.
+- قابلیت در همان Print Designer و ماژول PMS.Modules.PrintDesigner پیاده‌سازی شد؛ صفحه، کتابخانه، فرم، API یا مسیر ذخیره موازی ایجاد نشد.
+- PDF مستقل از Definition و Google Sheets در Google Drive tenant-scoped ذخیره می‌شود؛ metadata در شیت موجود 36_PrintTemplates و Definition فعلی نگهداری می‌شود.
+- جریان‌های موجود saveTemplate/loadLibrary/editTemplate، APIهای /print-templates و resolve، و خروجی resolveOutput/renderOutputDocument/printOutput حفظ شدند.
+- OCR با Tesseract.js و زبان‌های fas+eng در مرورگر و فقط با اقدام صریح کاربر اجرا می‌شود؛ سند به سرویس OCR/AI بیرونی ارسال نمی‌شود. پیشنهادهای تشخیص قابل ویرایش‌اند و بدون ذخیره صریح کاربر قالب نهایی نمی‌شوند.
+- bindingهای موجود PROJECT_FIELD, PROJECT_INFORMATION, EVENT_FORM_FIELD, EVENT_FORM_RESPONSE استفاده می‌شوند.
+
+### نقشه پیاده‌سازی Frontend
+- pages/print-designer.html: ورودی PDF و تصاویر و کنترل اجرای تبدیل هوشمند در محیط فعلی طراح.
+- index.html: بارگذاری PDF.js نسخه ثابت 3.11.174 و cache-busting نسخه‌های قابلیت.
+- js/modules/print-designer.js:
+  - استخراج متن و مختصات PDF با PDF.js؛ OCR محلی تنبل برای صفحات اسکن‌شده/متن ناقص.
+  - تبدیل تصویر به PDF در مرورگر و استفاده از مسیر آپلود PDF موجود.
+  - imageFileToPdf: حفظ JPEG اصلی بدون encode مجدد، جاسازی PNG بدون افت، تبدیل WebP به PNG در ابعاد اصلی؛ بدون downscale.
+  - groupSmartTextLines: گروه‌بندی تطبیقی خطوط/ستون‌ها، حفظ علائم Unicode bidi، اتصال fragmentهای واژه بر اساس فاصله bounding box و رعایت جهت RTL/LTR.
+  - رندر PDF خروجی با هدف ۳۰۰ DPI و سقف ۱۲MP برای هر صفحه، PNG lossless و Blob URL.
+  - تبدیل پیشنهادها به عناصر و bindingهای Definition موجود؛ امکان اصلاح دستی پیش از ذخیره.
+- tests/print-template-library.test.js: آزمون‌های رگرسیون ورودی PDF/تصویر، OCR، کیفیت رندر، مختصات، ترتیب متن و تفکیک ستون‌ها.
+- Backend runtime، API، permission، Google Sheets schema و داده عملیاتی در اصلاحات نهایی تغییر نکردند.
+
+### ذخیره‌سازی و قرارداد Backend موجود
+- فایل PDF با GoogleDriveStorage.uploadBase64ToTenant(data, tenantId) در پوشه Tenant ذخیره می‌شود.
+- PrintTemplateRepository.HEADERS در فاز پایه metadata فایل را به‌صورت additive در شیت 36_PrintTemplates نگهداری می‌کند؛ فایل PDF داخل Sheet یا DefinitionJSON قرار نمی‌گیرد.
+- PrintTemplateService.uploadPdf/downloadPdf و مسیرهای موجود POST/GET /print-templates/:id/pdf کنترل Tenant را اعمال می‌کنند.
+- سقف فایل ۱۰ مگابایت، سقف سند ۵۰ صفحه و کنترل MIME/امضای PDF در مسیر موجود حفظ شده‌اند.
+- PrintTemplateValidator.parseDefinition() و PrintTemplateService.resolve() قرارداد Definition و bindingها را حفظ می‌کنند.
+
+### آزمون، ادغام و انتشار ثبت‌شده
+- Frontend PR #66 با squash در main ادغام شد؛ merge commit: 43958df99c6c5fcfa14238842287dcafb483e738.
+- اصلاح نهایی متن در js/modules/print-designer.js، تست‌های tests/print-template-library.test.js و cache key در index.html ثبت شد.
+- Frontend checks، Cross-repository QA و Frontend Agent Suite روی commit نهایی موفق شدند.
+- GitHub Pages deployment run 42505441470 برای commit نهایی موفق گزارش شد.
+- Browser audit پیش از ادغام روی SHA مربوط به PR موفق بود؛ اجرای مجدد audit روی SHA نهایی در سوابق موجود تأیید نشده است.
+- Backend PR #38 صرفاً مستندسازی بود و با commit b9311054def1d10e4e63e99f7b09bcb3a01672e2 ادغام شد؛ انتشار Backend لازم نبود.
+- نسخه زنده Frontend: https://saeidesl.github.io/PRSPRO2-PRODUCTION/
+
+### تصمیم تحویل
+- Task 1 تا Task 4 در TODO5 به‌عنوان بسته‌شده بایگانی می‌شوند، با این قید که آزمون میدانی فایل واقعی کارخانه انجام‌شده تلقی نمی‌شود.
+- در صورت مشاهده اشکال در استفاده بعدی از فرم واقعی کارخانه، آن مورد باید به‌عنوان تسک/فاز اصلاحی جدید ثبت شود؛ این فاز بسته‌شده بدون گزارش خطای مشخص بازگشایی نمی‌شود.
