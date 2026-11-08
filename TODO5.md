@@ -10,36 +10,32 @@
 
 ### معماری موجود Backend
 - Runtime: Google Apps Script V8؛ دیتابیس Google Sheets؛ فایل‌ها در Google Drive؛ تمام درخواست‌ها از `Router.js` و کنترل دسترسی سمت سرور عبور می‌کنند.
-- `Router.js`: مسیر `GET /projects` با مجوزهای `PROJECT_VIEW` یا `PROJECT_CREATE` و مسیرهای جزئیات پروژه؛ مسیرهای فعلی قالب چاپ نیز در همین Router ثبت شده‌اند.
-- `PrintTemplateService.js`:
-  - `list(params)`: فهرست قالب‌های فعال tenant.
-  - `sources(params)`: فهرست فیلدهای مجاز پروژه، انواع اطلاعات مرکزی و فرم‌های فعال.
-  - `resolve(id, body, params)`: اعتبارسنجی پروژه و tenant، بررسی دسترسی کاربر، resolve فیلدهای پروژه، اطلاعات مرکزی و پاسخ فرم‌های رویداد.
-  - bindingهای موجود: `PROJECT_FIELD`, `PROJECT_INFORMATION`, `EVENT_FORM_RESPONSE`.
-- `PrintTemplateRepository.js`: شیت موجود `36_PrintTemplates` و metadata/DefinitionJSON قالب‌های چاپ؛ ایجاد schema به‌صورت additive.
-- `ProjectService.js` و `ProjectRepository.js`: منبع اصلی فهرست و دسترسی پروژه‌ها.
-- `AccessControlService.js`, `PermissionService.js`, `AuthService.js`: مرجع هویت، tenant و مجوزها؛ افزونه Word نباید مجوز یا دسترسی موازی تعریف کند.
-- APIهای موجود و مرتبط: `GET /projects`, `GET /projects/:id`, `GET /print-templates`, `GET /print-templates/sources` و resolve قالب چاپ از مسیرهای موجود. قرارداد دقیق HTTP/توکن و CORS برای Office Add-in در Task 2 باید از کد کامل Router و PMS.Api استخراج و آزمایش شود.
-- `GoogleDriveStorage.js`: ذخیره فایل‌های tenant-scoped؛ در MVP افزونه، ذخیره قالب Word در Drive فقط در صورت نیاز قطعی و پس از بررسی امنیتی انجام می‌شود.
+- `Router.js`: مسیر `GET /projects` با مجوزهای `PROJECT_VIEW` یا `PROJECT_CREATE`؛ مسیر جزئیات پروژه؛ مسیرهای ورود و خروج.
+- `AuthService.js`: `login(body,params)` ورودی `username/password` را اعتبارسنجی می‌کند؛ پاسخ موفق `Response.success({token,expiresAt,user})` است؛ token از `params.token`, `sessionToken` یا `Authorization` خوانده می‌شود.
+- `Response.js`: ساختار موفق `{success:true,data,error:null,meta}` و خطا `{success:false,data:null,error:{code,message,details},meta}`.
+- `ProjectService.js` و `ProjectRepository.js`: منبع اصلی فهرست و دسترسی پروژه‌ها؛ کنترل Tenant و permission در Backend باقی می‌ماند.
+- `AccessControlService.js`, `PermissionService.js`, `SessionManager.js`: مرجع هویت، نشست، tenant و مجوزها؛ افزونه Word مجوز یا دسترسی موازی تعریف نمی‌کند.
+- APIهای استفاده‌شده در MVP: `POST /auth/login`, `GET /projects`, `GET /projects/:id`, `POST /auth/logout`.
+- `PrintTemplateService.js` و `PrintTemplateRepository.js`: resolver و کتابخانه قالب چاپ موجود PMS؛ افزونه MVP هنوز آن‌ها را برای فیلدهای ساده فراخوانی نمی‌کند. توسعه داده‌های پیچیده باید در Task 3 قراردادهای موجود را reuse کند.
+- `GoogleDriveStorage.js`: ذخیره فایل‌های tenant-scoped؛ در MVP افزونه، ذخیره قالب Word در Drive انجام نمی‌شود.
 
 ### معماری موجود Frontend و هم‌پوشانی‌هایی که باید حفظ شوند
-- `js/core/api.js`: لایه درخواست استاندارد PMS شامل مدیریت token، خطا، کش و متدهای GET/POST؛ درخواست‌های فعلی فرانت‌اند باید از همین لایه عبور کنند.
-- `js/modules/print-designer.js` و `pages/print-designer.html`: Print Designer موجود با کتابخانه قالب، binding و خروجی PDF؛ این قابلیت نباید بی‌دلیل بازنویسی یا موازی‌سازی شود.
-- Print Designer از bindingهای موجود و resolver بک‌اند استفاده می‌کند. افزونه Word باید تا حد امکان قرارداد داده و قواعد دسترسی resolver موجود را reuse کند؛ قالب‌های Word نباید به Definitionهای ناسازگار یا مخزن داده موازی تبدیل شوند.
-- افزونه Word به‌عنوان کلاینت Office مستقل توسعه می‌یابد؛ UI انتخاب پروژه در Word است، نه فرم/مسیر ثبت پروژه جدید در PMS.
+- `js/core/api.js`: لایه درخواست استاندارد PMS؛ API_BASE_URL از تنظیمات نسخه عملیاتی خوانده می‌شود.
+- `js/modules/print-designer.js` و `pages/print-designer.html`: Print Designer موجود با کتابخانه قالب، binding و خروجی؛ این قابلیت نباید بازنویسی یا موازی‌سازی شود.
+- افزونه Word کلاینت Office مستقل است؛ مسیر انتخاب پروژه/ثبت پروژه جدید در PMS تغییر نمی‌کند.
 
 ### تصمیم‌ها و محدودیت‌های طراحی
-- پشتیبانی هم‌زمان Word Desktop و Word Online؛ تکنولوژی هدف Office JavaScript Add-in / Office.js با manifest مشترک و فقط APIهای سازگار در هر دو محیط.
-- جایگذاری با Word Content Controls و Tagهای پایدار؛ ظاهر سند، فونت، جدول، صفحه‌آرایی و متن ثابت تحت مالکیت کاربر باقی می‌ماند.
-- پروژه از فهرست مجاز PMS انتخاب می‌شود؛ هیچ شناسه پروژه یا داده‌ای بدون اعتبارسنجی سمت سرور پذیرفته نمی‌شود.
-- اصل tenant isolation، مجوزهای فعلی، حداقل‌سازی داده، نگهداری token امن، جلوگیری از ثبت token در فایل Word/log و عدم تغییر قالب اصلی الزامی است.
-- داده‌های چندردیفی، تصاویر، جداول و خروجی PDF باید با حفظ سازگاری هر دو نسخه Word آزمایش شوند.
-- هیچ deployment عملیاتی انجام نمی‌شود بدون تست و تأیید صریح Product Owner.
+- Office.js Add-in با manifest مشترک و WordApi 1.1؛ پشتیبانی Word Desktop و Word Online باید عملی آزمایش شود.
+- Content Controls با Tag پایدار محل درج را تعیین می‌کنند؛ قالب و صفحه‌آرایی Word متعلق به Product Owner است.
+- tenant isolation و permissionهای موجود Backend مرجع نهایی‌اند.
+- در نسخه MVP هیچ endpoint، Sheet، ستون، schema، migration یا تغییر runtime در Backend اضافه نشده است.
+- token فعلاً طبق قرارداد فعلی در query parameter درخواست‌ها ارسال می‌شود؛ این موضوع ریسک باقی‌مانده URL/log است و برای تأیید امنیت نهایی باید بررسی شود. هیچ token در سند یا log برنامه ذخیره نمی‌شود.
+- هیچ deployment عملیاتی بدون تست و تأیید صریح Product Owner انجام نمی‌شود.
 
 ## 📋 Macro-Task Queue & Implementation Log
 - [x] **Task 1 — Discovery & Planning:** بررسی وضعیت مخازن، TODO5 و ARCHITECTURE، شاخه‌ها و commitهای اصلی؛ شناسایی Print Designer، resolver و مسیرهای پروژه موجود؛ تعیین معماری اولیه افزونه مشترک Word.
-  - *Log:* Backend `Router.js`, `PrintTemplateService.js`, `PrintTemplateRepository.js`; Frontend `js/core/api.js`, `js/modules/print-designer.js`, `pages/print-designer.html`; شیت `36_PrintTemplates`; APIهای `GET /projects`, `GET /print-templates`, `GET /print-templates/sources` و resolver موجود بررسی شدند. TODO5 در هر دو مخزن در وضعیت Ready for the next feature بود؛ فاز قبلی بسته شده بود. شاخه کاری مشترک از آخرین commitهای main ایجاد شد.
-- [ ] **Task 2 — Word Add-in MVP (IN PROGRESS):** تکمیل بررسی فنی Office.js، روش احراز هویت امن به PMS و سازگاری GAS/CORS؛ پیاده‌سازی افزونه مشترک ویندوز/آنلاین با انتخاب و جستجوی پروژه و درج فیلدهای تکی در Content Controls؛ reuse کردن منطق resolve و مجوزهای موجود تا حد ممکن.
-  - *Log:* در این مرحله هیچ فایل runtime بک‌اند تغییر نکرد؛ مسیرهای موجود `POST /auth/login`, `GET /projects`, `GET /projects/:id` برای MVP انتخاب شدند و کنترل دسترسی/tenant همان Backend حفظ می‌شود. در Frontend فایل‌های `word-addin/manifest.xml`, `word-addin/taskpane.html`, `word-addin/taskpane.css`, `word-addin/taskpane.js` و `word-addin/README.md` اضافه شدند. افزونه از Office.js/WordApi 1.1، انتخاب و جستجوی پروژه، بارگذاری جزئیات و درج فیلدهای `PROJECT_NAME`, `PROJECT_CODE`, `TOTAL_QUANTITY`, `PROJECT_DESCRIPTION`, `PROJECT_STATUS`, `PROJECT_ID` در Content Controls با Tag استفاده می‌کند. رمز عبور پس از ورود پاک می‌شود و token فقط در حافظه task pane می‌ماند؛ سند اصلی و دیتابیس تغییر نمی‌کنند. PRهای Draft #39 بک‌اند و #67 فرانت‌اند ساخته شدند. در بازبینی تکمیلی، قرارداد پاسخ `Response.success(data)` و `Response.error(...)` در `Response.js` تأیید شد؛ کلاینت Word اصلاح شد تا خطاهای استاندارد Backend را درست بخواند. در این ادامه هیچ تغییر runtime یا دیتابیسی در Backend لازم/اعمال نشد و APIهای موجود `POST /auth/login`, `GET /projects`, `GET /projects/:id` مرجع باقی ماندند. کنترل ایستای فرانت‌اند به Workflow مستقل اضافه شده، اما اجرای موفق آن، CORS/API و تست Word Desktop/Online و Pages هنوز تأیید نشده‌اند؛ Task 2 باز است.
+  - *Log:* Backend `Router.js`, `AuthService.js`, `Response.js`, `ProjectService.js`, `ProjectRepository.js`; Frontend `js/core/api.js`, `js/modules/print-designer.js`, `pages/print-designer.html`; شیت موجود `36_PrintTemplates`; مسیرهای موجود پروژه و resolver قالب بررسی شدند. شاخه کاری مشترک از آخرین commitهای main ایجاد شد.
+- [ ] **Task 2 — Word Add-in MVP (IN PROGRESS):** تکمیل روش احراز هویت و ارتباط امن با Backend؛ نمایش/جستجوی پروژه‌های مجاز؛ درج فیلدهای ساده در Content Controls؛ تأیید میزبانی HTTPS و تست واقعی Word Desktop/Online.
+  - *Log:* هیچ فایل runtime یا دیتابیس Backend تغییر نکرد. مسیرهای موجود `POST /auth/login`, `GET /projects`, `GET /projects/:id`, `POST /auth/logout` استفاده می‌شوند. قرارداد `AuthService.login` ورودی `username/password` و خروجی `data.token` را تأیید می‌کند؛ `Router.js` مسیرها و کنترل مجوز پروژه را تأیید می‌کند؛ `Response.js` خطا را در `error.message` برمی‌گرداند. Frontend کلاینت Office.js و Content Controlها را پیاده کرده است. PR Draft #39 فقط این مستندات را ثبت می‌کند؛ هیچ API، Sheet، permission یا deployment جدید Backend وجود ندارد. Frontend PR #67 دارای Workflow کنترل ایستا است؛ Run `42511538519` برای Word Add-in Checks موفق شد. Frontend checks Run `42511538513` و Cross-repository QA Run `42511538408` نیز موفق شدند. CORS/redirect واقعی GAS، دسترسی Pages، تست Word Desktop/Online و بررسی امنیت token در URL هنوز تأیید نشده‌اند؛ Task 2 باز است.
 - [ ] **Task 3 — داده‌های پیچیده و قالب‌بندی:** پشتیبانی از جدول‌های چندردیفی، تصاویر و انواع داده مرکزی/پاسخ فرم؛ حفظ قالب اصلی و ساخت نسخه کاری؛ بررسی رفتار RTL و فارسی در Word Desktop و Online.
 - [ ] **Task 4 — آزمون یکپارچه و تحویل:** تست قرارداد API، امنیت tenant/token، دسترسی پروژه، Word Desktop و Online، فایل‌های قالب نمونه، خطاها و رگرسیون؛ مستندسازی استقرار افزونه و ارائه دستور تست به Product Owner. انتشار/توزیع سازمانی و deployment فقط پس از تأیید جداگانه.
