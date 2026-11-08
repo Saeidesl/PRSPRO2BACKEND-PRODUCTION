@@ -5,7 +5,7 @@
  */
 const PrintTemplateRepository = {
   SHEET_NAME: '36_PrintTemplates',
-  HEADERS: ['ID','TenantID','Code','Name','Description','Status','Version','DefinitionJSON','CreatedBy','CreatedAt','UpdatedBy','UpdatedAt'],
+  HEADERS: ['ID','TenantID','Code','Name','Description','Status','Version','DefinitionJSON','CreatedBy','CreatedAt','UpdatedBy','UpdatedAt','PdfStorageKey','PdfFileName','PdfMimeType','PdfFileSize','PdfPageCount'],
   _schemaSpreadsheetId: '',
 
   ensureSchema: function() {

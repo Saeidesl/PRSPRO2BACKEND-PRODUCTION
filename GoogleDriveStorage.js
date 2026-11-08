@@ -32,7 +32,7 @@ const GoogleDriveStorage = {
   },
 
 
-  uploadBase64: function(data) {
+  uploadBase64: function(data, destinationFolder) {
 
     if (!data) {
 
@@ -104,6 +104,15 @@ const GoogleDriveStorage = {
 
     }
 
+    if (mimeType === 'application/pdf') {
+      const signature = bytes.slice(0, 5).map(function(value) {
+        return String.fromCharCode((Number(value) + 256) % 256);
+      }).join('');
+      if (signature !== '%PDF-') {
+        throw ErrorHandler.create(Constants.ERROR.UPLOAD_FAILED, 'ساختار فایل PDF معتبر نیست.');
+      }
+    }
+
     const maxBytes =
       Number(
         AppConfig.FILES.MAX_SIZE_MB
@@ -130,7 +139,7 @@ const GoogleDriveStorage = {
       );
 
     const folder =
-      this.getRootFolder_();
+      destinationFolder || this.getRootFolder_();
 
     const file =
       folder.createFile(blob);
@@ -160,6 +169,17 @@ const GoogleDriveStorage = {
 
     };
 
+  },
+
+
+  uploadBase64ToTenant: function(data, tenantId) {
+    Validator.required(tenantId, 'شناسه سازمان');
+    const safeTenant = String(tenantId).replace(/[^A-Za-z0-9_-]/g, '_');
+    const folderName = 'TENANT_' + safeTenant;
+    const root = this.getRootFolder_();
+    const folders = root.getFoldersByName(folderName);
+    const folder = folders.hasNext() ? folders.next() : root.createFolder(folderName);
+    return this.uploadBase64(data, folder);
   },
 
 
