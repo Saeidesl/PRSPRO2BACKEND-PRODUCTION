@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <style>
+    body{font:13px/1.8 Arial,sans-serif;color:#202124;padding:12px;margin:0}
+    h3{font-size:15px;margin:0 0 12px}
+    label{display:block;margin:10px 0 4px;font-weight:600}
+    input,select{box-sizing:border-box;width:100%;padding:9px;border:1px solid #dadce0;border-radius:6px;background:#fff}
+    button{width:100%;padding:10px;border:0;border-radius:6px;background:#1a73e8;color:#fff;font-weight:600;margin-top:12px;cursor:pointer}
+    button.secondary{background:#5f6368}
+    button:disabled{opacity:.55;cursor:wait}
+    .muted{color:#5f6368;font-size:12px}
+    .status{margin:10px 0;padding:9px;border-radius:6px;background:#f1f3f4;white-space:pre-wrap}
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+  <h3>اتصال قالب Google Sheets به PMS</h3>
+  <div id="status" class="status">در حال بررسی نشست...</div>
+  <section id="login">
+    <label for="username">نام کاربری PMS</label>
+    <input id="username" autocomplete="username">
+    <label for="password">رمز عبور</label>
+    <input id="password" type="password" autocomplete="current-password">
+    <button id="loginButton" onclick="login()">ورود به PMS</button>
+  </section>
+  <section id="workspace" class="hidden">
+    <label for="project">انتخاب پروژه</label>
+    <select id="project"><option value="">در حال دریافت پروژه‌ها...</option></select>
+    <button id="generateButton" onclick="generate()">ساخت نسخه تکمیل‌شده</button>
+    <button class="secondary" onclick="logout()">خروج از حساب</button>
+  </section>
+  <p class="muted">قالب اصلی تغییر نمی‌کند. خروجی به‌صورت یک فایل جداگانه در همان پوشه Google Drive ساخته می‌شود.</p>
+<script>
+  const $ = id => document.getElementById(id);
+  function status(message){ $('status').textContent = message; }
+  function showWorkspace(connected){
+    $('login').classList.toggle('hidden', connected);
+    $('workspace').classList.toggle('hidden', !connected);
+  }
+  function runServer(method, args, success){
+    google.script.run.withSuccessHandler(success).withFailureHandler(e => {
+      status(e && e.message ? e.message : 'خطای نامشخص');
+    })[method].apply(null, args || []);
+  }
+  function loadProjects(){
+    status('در حال دریافت فهرست پروژه‌های مجاز...');
+    runServer('pmsListProjects', [], projects => {
+      const select = $('project');
+      select.innerHTML = '';
+      (projects || []).forEach(p => {
+        const option = document.createElement('option');
+        option.value = p.id;
+        option.textContent = (p.code ? p.code + ' — ' : '') + p.title;
+        select.appendChild(option);
+      });
+      if (!projects || !projects.length) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'پروژه قابل مشاهده‌ای پیدا نشد';
+        select.appendChild(option);
+      }
+      status('اتصال برقرار است. پروژه را انتخاب کنید.');
+    });
+  }
+  function checkConnection(){
+    runServer('pmsGetConnectionState', [], result => {
+      showWorkspace(!!result.connected);
+      if (result.connected) loadProjects();
+      else status(result.message || 'برای شروع، وارد حساب PMS شوید.');
+    });
+  }
+  function login(){
+    const button=$('loginButton'); button.disabled=true;
+    status('در حال ورود...');
+    runServer('pmsLogin', [$('username').value, $('password').value], result => {
+      button.disabled=false; $('password').value=''; showWorkspace(true); loadProjects();
+    });
+  }
+  function generate(){
+    const id=$('project').value;
+    if(!id){status('ابتدا یک پروژه انتخاب کنید.');return;}
+    const button=$('generateButton'); button.disabled=true;
+    status('در حال دریافت اطلاعات و ساخت کپی مستقل...');
+    runServer('pmsGenerateProjectCopy',[id],result=>{
+      button.disabled=false;
+      status(result.message+'\nسلول‌های تکمیل‌شده: '+result.written.length+
+        '\nموارد نیازمند بررسی: '+result.skipped.length);
+      if(result.url){
+        const link=document.createElement('a');link.href=result.url;link.target='_blank';
+        link.textContent='باز کردن فایل تکمیل‌شده';link.style.display='block';link.style.marginTop='10px';
+        $('status').appendChild(document.createElement('br'));$('status').appendChild(link);
+      }
+    });
+  }
+  function logout(){
+    runServer('pmsLogout',[],()=>{showWorkspace(false);status('از حساب PMS خارج شدید.');});
+  }
+  checkConnection();
+</script>
+</body>
+</html>
