@@ -155,14 +155,17 @@ function pmsRequireToken_() {
 function pmsApiRequest_(method, path, body, token) {
   var baseUrl = 'https://script.google.com/macros/s/AKfycbwxuzgcxw6fIGxWzeSwExvCIlrCXSTCq8y5sb2rtF7yPNhuC5XWbdJzesc2plXh_CB2/exec';
   var query = 'path=' + encodeURIComponent(path);
-  if (token) query += '&token=' + encodeURIComponent(token);
+  if (token && method === 'GET') query += '&token=' + encodeURIComponent(token);
   var options = {
     method: method.toLowerCase(),
     contentType: 'application/json',
     muteHttpExceptions: true,
     followRedirects: true
   };
-  if (body !== null && body !== undefined) options.payload = JSON.stringify(body);
+  if (body !== null && body !== undefined) {
+    if (token && method !== 'GET') body.token = token;
+    options.payload = JSON.stringify(body);
+  }
   var response = UrlFetchApp.fetch(baseUrl + '?' + query, options);
   var status = response.getResponseCode();
   var text = response.getContentText();
