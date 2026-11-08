@@ -9,7 +9,7 @@
 ### مخازن و شاخه عملیاتی
 - Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`
 - Frontend: `Saeidesl/PRSPRO2-PRODUCTION`
-- شاخه‌های فعال اصلاح چاپ: Frontend `fix/print-mobile-fit-page-20261108`؛ Backend مستندسازی `docs/print-mobile-fit-page-20261108`؛ اصلاح قبلی `fix/print-page-size-mobile-20261108` در PR #58 ادغام شده است.
+- شاخه فعال تنظیمات حاشیه چاپ: Frontend `feat/print-margin-controls-20261108`؛ Backend مستندسازی `docs/print-margin-controls-20261108`. اصلاح قبلی چاپ موبایل در Frontend PR #59 و مستندات Backend در PR #32 ادغام شده‌اند.
 - Backend baseline از main: `8f850258599a6437251c83c3994fa910120c05b7`
 - Frontend baseline از main: `4fcae36435120c5f489986765b6613b8db38e3b2`
 - هر دو مخزن پیش از شروع دارای `TODO5.md = Ready for the next feature` و `ARCHITECTURE.md` بودند؛ فاز قبلی بسته شده بود.
@@ -63,7 +63,10 @@
   - *Static QA:* Syntax check پنج فایل JS تغییرکرده PASS شد؛ آزمون mock برای اعتبارسنجی صفحه مقصد، رد فایل PDF با امضای نامعتبر، ذخیره در پوشه Tenant و جلوگیری از دسترسی Tenant دیگر PASS شد.
   - *Acceptance Log (2026-11-08):* Frontend PR #57 با squash در commit `f088d6b3445b061461308c420cb86546ef99c818` روی main ادغام شد. Frontend GitHub Pages deployment Run `42474033571` با conclusion=success پایان یافت؛ CI، cross-repository QA و frontend agent suite نیز موفق شدند. کاربر نسخه عملیاتی را آزمایش و Task 2 را تأیید کرد. مشاهده مستقیم سایت از محیط دستیار ممکن نبود؛ تأیید عملیاتی بر اساس تست و تأیید Product Owner ثبت شد.
   - *Log:* Backend: `GoogleDriveStorage.uploadBase64ToTenant`, `PrintTemplateRepository.HEADERS` و `PrintTemplateService.uploadPdf/downloadPdf`؛ metadata در `36_PrintTemplates` و endpointهای `POST/GET /print-templates/:id/pdf`. Frontend: `pages/print-designer.html`, `index.html`, `js/modules/print-designer.js` (PDF.js، بارگذاری صفحات، `pageIndex`، `loadOutputPdfPages`, `renderOutputDocument`, `printOutput`)، `css/print-template-library.css` و `tests/print-template-library.test.js`. PR #57 پس‌زمینه PDF را به خروجی و صفحات چاپ متصل کرد؛ PDF در Drive مستقل از Sheet باقی می‌ماند.
-- [ ] **Task 3 — اصلاح ابعاد فیزیکی صفحه و پایداری چاپ PDF (IN PROGRESS)**: اصلاح چاپ چندصفحه‌ای PDF در مرورگرهای موبایل و دسکتاپ؛ جلوگیری از شکستن یک صفحه PDF بین چند برگ چاپی؛ هماهنگی ابعاد واقعی صفحه، CSS `@page` و اندازه کاغذ مقصد؛ حفظ نسبت و جایگاه پس‌زمینه و عناصر روی تمام صفحات.
+- [ ] **Task 3 — اصلاح ابعاد فیزیکی صفحه و پایداری چاپ PDF (IN PROGRESS)**: اصلاح چاپ چندصفحه‌ای PDF در مرورگرهای موبایل و دسکتاپ؛ جلوگیری از شکستن یک صفحه PDF بین چند برگ چاپی؛ هماهنگی ابعاد واقعی صفحه، CSS و اندازه کاغذ مقصد؛ حفظ نسبت و جایگاه پس‌زمینه و عناصر روی تمام صفحات؛ افزودن کنترل‌های کاربری برای فاصله بالا، پایین، راست و چپ، با ذخیره خودکار تنظیمات روی دستگاه و اعمال آن‌ها روی همه قالب‌ها بدون تغییر کد.
   - *Test feedback (2026-11-08):* Product Owner تست PR #58 را انجام داد؛ مشکل کمتر شد اما همچنان در Android Print Preview، کاغذ Letter انتخاب می‌شود و انتهای یک صفحه PDF به برگ دوم منتقل می‌گردد. Task 3 باز می‌ماند.
   - *Implementation round 2:* به‌جای اتکا به پذیرش ابعاد سفارشی `@page` در چاپگر موبایل، کل صفحه PDF (پس‌زمینه و تمام المان‌های absolute) داخل یک لایه مشترک مقیاس می‌شود. ضریب fit بر اساس محدوده امن مشترک Letter/A4 (203×272mm) محاسبه و ابعاد فیزیکی article در حالت چاپ به اندازه مقیاس‌یافته تغییر می‌کند؛ پیش‌نمایش روی صفحه بدون تغییر اندازه می‌ماند. قواعد `@page` نام‌گذاری‌شده حذف و newline واقعی/ساختار CSS چاپ ساده‌سازی می‌شود. آزمون‌های ساختاری باید حفظ نسبت، اندازه صفحه چاپ و page-break را پوشش دهند.
 - [ ] **Task 4 — آزمون، ادغام و تحویل عملیاتی**: تست فایل‌های تک/چندصفحه‌ای، داده/تصویر/جدول، قالب‌های قدیمی، tenant access، حجم/خطاها، رگرسیون و انتشار مطابق workflow موجود؛ سپس ارائه دستور تست به Product Owner و توقف تا تأیید.
+
+
+- *Product requirement update (2026-11-08):* کاربر درخواست کرد فاصله بالا/پایین/طرفین در صفحه «تولید و چاپ اسناد» قابل تنظیم باشد تا برای هر فرم نیازی به تغییر کد نباشد. تصمیم پیاده‌سازی: کنترل‌های حاشیه بر حسب میلی‌متر در همان صفحه خروجی چاپ، با مقادیر قابل ویرایش و ذخیره خودکار در مرورگر همان دستگاه؛ تنظیمات در چاپ همه قالب‌ها اعمال می‌شود و به قالب یا داده پروژه وابسته نیست. این کار بدون تغییر Backend/API/Google Sheets انجام می‌شود.
