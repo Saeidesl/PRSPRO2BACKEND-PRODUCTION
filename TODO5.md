@@ -89,4 +89,4 @@
 - [x] **Task 1 — Discovery & Planning:** بررسی وضعیت پذیرش تسک ثبت فرم، آخرین commitهای main، فایل‌های TODO5/ARCHITECTURE و DOM/توابع فعلی برگه A4 انجام شد.
   - *Log:* Backend main=`c4d6d22ac1ea9218300a3056a2b45b03cfd61c1f` و Frontend main=`17a7a83b715cdf5f0ec747aee485c1087bb72c43`؛ branch مستقل `feat/event-form-a4-confirm-close-20261109` در هر دو مخزن ساخته شد. مسیر ساخت برگه در `js/modules/events.js:prepareConfiguredFormsA4` و بستن/بازکردن در `closeConfiguredFormsA4/openConfiguredFormsA4` بررسی شد؛ دکمه باید به همان close handler متصل شود و از submit فرم اصلی مستقل بماند.
 - [ ] **Task 2 — افزودن دکمه تأیید (IN PROGRESS):** افزودن دکمه پایین برگه A4 با `type="button"`، بستن برگه از طریق تابع موجود و حفظ تمام مقادیر فرم؛ عدم فراخوانی `submitForm` یا `PMS.Api.post('/events')`.
-- [ ] **Task 3 — آزمون رگرسیون و انتشار:** پوشش تست برای کلیک دکمه، بسته‌شدن برگه، حفظ مقدارها و عدم فراخوانی submit/API؛ اجرای تست‌ها، PR و بررسی انتشار Frontend؛ بدون تغییر Backend runtime.
+- [ ] **Task 3 — آزمون رگرسیون و انتشار (IN PROGRESS):** تست دکمه تأیید، بسته‌شدن برگه، حفظ مقدارها و عدم submit/API؛ اجرای CI، PR و بررسی انتشار Frontend؛ بدون تغییر Backend runtime.
