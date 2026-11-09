@@ -8,6 +8,8 @@ const test = require('node:test');
 function loadPrintTemplates() {
   const templates = [];
   const audits = [];
+  const storedFiles = Object.create(null);
+  let storageSequence = 0;
   const responses = [
     { ID:'R1',TenantID:'T1',EventID:'E1',FormID:'F1',FormVersion:2,CreatedAt:'2026-01-01T10:00:00Z',
       ResponseJSON:JSON.stringify({I1:'قدیمی'}),DefinitionSnapshotJSON:JSON.stringify({Version:2,Fields:[{ID:'FF1',InformationTypeID:'I1'}]}) },
@@ -47,6 +49,20 @@ function loadPrintTemplates() {
       getEventResponses: () => responses
     },
     AuditService: { log: entry => audits.push(entry) },
+    AppConfig: { FILES: { MAX_SIZE_MB: 10, ALLOWED_MIME_TYPES: ['image/jpeg','image/png','image/webp','application/pdf'] } },
+    GoogleDriveStorage: {
+      uploadBase64ToTenant: (data, tenantId) => {
+        const id = 'FILE_' + (++storageSequence);
+        storedFiles[id] = { fileName: data.fileName, mimeType: data.mimeType, fileSize: Buffer.from(data.base64, 'base64').length, base64: data.base64, tenantId };
+        return { storageKey: id, fileName: data.fileName, mimeType: data.mimeType, fileSize: storedFiles[id].fileSize };
+      },
+      getFileAsBase64: id => {
+        if (!storedFiles[id]) throw new Error('missing file');
+        return { fileName: storedFiles[id].fileName, mimeType: storedFiles[id].mimeType,
+          fileSize: storedFiles[id].fileSize, base64: storedFiles[id].base64 };
+      },
+      delete: id => { delete storedFiles[id]; return true; }
+    },
     Validator: {
       required: (value,label) => { if(value===undefined||value===null||String(value)==='') throw new Error(label+' الزامی است.'); },
       object: value => { if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('object'); }
@@ -54,14 +70,14 @@ function loadPrintTemplates() {
     Response: { success: (data,meta) => ({success:true,data,meta:meta||{}}) },
     ErrorHandler: { create: (_code,message) => new Error(message) },
     Constants: { ERROR:{NOT_FOUND:'NOT_FOUND',VALIDATION_ERROR:'VALIDATION_ERROR',DUPLICATE:'DUPLICATE'}, ACTION:{CREATE:'CREATE',UPDATE:'UPDATE',DELETE:'DELETE'} },
-    Utilities: { getUuid: () => 'test-uuid' },
+    Utilities: { getUuid: () => 'test-uuid', base64Decode: value => Array.from(Buffer.from(value, 'base64')) },
     Date, Object, String, Array, JSON, Number, Math, isFinite
   };
   const root = path.join(__dirname,'..');
   vm.runInNewContext(fs.readFileSync(path.join(root,'PrintTemplateValidator.js'),'utf8')+'\nthis.__validator=PrintTemplateValidator;',context);
   context.PrintTemplateValidator = context.__validator;
   vm.runInNewContext(fs.readFileSync(path.join(root,'PrintTemplateService.js'),'utf8')+'\nthis.__service=PrintTemplateService;',context);
-  return {service:context.__service,templates,audits};
+  return {service:context.__service,templates,audits,storedFiles};
 }
 
 test('template definitions accept stable bindings and reject duplicate or unsupported sources',()=>{
@@ -138,3 +154,47 @@ test('template deletion is logical and retains the stored record',()=>{
   assert.equal(h.templates.length,1);
   assert.throws(()=>h.service.get(created.data.ID,{}),/پیدا نشد/);
 });
+test('template images upload as tenant-scoped image assets and never expose Drive storage keys',()=>{
+  const h=loadPrintTemplates();
+  const created=h.service.create({Code:'WITH_IMAGE',Name:'قالب دارای تصویر',Definition:{elements:[],bindings:[]}}, {});
+  const uploaded=h.service.uploadImage(created.data.ID,{
+    fileName:'logo.png',mimeType:'image/png',base64:'iVBORw0KGgo='
+  },{});
+  assert.equal(uploaded.success,true);
+  assert.match(uploaded.data.ID,/^IMG_/);
+  assert.equal(uploaded.data.MimeType,'image/png');
+  const row=h.templates[0];
+  const assets=JSON.parse(row.ImageAssetsJSON);
+  assert.equal(assets.length,1);
+  assert.ok(assets[0].StorageKey);
+  assert.equal(h.storedFiles[assets[0].StorageKey].tenantId,'T1');
+  const publicTemplate=h.service.get(created.data.ID,{}).data;
+  assert.equal(publicTemplate.Images.length,1);
+  assert.equal(Object.hasOwn(publicTemplate.Images[0],'StorageKey'),false);
+  const downloaded=h.service.downloadImage(created.data.ID,uploaded.data.ID,{});
+  assert.equal(downloaded.data.base64,'iVBORw0KGgo=');
+  assert.equal(downloaded.data.mimeType,'image/png');
+});
+
+test('template image upload rejects mismatched image signatures and unsupported formats',()=>{
+  const h=loadPrintTemplates();
+  const created=h.service.create({Code:'IMAGE_CHECK',Name:'اعتبارسنجی تصویر',Definition:{elements:[],bindings:[]}}, {});
+  assert.throws(()=>h.service.uploadImage(created.data.ID,{
+    fileName:'wrong.png',mimeType:'image/png',base64:'AAAA'
+  },{}),/مطابقت ندارد/);
+  assert.throws(()=>h.service.uploadImage(created.data.ID,{
+    fileName:'wrong.gif',mimeType:'image/gif',base64:'R0lGODlh'
+  },{}),/فقط تصاویر JPG/);
+  assert.equal(Object.keys(h.storedFiles).length,0);
+});
+
+test('template image download cannot access assets through another tenant template',()=>{
+  const h=loadPrintTemplates();
+  const created=h.service.create({Code:'PRIVATE_IMAGE',Name:'تصویر خصوصی',Definition:{elements:[],bindings:[]}}, {});
+  const uploaded=h.service.uploadImage(created.data.ID,{
+    fileName:'logo.png',mimeType:'image/png',base64:'iVBORw0KGgo='
+  },{});
+  h.service._user=()=>({ID:'U2',TenantID:'T2'});
+  assert.throws(()=>h.service.downloadImage(created.data.ID,uploaded.data.ID,{}),/پیدا نشد/);
+});
+
