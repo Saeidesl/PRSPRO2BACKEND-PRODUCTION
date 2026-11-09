@@ -162,3 +162,24 @@
   - *Log:* Backend: `PrintTemplateValidator.js:parseDefinition`، `PrintTemplateService.js:uploadImage/preview` و route موجود در `Router.js` بررسی شدند؛ تولید شناسه دائمی با `IMG_ + UUID بدون خط تیره` معتبر است. Frontend: `js/modules/print-designer.js:handleImageSelection/uploadPendingImages/renderLivePreview` و `tests/print-template-library.test.js` بررسی شدند. اشکال فقط در ارسال `assetId:''` برای تصویر pending است؛ Backend validation، قرارداد API و ذخیره‌سازی دست‌نخورده می‌مانند.
 - [ ] **Task 2 — اصلاح preview برای تصویر ذخیره‌نشده (IN PROGRESS):** حذف شناسه خالی فقط از clone درخواست preview، حفظ Definition اصلی و تصاویر دائمی؛ افزودن تست رگرسیون برای pending، saved و image بدون فایل pending.
 - [ ] **Task 3 — Regression، ادغام و انتشار:** اجرای تست‌های Frontend و QA بین‌مخزنی، بررسی diff و CI، ادغام Frontend در main و انتشار GitHub Pages؛ سپس تست عملیاتی Product Owner. Backend فقط مستندات را نگه می‌دارد و deployment/runtime change ندارد.
+
+
+## 2026-11-09 — افزودن چاپ مستقیم به پیش‌نمایش زنده قالب‌ساز
+
+### 🎯 Current Objective
+تکمیل پنل پیش‌نمایش زنده با امکان چاپ همان خروجی از داخل محیط قالب‌ساز؛ بدون ذخیره قالب و بدون مسیر موازی.
+
+### 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
+- Backend operational: `Saeidesl/PRSPRO2BACKEND-PRODUCTION/main`، مبنای فاز `e723055d4fdd9e227a8f387d19a9dc5796c6e65a`؛ Frontend operational: `Saeidesl/PRSPRO2-PRODUCTION/main`، مبنای فاز `c15fdeaef1dc0e683d8a54bfccb1e799b3b9088d`.
+- Frontend branch: `feat/live-preview-print-20261109`; Backend branch: `feat/live-preview-print-20261109`.
+- Frontend `pages/print-designer.html`: پنل موجود `#pt-live-preview-content` و نوار ابزار `#pt-live-preview-actions`.
+- Frontend `js/modules/print-designer.js`: `renderLivePreview()` با API موجود `POST /print-templates/preview` و Definition جاری، از `renderOutputDocument()` برای HTML و `generateSourcePdfOutput()` برای PDF اصلی استفاده می‌کند؛ `renderFinalPdfPreview()` PDF را برای نمایش رندر می‌کند؛ `printOutput()` در صفحه خروجی قبلی، PDF را در نمایشگر مرورگر باز می‌کند یا HTML را با `window.print()` چاپ می‌کند.
+- Frontend `css/print-template-library.css`: قواعد چاپ فعلی برای `body.pt-printing` فقط `#pt-output-preview-card` را هدف می‌گیرند؛ قابلیت جدید باید selector مستقل `body.pt-live-preview-printing` داشته باشد و فقط `#pt-live-preview-content` را در چاپ نمایش دهد.
+- Backend: endpoint امن موجود `POST /print-templates/preview` با `PROJECT_VIEW` و tenant/project scope حفظ می‌شود؛ هیچ API، permission، Sheet، schema یا runtime change لازم نیست.
+- تصمیم رفتاری: دکمه «چاپ» تا آماده‌شدن preview غیرفعال است؛ خروجی HTML از پنل فعلی چاپ می‌شود؛ PDF اصلی به‌صورت PDF اصلی در تب/نمایشگر PDF باز می‌شود و از همان‌جا چاپ می‌گردد. هیچ saveTemplate، CRUD قالب، upload یا ایجاد رویداد اجرا نمی‌شود.
+
+### 📋 Macro-Task Queue & Implementation Log
+- [x] **Task 1 — Discovery & Planning:** بررسی TODO5/ARCHITECTURE، commitهای main، پنل پیش‌نمایش، موتور HTML/PDF، مسیر چاپ موجود و قواعد CSS چاپ انجام شد.
+  - *Log:* Frontend: `pages/print-designer.html` پنل `#pt-live-preview-content`؛ `js/modules/print-designer.js` توابع `renderLivePreview`، `renderOutputDocument`، `generateSourcePdfOutput`، `renderFinalPdfPreview` و `printOutput`؛ `css/print-template-library.css` قواعد موجود چاپ سند نهایی؛ `tests/print-template-library.test.js`؛ `index.html`. Backend: route موجود `POST /print-templates/preview` و permission `PROJECT_VIEW` بدون تغییر استفاده می‌شوند. main SHAs قبل از شروع: Backend `e723055d4fdd9e227a8f387d19a9dc5796c6e65a`، Frontend `c15fdeaef1dc0e683d8a54bfccb1e799b3b9088d`.
+- [ ] **Task 2 — افزودن چاپ به پنل پیش‌نمایش زنده (IN PROGRESS):** دکمه چاپ، وضعیت آماده‌بودن preview، چاپ HTML با CSS محدود به preview، بازکردن PDF اصلی برای چاپ و مدیریت URL موقت؛ بدون ذخیره‌سازی یا تغییر Backend.
+- [ ] **Task 3 — آزمون رگرسیون، ادغام و انتشار:** اجرای Frontend regression و cross-repository QA، browser audit، ادغام PRها و انتشار GitHub Pages؛ تست عملیاتی Product Owner.
