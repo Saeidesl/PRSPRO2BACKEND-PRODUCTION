@@ -198,3 +198,39 @@ test('template image download cannot access assets through another tenant templa
   assert.throws(()=>h.service.downloadImage(created.data.ID,uploaded.data.ID,{}),/پیدا نشد/);
 });
 
+
+
+test('unsaved template preview resolves current project bindings without creating or changing a template',()=>{
+  const h=loadPrintTemplates();
+  const result=h.service.preview({ProjectID:'P1',Definition:{bindings:[
+    {id:'project_code',sourceType:'PROJECT_FIELD',field:'ProjectCode'},
+    {id:'current_model',sourceType:'PROJECT_INFORMATION',informationTypeId:'I1'},
+    {id:'latest_form_value',sourceType:'EVENT_FORM_FIELD',formId:'F1',fieldId:'FF1',selection:'LATEST'},
+    {id:'all_form_values',sourceType:'EVENT_FORM_FIELD',formId:'F1',fieldId:'FF1',selection:'ALL'}
+  ]}}, {});
+  assert.equal(result.success,true);
+  assert.equal(result.data.project.ID,'P1');
+  assert.equal(result.data.data.project_code,'PR-1');
+  assert.equal(result.data.data.current_model,'مقدار جاری');
+  assert.equal(result.data.data.latest_form_value,'جدید');
+  assert.deepEqual(Array.from(result.data.data.all_form_values),['قدیمی','جدید']);
+  assert.equal(h.templates.length,0);
+  assert.equal(h.audits.length,0);
+});
+
+test('unsaved template preview validates the definition and enforces project tenant/access boundaries',()=>{
+  const h=loadPrintTemplates();
+  assert.throws(()=>h.service.preview({ProjectID:'P1',Definition:{bindings:[
+    {id:'invalid',sourceType:'UNSUPPORTED'}
+  ]}}, {}),/پشتیبانی نمی‌شود/);
+  assert.throws(()=>h.service.preview({ProjectID:'OTHER',Definition:{bindings:[]}}, {}),/پیدا نشد/);
+  assert.equal(h.templates.length,0);
+});
+
+test('router exposes preview through PROJECT_VIEW and delegates to the non-persistent service method',()=>{
+  const source=fs.readFileSync(path.join(__dirname,'..','Router.js'),'utf8');
+  const route=source.match(/if \(path === '\/print-templates\/preview'\) \{[\s\S]*?\n    \}/);
+  assert.ok(route,'preview route exists');
+  assert.match(route[0],/AccessControlService\.require\(params, 'PROJECT_VIEW'\)/);
+  assert.match(route[0],/PrintTemplateService\.preview\(body, params\)/);
+});
