@@ -112,6 +112,16 @@ const PrintTemplateValidator = {
         throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'صفحه مقصد یکی از المان‌ها معتبر نیست.');
       }
       element.pageIndex = pageIndex;
+      if (String(element.type || '').toLowerCase() === 'image' && element.assetId !== undefined) {
+        const assetId = String(element.assetId || '').trim();
+        if (!/^IMG_[A-Za-z0-9_-]{8,100}$/.test(assetId)) {
+          throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'شناسه تصویر یکی از المان‌های قالب معتبر نیست.');
+        }
+        element.assetId = assetId;
+        if (element.base64 !== undefined || element.dataUrl !== undefined || element.storageKey !== undefined) {
+          throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'محتوای فایل یا مسیر ذخیره‌سازی نباید داخل تعریف قالب قرار گیرد.');
+        }
+      }
     });
     let serialized;
     try { serialized = JSON.stringify(normalized); }
