@@ -298,20 +298,13 @@ const PrintTemplateService = {
       Reason: 'غیرفعال‌سازی قالب چاپ مرکزی' });
     return Response.success({ ID: id, Status: 'DELETED' }, { message: 'قالب غیرفعال شد.' });
   },
-  resolve: function(id, body, params) {
-    const user = this._user(params);
-    body = body || {};
-    const template = this._template(id, user.TenantID);
-    if (String(template.Status || 'ACTIVE') !== 'ACTIVE') {
-      throw ErrorHandler.create(Constants.ERROR.INVALID_OPERATION, 'قالب غیرفعال است و قابل استفاده برای تولید سند نیست.');
-    }
-    Validator.required(body.ProjectID, 'ProjectID');
-    const project = ProjectRepository.findById(body.ProjectID);
+  _resolveProjectData: function(projectId, definition, user) {
+    Validator.required(projectId, 'ProjectID');
+    const project = ProjectRepository.findById(projectId);
     if (!project || String(project.TenantID) !== String(user.TenantID) ||
         !ProjectService._isProjectAvailableToUser_(project, user)) {
       throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'پروژه موردنظر پیدا نشد.');
     }
-    const definition = this._definition(template);
     const projectFieldAllowList = {
       ID: true, ProjectCode: true, Title: true, Description: true, Status: true,
       Quantity: true, CreatedAt: true, UpdatedAt: true, RecordState: true
@@ -321,12 +314,12 @@ const PrintTemplateService = {
     infoTypes.forEach(function(type) {
       if (String(type.Status || 'ACTIVE') === 'ACTIVE') infoById[String(type.ID)] = type;
     });
-    const informationRows = ProjectInformationRepository.findByProject(body.ProjectID).filter(function(row) {
+    const informationRows = ProjectInformationRepository.findByProject(projectId).filter(function(row) {
       return String(row.TenantID) === String(user.TenantID) && String(row.Status || 'ACTIVE') === 'ACTIVE';
     });
     const informationByType = Object.create(null);
     informationRows.forEach(function(row) { informationByType[String(row.InformationTypeID)] = row; });
-    const events = EventRepository.findByProjectId(body.ProjectID).filter(function(event) {
+    const events = EventRepository.findByProjectId(projectId).filter(function(event) {
       const status = String(event.Status || '').toUpperCase();
       return String(event.TenantID) === String(user.TenantID) && status !== 'VOID' &&
         status !== 'CANCELLED' && status !== 'CANCELED';
@@ -381,10 +374,36 @@ const PrintTemplateService = {
       }
       resolved[String(binding.id)] = value;
     }, this);
+    return {
+      project: { ID: project.ID, ProjectCode: project.ProjectCode || '', Title: project.Title || '' },
+      data: resolved
+    };
+  },
+  preview: function(body, params) {
+    const user = this._user(params);
+    body = body || {};
+    Validator.required(body.ProjectID, 'ProjectID');
+    const definition = PrintTemplateValidator.parseDefinition(body.Definition);
+    const resolved = this._resolveProjectData(body.ProjectID, definition, user);
+    return Response.success({
+      project: resolved.project,
+      data: resolved.data,
+      resolvedAt: this._now()
+    });
+  },
+  resolve: function(id, body, params) {
+    const user = this._user(params);
+    body = body || {};
+    const template = this._template(id, user.TenantID);
+    if (String(template.Status || 'ACTIVE') !== 'ACTIVE') {
+      throw ErrorHandler.create(Constants.ERROR.INVALID_OPERATION, 'قالب غیرفعال است و قابل استفاده برای تولید سند نیست.');
+    }
+    const definition = this._definition(template);
+    const resolved = this._resolveProjectData(body.ProjectID, definition, user);
     return Response.success({
       template: { ID: template.ID, Code: template.Code, Name: template.Name, Version: Number(template.Version || 1) },
-      project: { ID: project.ID, ProjectCode: project.ProjectCode || '', Title: project.Title || '' },
-      data: resolved,
+      project: resolved.project,
+      data: resolved.data,
       resolvedAt: this._now()
     });
   }

@@ -1,5 +1,5 @@
 ## 🎯 Current Objective
-افزودن دکمه «تأیید» در انتهای برگه A4 فرم‌های متصل به رویداد؛ این دکمه فقط برگه را می‌بندد و مقادیر فرم را حفظ می‌کند و به هیچ عنوان رویداد را ثبت نمی‌کند.
+افزودن پیش‌نمایش زنده و واقعی خروجی چاپ در محیط قالب‌ساز، بدون ذخیره اجباری قالب.
 
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
 ### مخازن و شاخه عملیاتی
@@ -92,3 +92,53 @@
   - *Log:* Frontend `js/modules/events.js`: در `prepareConfiguredFormsA4(section, container)` عنصر `button#event-forms-a4-confirm` با متن «تأیید» ساخته و فقط به `closeConfiguredFormsA4()` متصل شد؛ دکمه پس از `paper` در viewport قرار گرفت. `css/events.css`: استایل `.event-forms-a4-actions` و `.event-forms-a4-confirm` و مخفی‌سازی در `@media print`. `tests/event-form-a4-modal.test.js`: تست نوع button، متن، listener بستن، ترتیب قرارگیری و حفظ DOM/مقادیر. `index.html`: cache-busting با نسخه `20261109-event-form-a4-confirm-1`. Frontend PR #73 با merge commit `0bcc7f43d17ae1f9388218e798b421fef5a07aad` ادغام شد. Backend PR #45 فقط مستندات TODO5 را sync کرد؛ هیچ تغییر runtime/API/schema/Sheet نداشت و با commit `ec5c890ae296c6421a6512aedb2cdfba3d343fb3` ادغام شد.
 - [x] **Task 3 — آزمون رگرسیون، ادغام و انتشار:** تست‌ها و کنترل‌های CI موفق شدند؛ هر دو PR ادغام و انتشار Frontend به GitHub Pages با موفقیت تکمیل شد؛ Product Owner تست عملیاتی را تأیید کرد.
   - *Log:* Frontend PR #73 ادغام شد؛ workflowهای `Frontend checks` run `42633388334`، `PMS cross-repository QA` run `42633388482` و `PMS frontend agent suite` run `42633388613` موفق شدند. انتشار `Publish frontend to GitHub Pages (MAIN)` run `42633389071` و `pages build and deployment` run `42633385825` هر دو با conclusion=success تکمیل شدند. کاربر در 2026-11-09 تست عملیاتی را تأیید کرد: دکمه A4 را بدون ثبت رویداد می‌بندد و اطلاعات فرم پس از بازگشایی حفظ می‌شوند. Backend PR #45 فقط مستندات بود؛ انتشار مجدد Apps Script لازم نبود. ادغام‌ها: Frontend `0bcc7f43d17ae1f9388218e798b421fef5a07aad`، Backend `ec5c890ae296c6421a6512aedb2cdfba3d343fb3`.
+
+
+## 2026-11-09 — پیش‌نمایش زنده در محیط قالب‌ساز
+
+### 🎯 Current Objective
+افزودن پیش‌نمایش واقعی و زنده خروجی چاپ در همان محیط طراحی؛ تغییرات ذخیره‌نشده باید بدون رفتن به صفحه چاپ اسناد و بدون ذخیره قالب قابل مشاهده باشند.
+
+### 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
+#### مخازن و شاخه‌های عملیاتی
+- Backend: Saeidesl/PRSPRO2BACKEND-PRODUCTION، شاخه feat/live-print-preview-20261109، مبنا main با commit 33c36066d559f0e051fc6525b50c6d0c61c797f9.
+- Frontend: Saeidesl/PRSPRO2-PRODUCTION، شاخه feat/live-print-preview-20261109، مبنا main با commit 51a545c8cc6648e60dea6ac06b60fda8edf981e5.
+- هر دو شاخه مستقل از main ساخته شده‌اند؛ مخازن توسعه و شاخه‌های قدیمی feature مبنای این کار نیستند.
+
+#### معماری کشف‌شده Backend
+- Router.js: GET /print-templates، GET /print-templates/sources و POST /print-templates/:id/resolve مسیرهای موجودند. مسیر resolve فعلی به PROJECT_VIEW نیاز دارد.
+- PrintTemplateService.js: تابع resolve(id, body, params) قالب ذخیره‌شده را با _template و Tenant کنترل می‌کند، پروژه را با ProjectRepository.findById و ProjectService._isProjectAvailableToUser_ اعتبارسنجی می‌کند و bindingهای PROJECT_FIELD، PROJECT_INFORMATION، EVENT_FORM_FIELD و EVENT_FORM_RESPONSE را از منابع مرکزی، رویدادها و پاسخ‌های فرم resolve می‌کند.
+- PrintTemplateValidator.js: تابع parseDefinition قرارداد Definition، صفحه‌ها، المان‌ها و bindingها را اعتبارسنجی و سقف حجم Definition را کنترل می‌کند.
+- منابع داده موجود: ProjectRepository، InformationTypeRepository، ProjectInformationRepository، EventRepository و FormRepository.getEventResponses(). داده پاسخ فرم در ساختار موجود ذخیره می‌شود.
+- شیت قالب‌ها 36_PrintTemplates و فایل PDF/تصاویر در Google Drive tenant-scoped باقی می‌مانند. برای پیش‌نمایش هیچ Sheet، ستون، رکورد یا فایل دائمی جدیدی لازم نیست.
+- تصمیم Task 2: منطق resolve داده به helper مشترک و قابل استفاده مجدد تبدیل شود؛ endpoint پیش‌نمایش فقط Definition و ProjectID را می‌گیرد، همان اعتبارسنجی و Tenant/Permission scope را اعمال می‌کند و هیچ چیزی ذخیره نمی‌کند. قرارداد هدف: POST /print-templates/preview با payload شامل ProjectID و Definition و پاسخ شامل project و data.
+
+#### معماری کشف‌شده Frontend
+- pages/print-designer.html: صفحه فعلی قالب‌ساز، toolbar، پنل تنظیمات، بوم #pt-design-canvas و فرم ذخیره #pt-template-form.
+- js/modules/print-designer.js:
+  - definition منبع واحد تغییرات جاری و ذخیره‌نشده است.
+  - renderEditor() و renderCanvas() بعد از تغییرات، بوم را رندر می‌کنند؛ drag/resize در bindEditor() و ویرایش تنظیمات در applyInspectorChange() انجام می‌شود.
+  - editTemplate() قالب و PDF موجود را بارگذاری می‌کند؛ saveTemplate() تنها مسیر ذخیره صریح است.
+  - renderOutputDocument(template, project, data) موتور HTML خروجی و generateSourcePdfOutput() موتور PDF اصلی/overlay است.
+  - loadTemplateImages()، loadOutputPdfPages() و fetchOutputPdfBytes() منابع تصویری و PDF را از مسیرهای امن موجود بارگذاری می‌کنند.
+  - loadOutputOptions() فهرست پروژه‌ها و قالب‌ها را در صفحه چاپ اسناد می‌گیرد؛ resolveOutput() از POST /print-templates/:id/resolve استفاده می‌کند.
+- css/print-template-library.css: استایل بوم، صفحه‌های طراحی، خروجی چاپ و breakpoint موبایل؛ پنل preview در همین فایل توسعه می‌یابد.
+- tests/print-template-library.test.js: تست‌های قالب‌ساز، رندر خروجی، PDF، تصاویر، چندصفحه‌ای و نسخه asset.
+- index.html: cache-busting فایل‌های print-template-library.css و print-designer.js.
+
+#### قیود و معیارهای معماری
+- فقط یک Definition و یک مسیر ذخیره قالب حفظ شود؛ preview هرگز saveTemplate()، POST/PUT ذخیره قالب یا آپلود دائمی PDF/تصویر را فراخوانی نکند.
+- رندر پیش‌نمایش باید از موتور خروجی موجود استفاده کند تا ظاهر آن با چاپ نهایی همسان بماند؛ PDF منبع، تصویرها، RTL، اندازه واقعی صفحه، چندصفحه‌ای و bindingهای موجود حفظ شوند.
+- تغییرات بوم، inspector، انتخاب پروژه، undo/redo و تغییر صفحه باید preview را به‌روز کنند؛ درخواست‌های متوالی با debounce و نادیده‌گرفتن پاسخ‌های قدیمی مدیریت شوند.
+- دسکتاپ: طراحی و preview کنار هم؛ موبایل: preview با کنترل نمایش تمام‌صفحه/تعویض نما. خطای resolve یا منبع فقط در پنل preview نشان داده شود و ویرایش را متوقف نکند.
+- هیچ تغییری در قالب‌های ذخیره‌شده، داده‌های عملیاتی، API چاپ نهایی یا گردش فعلی چاپ بدون نیاز و سازگاری‌سنجی انجام نشود.
+
+### 📋 Macro-Task Queue & Implementation Log
+- [x] **Task 1 — Discovery & Planning:** بررسی TODO5.md و ARCHITECTURE.md هر دو مخزن، آخرین commitهای main، شاخه‌ها، Print Designer، موتور خروجی، مسیرهای resolve، اعتبارسنجی Definition و منابع داده انجام شد.
+  - *Log:* Backend main=33c36066d559f0e051fc6525b50c6d0c61c797f9 و Frontend main=51a545c8cc6648e60dea6ac06b60fda8edf981e5؛ شاخه مستقل feat/live-print-preview-20261109 در هر دو مخزن ایجاد شد. Backend: Router.js، PrintTemplateService.resolve، PrintTemplateValidator.parseDefinition، مخازن Project/Information/Event/Form و endpoint فعلی POST /print-templates/:id/resolve بررسی شدند. Frontend: pages/print-designer.html، js/modules/print-designer.js (توابع bindEditor، renderEditor، renderCanvas، editTemplate، saveTemplate، renderOutputDocument، generateSourcePdfOutput)، css/print-template-library.css، tests/print-template-library.test.js و index.html بررسی شدند. فهرست منابع و داده واقعی پروژه از resolver فعلی قابل reuse است؛ preview ذخیره‌نشده به resolver بدون ذخیره نیاز دارد.
+- [x] **Task 2 — Backend: سرویس امن Resolve برای پیش‌نمایش ذخیره‌نشده:** استخراج منطق resolve مشترک، افزودن POST `/print-templates/preview` با دریافت `ProjectID` و `Definition`، اعتبارسنجی با Validator موجود، اعمال `PROJECT_VIEW` و tenant/project access، و اطمینان از عدم ایجاد/ویرایش رکورد یا Sheet.
+  - *Log:* Backend: `PrintTemplateService.js` منطق resolve مشترک را در `_resolveProjectData(projectId, definition, user)` متمرکز کرد؛ `preview(body, params)` تعریف ذخیره‌نشده را با `PrintTemplateValidator.parseDefinition` اعتبارسنجی و داده‌های پروژه/اطلاعات مرکزی/پاسخ فرم‌ها را بدون ذخیره resolve می‌کند. `Router.js`: مسیر `POST /print-templates/preview` با مجوز `PROJECT_VIEW`. `tests/print-templates.test.js`: تست resolve bindingها، tenant/project access، تعریف نامعتبر، عدم ایجاد قالب و اتصال Router. CI در Backend runs `42664792706`، `42664792720` و `42664792703` موفق شدند. Backend PR #46 با head فعلی `d2479a2faa8a05e0ff2417cb2d255ef6570b8851` باز است؛ workflowهای Backend source checks run `42665150788`، PMS agent suite run `42665150920` و Procurement diagnostics run `42665151381` همگی موفق‌اند. هنوز merge/deploy نشده.
+- [x] **Task 3 — Frontend: پیش‌نمایش زنده در همان قالب‌ساز:** پنل پیش‌نمایش، انتخاب پروژه، رندر Definition ذخیره‌نشده با موتور چاپ فعلی، debounce، محافظت از پاسخ‌های قدیمی، پشتیبانی PDF/تصویر و حالت واکنش‌گرا پیاده شد.
+  - *Log:* در مخزن Frontend: `pages/print-designer.html` پنل preview و انتخاب پروژه؛ `js/modules/print-designer.js` توابع `loadLivePreviewProjects`، `bindLivePreview`، `scheduleLivePreview`، `renderLivePreview` و `toggleLivePreviewExpanded`؛ endpoint `POST /print-templates/preview` با Definition جاری؛ reuse `renderOutputDocument` و `generateSourcePdfOutput`؛ فایل‌های محلی PDF/تصویر تا پیش از ذخیره صریح فقط در حافظه مرورگر می‌مانند. `css/print-template-library.css` حالت واکنش‌گرا؛ `tests/print-template-library.test.js` تست‌های API، عدم ذخیره، PDF محلی و assetهای تصویر؛ `index.html` cache-busting نسخه `20261109-live-preview-1`. Frontend checks run `42665949449`، cross-repository QA run `42665949108` و frontend agent suite run `42665949084` موفق شدند. تغییرات Frontend در PR #74 ذخیره شده‌اند.
+- [ ] **Task 4 — رگرسیون نهایی، بررسی مرورگر، ادغام و انتشار (IN PROGRESS):** ممیزی نهایی UI/performance، تأیید اجرای regression مرورگر، بررسی قرارداد دو مخزن، سپس آماده‌سازی ادغام و انتشار مطابق workflowهای موجود؛ توقف برای تست Product Owner.
+  - *Log:* Backend PR #46 با head `95d048eda9a71317bd7f59c5a74afd41d323d9e4` و Frontend PR #74 با head `300e875fafb3c9e7c85ea6e099e6e59867ff2a17` باز و merge نشده‌اند. Backend source checks run `42665150788`، PMS agent suite run `42665150920` و Procurement diagnostics run `42665151381` موفق‌اند. ممیزی مرورگر Frontend run `42665949298` در attempt دوم است؛ تست‌های مرورگر موجود موفق‌اند و مرحله UI inventory/performance audit هنوز در حال اجراست. هیچ merge، deploy یا تغییر داده عملیاتی انجام نشده است.
