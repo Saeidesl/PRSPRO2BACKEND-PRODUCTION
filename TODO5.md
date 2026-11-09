@@ -1,4 +1,44 @@
 ## 🎯 Current Objective
+حذف کامل مسیر تشخیص هوشمند فیلدها از نسخه عملیاتی PMS؛ حذف UI، الگوریتم استخراج/تشخیص، OCR، اتصال‌های تشخیص و تست‌های اختصاصی آن، بدون آسیب به ورود دستی PDF/تصویر، ویرایش دستی فیلدها، قالب‌ساز، پیش‌نمایش زنده و چاپ.
+
+## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
+### مخازن و شاخه‌های عملیاتی
+- Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه `feat/remove-smart-field-detection-20261109`، مبنا `main` با commit `682193d2f4cb0b2985947ce050116f21377fcb8e`.
+- Frontend: `Saeidesl/PRSPRO2-PRODUCTION`، شاخه `feat/remove-smart-field-detection-20261109`، مبنا `main` با commit `c88bfd9526782fc23af8a1f737b35523b7830590`.
+- تسک چاپ در قالب‌ساز به درخواست Product Owner در حالت توقف باقی می‌ماند؛ هیچ وضعیت پذیرش یا Log آن تغییر نمی‌کند.
+
+### یافته‌های قطعی Frontend
+- `pages/print-designer.html`: کنترل تشخیص با شناسه `pt-smart-detect` و متن راهنمای OCR در خطوط 15–16.
+- `js/modules/print-designer.js`:
+  - محدوده مستقل تشخیص: `normalizeSmartText`, `smartSourceCatalog`, `suggestSmartBinding`, `normalizeSmartLineText`, `getSmartTextDirection`, `groupSmartTextLines`, `smartLineToElements`, `runSmartDetection` (تقریباً خطوط 615–837).
+  - اتصال UI: listener دکمه در `initLibrary`؛ enable/disable دکمه در `handlePdfFile`, `resetForm`, `editTemplate`.
+  - OCR پویا: بارگذاری `tesseract.js@5.1.1` از CDN، ساخت worker با زبان‌های `fas+eng` و `worker.recognize`.
+  - مسیر مستقل و لازم ورود دستی سند: `handleImportFile`, `handlePdfFile`, `imageFileToPdf`. این مسیر PDF یا تصویر را به‌عنوان پس‌زمینه سند در همان قالب‌ساز وارد می‌کند و باید حفظ شود؛ حذف تشخیص هوشمند نباید ورود دستی سند را حذف کند.
+  - PDF.js برای بارگذاری، بررسی صفحات و رندر PDF در بخش‌های دیگر قالب‌ساز نیز استفاده می‌شود؛ وابستگی `pdf.min.js` و worker آن حذف نشود.
+  - `pt-field-hint` و `pt-output-field` برای نمایش عمومی فیلدهای دستی نیز استفاده می‌شوند؛ این استایل‌ها حذف نشوند.
+- `css/print-template-library.css`: قواعد اختصاصی دکمه `#pt-smart-detect` حذف‌پذیرند؛ استایل عمومی hint/output field حفظ شود.
+- `tests/print-template-library.test.js`: تست‌های اختصاصی smart conversion/OCR/detection و grouping باید با تست‌های عدم وجود مسیر تشخیص جایگزین شوند؛ تست ورود دستی PDF/تصویر، فیلدهای دستی، PDF اصلی، پیش‌نمایش و چاپ حفظ شود.
+- `index.html`: PDF.js نسخه 3.11.174 برای رندر و پردازش عادی PDF لازم است؛ فقط اگر وابستگی اختصاصی دیگری برای OCR پیدا شد حذف می‌شود.
+
+### یافته‌های قطعی Backend
+- `Router.js`, `PrintTemplateService.js`, `PrintTemplateValidator.js`: در بررسی محتوای اجرایی فعلی، منطق تشخیص فیلد، OCR، Tesseract یا endpoint مختص تشخیص پیدا نشد.
+- `POST /print-templates/preview` و resolver مربوط به پیش‌نمایش زنده، مستقل از تشخیص هوشمند هستند و باید حفظ شوند.
+- در حال حاضر هیچ تغییر runtime، API، permission، Sheet یا داده عملیاتی Backend برای حذف این قابلیت لازم/موجه نیست؛ بررسی نهایی repository-wide و تست cross-repository الزامی است.
+
+### مرزهای حذف و حفظ
+- حذف: دکمه/متن تشخیص، توابع و الگوریتم‌های تشخیص متن/برچسب/مختصات، پیشنهاد خودکار binding، OCR و بارگذاری Tesseract، اتصال event handler و stateهای مربوط، CSS اختصاصی دکمه و تست‌های مثبت قابلیت.
+- حفظ: ورود دستی PDF و JPG/PNG/WebP به‌عنوان پس‌زمینه، PDF.js و worker برای کارکردهای عادی PDF، افزودن/ویرایش دستی فیلدها، bindingهای دستی موجود، `pt-field-hint` و `pt-output-field` عمومی، preview resolver و مسیرهای ذخیره/خروجی/چاپ.
+- هیچ API، Sheet، جدول یا مسیر موازی جدید ایجاد نشود؛ هیچ داده یا قالب ذخیره‌شده حذف یا migrate نشود.
+
+## 📋 Macro-Task Queue & Implementation Log
+- [x] **Task 1 — Discovery & Planning:** بررسی شاخه‌ها، آخرین commitهای main، TODO5/ARCHITECTURE و ردیابی وابستگی‌های تشخیص در دو مخزن انجام شد.
+  - *Log:* Frontend main=`c88bfd9526782fc23af8a1f737b35523b7830590`؛ Backend main=`682193d2f4cb0b2985947ce050116f21377fcb8e`. مسیر تشخیص در `pages/print-designer.html`، `js/modules/print-designer.js`، `css/print-template-library.css` و `tests/print-template-library.test.js` شناسایی شد. Backend runtime در `Router.js`، `PrintTemplateService.js` و `PrintTemplateValidator.js` فاقد پیاده‌سازی تشخیص/OCR است. PDF.js، ورود دستی سند، renderer فیلد و API preview وابستگی‌های مستقل و قابل حفظ‌اند. شاخه عملیاتی اختصاصی در هر دو مخزن از main ساخته شد.
+- [ ] **Task 2 — حذف کامل مسیر تشخیص هوشمند از Frontend (IN PROGRESS):** حذف UI، توابع تشخیص، OCR/Tesseract، اتصال‌ها و CSS اختصاصی؛ پاک‌سازی تست‌های مثبت قدیمی و جایگزینی با تست عدم وجود قابلیت؛ حفظ کامل ورود دستی PDF/تصویر، فیلدهای دستی، PDF.js، preview و چاپ.
+- [ ] **Task 3 — ممیزی نهایی، سازگاری، ادغام و انتشار:** جست‌وجوی سراسری آثار اجرایی در هر دو مخزن، اجرای تست‌های Frontend و Cross-repository QA، بررسی عدم Regression و سپس PR/ادغام/انتشار فقط از workflowهای موجود. Backend فقط در صورت کشف کد اجرایی مرتبط تغییر خواهد کرد؛ در غیر این صورت بدون تغییر runtime باقی می‌ماند.
+
+---
+
+## 🎯 Current Objective
 افزودن پیش‌نمایش زنده و واقعی خروجی چاپ در محیط قالب‌ساز، بدون ذخیره اجباری قالب.
 
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
