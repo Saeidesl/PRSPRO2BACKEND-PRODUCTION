@@ -244,7 +244,8 @@ test('legacy PDF background metadata is ignored and is not exposed by the templa
   assert.equal(Object.hasOwn(created.data.Definition,'pdf'),false);
   assert.equal(Object.hasOwn(created.data,'Pdf'),false);
   const source=fs.readFileSync(path.join(__dirname,'..','PrintTemplateValidator.js'),'utf8');
-  assert.match(source,/Legacy background-PDF metadata is intentionally ignored/);
+  assert.match(source,/schemaVersion: definition\.schemaVersion/);
+  assert.match(source,/bindings: Array\.isArray\(definition\.bindings\)/);
 });
 
 test('print-template API has no dedicated PDF background upload or download route while image asset routes remain',()=>{
