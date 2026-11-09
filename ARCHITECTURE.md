@@ -938,3 +938,31 @@
 ### تصمیم تحویل
 - Task 1 تا Task 4 در TODO5 به‌عنوان بسته‌شده بایگانی می‌شوند، با این قید که آزمون میدانی فایل واقعی کارخانه انجام‌شده تلقی نمی‌شود.
 - در صورت مشاهده اشکال در استفاده بعدی از فرم واقعی کارخانه، آن مورد باید به‌عنوان تسک/فاز اصلاحی جدید ثبت شود؛ این فاز بسته‌شده بدون گزارش خطای مشخص بازگشایی نمی‌شود.
+
+
+## 2026-11-09 — حفظ PDF اصلی در خروجی نهایی قالب‌های چاپ
+
+### محدوده و نتیجه
+- هدف: حفظ سند PDF بارگذاری‌شده به‌عنوان سند مرجع در تمام چرخه قالب‌ساز؛ صفحات PDF اصلی نباید در خروجی نهایی به PNG/JPEG تبدیل یا بازسازی شوند.
+- قابلیت در مسیر موجود Print Template پیاده‌سازی شد؛ Backend runtime، APIها، مجوزها و ساختار پایگاه داده تغییر نکردند.
+- Frontend از APIهای tenant-scoped موجود برای دریافت/ذخیره PDF استفاده می‌کند و خروجی را در مرورگر با حفظ صفحات سند اصلی تولید می‌کند.
+
+### قراردادهای Backend حفظ‌شده
+- Router.js: مسیرهای موجود GET/POST /print-templates/:id/pdf و POST /print-templates/:id/resolve بدون تغییر.
+- PrintTemplateService.js: توابع uploadPdf, downloadPdf, resolve و کنترل tenant موجود بدون تغییر اجرایی.
+- PrintTemplateRepository.js و شیت 36_PrintTemplates: Definition و metadata فایل در همان ساختار فعلی باقی ماندند.
+- GoogleDriveStorage.uploadBase64ToTenant ذخیره PDF اصلی را در فضای Drive مختص Tenant انجام می‌دهد؛ فایل PDF داخل Google Sheets یا DefinitionJSON قرار نمی‌گیرد.
+- هیچ API، Sheet، ستون، migration یا مسیر ذخیره‌سازی موازی ایجاد نشد.
+
+### نقشه Frontend و تولید خروجی
+- pages/print-designer.html: همان صفحه موجود طراح قالب.
+- js/modules/print-designer.js: فایل اصلی PDF از API موجود دریافت می‌شود؛ generateSourcePdfOutput با pdf-lib@1.17.1 صفحات اصلی را حفظ می‌کند و overlay المان‌های PMS را روی همان صفحات قرار می‌دهد. renderOutputDocument با overlayOnly فقط لایه المان‌ها را رندر می‌کند. renderFinalPdfPreview از PDF.js فقط برای پیش‌نمایش استفاده می‌کند.
+- drawPdfOverlayOnSourcePage موقعیت overlay را با اندازه صفحه، CropBox و چرخش PDF هم‌راستا می‌کند.
+- قالب‌های فاقد PDF پس‌زمینه، مسیر چاپ HTML قبلی را حفظ می‌کنند.
+
+### آزمون، ادغام و پذیرش
+- Frontend PR #68 با squash در main ادغام شد؛ commit: 704db5a0003359cf3b27f3a13a258dc29b156fda.
+- Backend PR #40 با squash در main ادغام شد؛ commit: 07a5eae94d0ecc440ffb660b7d9316954d375552؛ تغییر Backend صرفاً مستنداتی بود.
+- بررسی syntax و آزمون‌های رگرسیون مرتبط انجام شد؛ کاربر جریان PDF را در نسخه عملیاتی تست و موفقیت را در 2026-11-09 تأیید کرد.
+- Backend به دلیل نبود تغییر runtime نیازمند انتشار مجدد Apps Script نبود.
+- فاز بنا به تأیید صریح Product Owner در 2026-11-09 بسته شد.
