@@ -142,3 +142,23 @@
   - *Log:* در مخزن Frontend: `pages/print-designer.html` پنل preview و انتخاب پروژه؛ `js/modules/print-designer.js` توابع `loadLivePreviewProjects`، `bindLivePreview`، `scheduleLivePreview`، `renderLivePreview` و `toggleLivePreviewExpanded`؛ endpoint `POST /print-templates/preview` با Definition جاری؛ reuse `renderOutputDocument` و `generateSourcePdfOutput`؛ فایل‌های محلی PDF/تصویر تا پیش از ذخیره صریح فقط در حافظه مرورگر می‌مانند. `css/print-template-library.css` حالت واکنش‌گرا؛ `tests/print-template-library.test.js` تست‌های API، عدم ذخیره، PDF محلی و assetهای تصویر؛ `index.html` cache-busting نسخه `20261109-live-preview-1`. Frontend checks run `42665949449`، cross-repository QA run `42665949108` و frontend agent suite run `42665949084` موفق شدند. تغییرات Frontend در PR #74 ذخیره شده‌اند.
 - [ ] **Task 4 — رگرسیون نهایی، بررسی مرورگر، ادغام و انتشار (IN PROGRESS):** ممیزی نهایی UI/performance، تأیید اجرای regression مرورگر، بررسی قرارداد دو مخزن، سپس آماده‌سازی ادغام و انتشار مطابق workflowهای موجود؛ توقف برای تست Product Owner.
   - *Log:* Backend PR #46 با head `95d048eda9a71317bd7f59c5a74afd41d323d9e4` و Frontend PR #74 با head `300e875fafb3c9e7c85ea6e099e6e59867ff2a17` باز و merge نشده‌اند. Backend source checks run `42665150788`، PMS agent suite run `42665150920` و Procurement diagnostics run `42665151381` موفق‌اند. ممیزی مرورگر Frontend run `42665949298` در attempt دوم است؛ تست‌های مرورگر موجود موفق‌اند و مرحله UI inventory/performance audit هنوز در حال اجراست. هیچ merge، deploy یا تغییر داده عملیاتی انجام نشده است.
+
+
+## 2026-11-09 — اصلاح شناسه تصویر موقت در پیش‌نمایش زنده قالب‌ساز
+
+### 🎯 Current Objective
+رفع خطای «شناسه تصویر یکی از المان‌های قالب معتبر نیست» هنگام پیش‌نمایش زنده تصویری که هنوز در قالب ذخیره نشده است؛ بدون تغییر در تعریف اصلی و بدون آپلود/ذخیره خودکار.
+
+### 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
+- Backend operational: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه اصلاحی `fix/live-preview-pending-image-asset-20261109`، مبنای main برابر `f33f32bd77fc1674ea7c49d7daf17e79ba0b0f3c`.
+- Frontend operational: `Saeidesl/PRSPRO2-PRODUCTION`، شاخه اصلاحی `fix/live-preview-pending-image-asset-20261109`، مبنای main برابر `bf8b04c5e6e27db45ce73f02e59d52709c5ca310`.
+- Backend: `PrintTemplateValidator.js:parseDefinition` برای هر image که property به نام `assetId` دارد، شناسه با الگوی `IMG_[A-Za-z0-9_-]{8,100}` اعتبارسنجی می‌کند. `PrintTemplateService.js:uploadImage` شناسه دائمی را با پیشوند `IMG_` و UUID بدون خط تیره می‌سازد؛ `preview(body, params)` نیز Definition دریافتی را از همان Validator عبور می‌دهد. مسیر API موجود `POST /print-templates/preview` و مجوز `PROJECT_VIEW` حفظ می‌شود.
+- Frontend: `js/modules/print-designer.js:handleImageSelection` المان تصویر جدید را با `assetId:''` و فایل را در `pendingImageFiles[element.id]` نگه می‌دارد؛ `renderLivePreview` پیش از اصلاح، clone تعریف را بدون پاک‌سازی به `POST /print-templates/preview` می‌فرستاد. رندر محلی تصویر با `imageSources[item.assetId || item.id]` و مسیر PDF با فایل pending کار می‌کند.
+- علت قطعی: شناسه خالیِ یک asset موقت نباید به Validator سمت سرور ارسال شود؛ اعتبارسنجی سخت‌گیرانه شناسه assetهای دائمی باید بدون تغییر باقی بماند.
+- راه‌حل: فقط clone مخصوص preview پاک‌سازی شود؛ property خالی `assetId` صرفاً برای المان تصویری که فایل متناظر آن در `pendingImageFiles` وجود دارد حذف شود. Definition اصلی، شناسه assetهای ذخیره‌شده و تصاویر خراب/بدون فایل pending تغییر نکنند. هیچ API، Sheet، schema، migration یا مسیر موازی جدید لازم نیست.
+
+### 📋 Macro-Task Queue & Implementation Log
+- [x] **Task 1 — Discovery & Planning:** بررسی TODO5.md و ARCHITECTURE.md هر دو مخزن، آخرین commitهای main، شاخه‌های اصلاحی و مسیر انتخاب تصویر → Definition → preview → Validator انجام شد.
+  - *Log:* Backend: `PrintTemplateValidator.js:parseDefinition`، `PrintTemplateService.js:uploadImage/preview` و route موجود در `Router.js` بررسی شدند؛ تولید شناسه دائمی با `IMG_ + UUID بدون خط تیره` معتبر است. Frontend: `js/modules/print-designer.js:handleImageSelection/uploadPendingImages/renderLivePreview` و `tests/print-template-library.test.js` بررسی شدند. اشکال فقط در ارسال `assetId:''` برای تصویر pending است؛ Backend validation، قرارداد API و ذخیره‌سازی دست‌نخورده می‌مانند.
+- [ ] **Task 2 — اصلاح preview برای تصویر ذخیره‌نشده (IN PROGRESS):** حذف شناسه خالی فقط از clone درخواست preview، حفظ Definition اصلی و تصاویر دائمی؛ افزودن تست رگرسیون برای pending، saved و image بدون فایل pending.
+- [ ] **Task 3 — Regression، ادغام و انتشار:** اجرای تست‌های Frontend و QA بین‌مخزنی، بررسی diff و CI، ادغام Frontend در main و انتشار GitHub Pages؛ سپس تست عملیاتی Product Owner. Backend فقط مستندات را نگه می‌دارد و deployment/runtime change ندارد.
