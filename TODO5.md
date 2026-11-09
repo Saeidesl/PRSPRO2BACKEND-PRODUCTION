@@ -1,10 +1,10 @@
 ## 🎯 Current Objective
-افزودن تصویر مستقل به محیط ایجاد قالب چاپ؛ تصویر باید به‌صورت عنصر واقعی داخل صفحه طراحی قرار گیرد، جابه‌جا و تغییر اندازه داده شود و در خروجی نهایی به‌عنوان تصویر embed شود. فایل ورودی تصویر نباید به PDF واسط تبدیل شود.
+حفظ کیفیت اصلی تصویرهای مستقل در خروجی PDF قالب چاپ؛ فایل اصلی باید بدون فشرده‌سازی مجدد یا rasterize شدن همراه لایه طراحی، مستقیماً در PDF embed شود و ابعاد/نسبت تصویر حفظ گردد.
 
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
 ### مخازن و شاخه عملیاتی
-- Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه `feature/template-image-elements-20261109`؛ مبنا `main` با commit `5bc7b32448323b5f00345c985ea45c5d6eadc8a6`.
-- Frontend: `Saeidesl/PRSPRO2-PRODUCTION`، شاخه `feature/template-image-elements-20261109`؛ مبنا `main` با commit `41b03aa19ffaceaa10d5f82c8686ad4076c6ab20`.
+- Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه `feature/template-image-quality-20261109`؛ مبنا `main` با commit `5bc7b32448323b5f00345c985ea45c5d6eadc8a6`.
+- Frontend: `Saeidesl/PRSPRO2-PRODUCTION`، شاخه `feature/template-image-quality-20261109`؛ مبنا `main` با commit `41b03aa19ffaceaa10d5f82c8686ad4076c6ab20`.
 - فاز قبلی حفظ PDF اصلی بسته شد؛ PRهای مستنداتی Backend #41 و Frontend #69 ادغام شده‌اند. TODO5 هر دو مخزن در شروع این فاز برابر `Ready for the next feature` بود.
 
 ### معماری کشف‌شده Backend
@@ -30,7 +30,9 @@
 ## 📋 Macro-Task Queue & Implementation Log
 - [x] **Task 1 — Discovery & Planning:** بررسی دو مخزن عملیاتی، شاخه‌ها، commitهای مبنا، TODO5/ARCHITECTURE و مسیر فعلی Print Template، Storage و PDF انجام شد. فاز قبلی بسته و مستندات آن ادغام شده‌اند.
   - *Log:* Backend: `Router.js` مسیرهای قالب و مجوزهای `SYSTEM_SETTINGS/PROJECT_VIEW`؛ `PrintTemplateService.js` مالکیت Tenant و CRUD/PDF؛ `PrintTemplateRepository.js` و شیت `36_PrintTemplates`؛ `GoogleDriveStorage.js` ذخیره tenant-scoped و read/delete؛ `StorageRepository.js` facade. Frontend: `pages/print-designer.html`، `js/modules/print-designer.js`، `css/print-template-library.css`، `tests/print-template-library.test.js` و `index.html`. placeholder فعلی `add-image` از `createElement('image')` استفاده می‌کند؛ مسیر `imageFileToPdf` برای import پس‌زمینه است و نباید برای عنصر تصویر استفاده شود. خروجی PDF فعلی در `generateSourcePdfOutput` با pdf-lib ساخته می‌شود و باید مسیر embed تصویر را حفظ کند.
-- [ ] **Task 2 — چرخه امن Asset تصویر قالب در Backend (IN PROGRESS):** تعیین و پیاده‌سازی قرارداد upload/download تصویر متصل به قالب، ذخیره باینری در Drive مختص Tenant، اعتبارسنجی MIME/حجم، کنترل مالکیت قالب و asset، metadata پایدار و پاک‌سازی امن در صورت نیاز؛ بدون ذخیره باینری در Sheets و بدون آسیب به API PDF موجود.
-- [ ] **Task 3 — تجربه افزودن و ویرایش تصویر در Frontend:** انتخاب تصویر از دستگاه در همان Print Designer، ایجاد عنصر واقعی تصویر، نمایش در صفحه، drag با ماوس/لمس، resize با دستگیره، انتخاب/حذف/ترتیب لایه‌ها، ذخیره و بازیابی عنصر و پشتیبانی چندصفحه‌ای؛ حفظ undo/redo.
-- [ ] **Task 4 — خروجی و پذیرش یکپارچه:** embed مستقیم تصویر در PDF با حفظ کیفیت و نسبت ابعاد، پیش‌نمایش/چاپ/دانلود، سازگاری با قالب‌های قدیمی و PDF اصلی، تست‌های رگرسیون Frontend/Backend و کنترل خطا/tenant isolation. انتشار فقط طبق workflow موجود و پس از تأیید آزمون.
+- [x] **Task 2 — چرخه امن Asset تصویر قالب در Backend:** API بارگذاری و دریافت تصویر متصل به قالب پیاده‌سازی و در PR #42 ادغام شد.
+  - *Log:* `PrintTemplateRepository.js`: ستون افزایشی `ImageAssetsJSON` در `36_PrintTemplates`؛ `PrintTemplateValidator.js`: اعتبارسنجی assetId و جلوگیری از ذخیره base64 در Definition؛ `PrintTemplateService.js`: `uploadImage/downloadImage`، ذخیره tenant-scoped در Google Drive، کنترل مالکیت، MIME/signature، سقف 10MB و پاک‌سازی شکست؛ `Router.js`: مسیرهای `POST/GET /print-templates/:id/images`؛ `tests/print-templates.test.js`: تست upload/download و tenant isolation. PR #42 با commit `fbd8cb8351201e258b25be2c90ef3ed91624405e` ادغام و سپس Apps Script production sync/deploy در workflow run `42603283136` موفق شد.
+- [x] **Task 3 — تجربه افزودن و ویرایش تصویر در Frontend:** انتخاب تصویر از دستگاه در همان Print Designer، ایجاد عنصر واقعی، نمایش، drag/resize، ذخیره و بازیابی و چندصفحه‌ای؛ تست عملیاتی Product Owner موفق بود.
+  - *Log:* Frontend `pages/print-designer.html`, `js/modules/print-designer.js`, `css/print-template-library.css`, `index.html`, `tests/print-template-library.test.js`; PR #70 با commit `00937880ad161c272e2eb2b11ad419a989666940` ادغام شد. کاربر ذخیره قالب، بازگشایی و ماندگاری تصویر را در نسخه عملیاتی تأیید کرد.
+- [ ] **Task 4 — حفظ کیفیت اصلی تصویر در خروجی PDF (IN PROGRESS):** تصویرهای ثابت قالب به‌صورت image object/XObject با بایت‌های اصلی JPG/PNG مستقیماً در PDF درج شوند؛ WebP فقط به PNG lossless در ابعاد اصلی تبدیل شود؛ متن و سایر المان‌ها و PDF اصلی حفظ شوند؛ regression روی صفحه‌های چندگانه، rotation/CropBox و templateهای قدیمی اجرا شود. انتشار فقط از workflow موجود و پس از تست.
 
