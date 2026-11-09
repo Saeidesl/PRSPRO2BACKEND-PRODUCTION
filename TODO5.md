@@ -1,5 +1,5 @@
 ## 🎯 Current Objective
-افزودن دکمه «تأیید» در انتهای برگه A4 فرم‌های متصل به رویداد؛ این دکمه فقط برگه را می‌بندد و مقادیر فرم را حفظ می‌کند و به هیچ عنوان رویداد را ثبت نمی‌کند.
+افزودن قابلیت ورود فایل HTML طراحی‌شده توسط کاربر به همان محیط Print Designer؛ ظاهر و ساختار HTML پس از ورود ثابت و حفظ شود و کاربر فقط فیلدهای داده PMS را روی نقاط دلخواه قرار دهد، جابه‌جا کند و تنظیم نماید. قابلیت‌های فعلی PDF، OCR، تصویر، bindingها، ذخیره قالب و خروجی PDF باید بدون اختلال باقی بمانند.
 
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
 ### مخازن و شاخه عملیاتی
@@ -52,6 +52,47 @@
 - `FormService.js:prepareEventResponses`: mappingهای فعال، اجباری‌بودن فرم، نسخه فرم، فیلدها، visibility و required را اعتبارسنجی می‌کند.
 - داده پاسخ در ساختار موجود `35_EventFormData` ذخیره می‌شود؛ endpoint یا Sheet موازی لازم نیست.
 - بررسی اولیه نشان می‌دهد باگ گزارش‌شده در submit guard سمت Frontend است؛ در صورت عدم کشف ناسازگاری جدید، Backend runtime/API/schema تغییر نخواهد کرد.
+### فاز HTML Template Import — تصمیم محصول و نقشه فنی (2026-11-09)
+#### تصمیم قطعی محصول
+- HTML واردشده به‌عنوان لایه طراحی اصلی حفظ می‌شود؛ اجزای HTML به عناصر قابل ویرایش مستقل تبدیل نمی‌شوند.
+- کاربر فقط عناصر داده PMS را روی لایه HTML اضافه/جابجا/تنظیم می‌کند؛ ظاهر، متن‌ها، جدول‌ها و چیدمان HTML ثابت می‌مانند.
+- قابلیت باید در Print Designer و چرخه موجود قالب‌ها ادغام شود؛ صفحه، کتابخانه، فرم، API یا مسیر ذخیره موازی ایجاد نشود.
+- مسیر فعلی PDF/OCR و قالب‌های قدیمی باید کاملاً backward-compatible بمانند.
+
+#### یافته‌های واقعی Frontend روی main
+- pages/print-designer.html: ورودی فعلی #pt-pdf-file فقط PDF و تصویر را می‌پذیرد؛ بوم فعلی #pt-design-canvas و ابزارهای داده/متن/جدول/تصویر/اشکال در همان صفحه موجودند.
+- js/modules/print-designer.js (SHA 555037e4d599929ce3739f4bc91b4e3a092acb50): handleImportFile فقط PDF و تصویر را می‌پذیرد؛ imageFileToPdf مسیر تصویر به PDF پس‌زمینه/OCR است و نباید برای HTML استفاده شود؛ createElement, renderCanvas, saveTemplate, renderOutputDocument, generateSourcePdfOutput, renderFinalPdfPreview, downloadOutputPdf و مدل definition.page/elements/bindings مسیرهای موجودند.
+- index.html: نسخه asset ماژول Print Designer با query version مدیریت می‌شود.
+- css/print-template-library.css: استایل‌های بوم و خروجی چاپ در همین فایل توسعه می‌یابند.
+- tests/print-template-library.test.js: تست‌های فعلی CRUD، binding، canvas، PDF، تصویر، اشکال و خروجی چاپ باید گسترش یابند.
+- API Client واحد PMS.Api است؛ درخواست مستقیم یا مسیر موازی ممنوع.
+
+#### یافته‌های واقعی Backend روی main
+- Router.js: مسیرهای CRUD قالب، POST/GET /print-templates/:id/pdf و مسیرهای image asset موجودند؛ مجوزها و tenant scope باید حفظ شوند.
+- PrintTemplateService.js: create/update, _template, _public, uploadPdf/downloadPdf, uploadImage/downloadImage و کنترل Tenant در همان سرویس موجودند.
+- PrintTemplateRepository.js: شیت 36_PrintTemplates و ستون‌های DefinitionJSON، metadata PDF و ImageAssetsJSON موجودند.
+- GoogleDriveStorage.uploadBase64ToTenant/getFileAsBase64/delete و facade StorageRepository برای ذخیره فایل tenant-scoped موجودند.
+- PrintTemplateValidator.parseDefinition قرارداد JSON و اندازه Definition را اعتبارسنجی می‌کند؛ HTML حجیم یا باینری نباید در سلول Google Sheets یا DefinitionJSON ذخیره شود.
+- تست‌های Backend در tests/print-templates.test.js چرخه سرویس و storage را پوشش می‌دهند.
+
+#### اصول فنی و امنیتی الزامی
+- HTML/CSS منبع باید به‌صورت asset مستقل و tenant-scoped در Google Drive نگهداری شود؛ در DefinitionJSON فقط metadata/reference و تنظیمات صفحه/لایه و bindingهای PMS قرار گیرند.
+- رندر HTML باید در محیط ایزوله و بدون دسترسی به origin اصلی PMS اجرا شود؛ اجرای scriptهای واردشده، handlerهای inline، فرم‌ها، navigation و درخواست‌های شبکه ناخواسته مجاز نیست.
+- CSS و layout واردشده باید در preview و خروجی چاپ تا حد ممکن یکسان باشند؛ محدودیت منابع خارجی، فونت‌ها، تصاویر و relative paths باید در import مشخص و امن مدیریت شود.
+- overlay داده‌ها باید از definition.elements و bindingهای موجود استفاده کند و روی HTML قرار گیرد؛ مدل جدیدی برای فیلدهای داده ساخته نشود.
+- PDF نهایی باید HTML را با ابعاد و مقیاس صفحه تعریف‌شده رندر کند و لایه داده PMS را با همان pipeline فعلی اضافه کند؛ مسیر PDF اصلی و تصویر/OCR مستقل باقی بمانند.
+- کنترل اندازه فایل، MIME، محتوا، tenant isolation، مجوزها، پاک‌سازی asset در شکست و عدم افشای storage key الزامی است.
+
+
+## 📋 Macro-Task Queue & Implementation Log
+- [x] Task 1 — Discovery & Planning: بررسی TODO5 و ARCHITECTURE دو مخزن عملیاتی، آخرین commitهای main، وضعیت شاخه‌ها، ورودی import، مدل Definition، چرخه CRUD/asset، خروجی PDF و تست‌های موجود انجام شد؛ تصمیم محصول برای حفظ کامل طراحی HTML تأیید شد.
+  - *Log:* شاخه مستقل feat/html-template-import-20261109 در هر دو مخزن از Backend main 33c36066d559f0e051fc6525b50c6d0c61c797f9 و Frontend main 51a545c8cc6648e60dea6ac06b60fda8edf981e5 ساخته شد. Frontend: pages/print-designer.html, js/modules/print-designer.js, css/print-template-library.css, tests/print-template-library.test.js, index.html. Backend: Router.js, PrintTemplateService.js, PrintTemplateRepository.js, PrintTemplateValidator.js, GoogleDriveStorage.js, StorageRepository.js, tests/print-templates.test.js, Sheet 36_PrintTemplates. فایل HTML باید در Drive tenant-scoped نگهداری و فقط reference در Definition ذخیره شود؛ bindingهای موجود و API Client فعلی حفظ می‌شوند.
+- [ ] Task 2 — ورود امن و ذخیره HTML در قالب موجود (IN PROGRESS): افزودن ورودی HTML در همان Print Designer؛ اعتبارسنجی نوع/حجم/ساختار؛ ذخیره tenant-scoped از مسیر موجود Storage و API قالب؛ نگهداری metadata/reference در مدل موجود؛ نمایش HTML در بوم ایزوله بدون اجرای script یا دسترسی به origin برنامه.
+- [ ] Task 3 — اتصال داده‌های PMS روی HTML: افزودن/جابجایی/تنظیم عناصر داده روی لایه HTML با استفاده از definition.elements و bindingهای فعلی؛ حفظ HTML اصلی و پشتیبانی از داده‌های پروژه، اطلاعات مرکزی و پاسخ فرم‌ها؛ ذخیره و بازیابی کامل قالب.
+- [ ] Task 4 — خروجی، رگرسیون و پذیرش عملیاتی: تطبیق preview، چاپ و PDF نهایی با طراحی HTML؛ تست صفحات A4 و چندصفحه‌ای، CSS/فونت/تصویر، امنیت HTML، tenant isolation، قالب‌های قدیمی، مسیر PDF/OCR و عملکرد Frontend/Backend؛ سپس ادغام و انتشار طبق workflow موجود و ارائه تست به Product Owner.
+
+
+## سابقه و لاگ‌های فازهای پیشین (بدون حذف)
 
 ## 📋 Macro-Task Queue & Implementation Log
 - [x] **Task 1 — Discovery & Planning:** بررسی دو مخزن عملیاتی، شاخه‌ها، commitهای مبنا، TODO5/ARCHITECTURE و مسیر فعلی Print Template، Storage و PDF انجام شد. فاز قبلی بسته و مستندات آن ادغام شده‌اند.
