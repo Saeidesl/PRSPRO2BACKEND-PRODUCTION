@@ -31,6 +31,12 @@ const PrintTemplateValidator = {
       bindings: Array.isArray(definition.bindings) ? definition.bindings : []
     };
     normalized.page = Object.assign({ size: 'A4', orientation: 'portrait' }, normalized.page || {});
+    if (!['A4','A5','LETTER','CUSTOM'].includes(String(normalized.page.size || 'A4').toUpperCase())) {
+      throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'اندازه صفحه قالب معتبر نیست.');
+    }
+    if (!['portrait','landscape'].includes(String(normalized.page.orientation || 'portrait').toLowerCase())) {
+      throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'جهت صفحه قالب معتبر نیست.');
+    }
     const seen = Object.create(null);
     normalized.bindings.forEach(function(binding, index) {
       if (!binding || typeof binding !== 'object' || Array.isArray(binding)) {
