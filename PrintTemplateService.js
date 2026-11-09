@@ -30,6 +30,10 @@ const PrintTemplateService = {
         HasFile: true, FileName: row.PdfFileName || '', MimeType: row.PdfMimeType || 'application/pdf',
         FileSize: Number(row.PdfFileSize || 0), PageCount: Number(row.PdfPageCount || 0)
       } : null,
+      Images: this._imageAssets(row).map(function(asset) {
+        return { ID: asset.ID, FileName: asset.FileName, MimeType: asset.MimeType,
+          FileSize: Number(asset.FileSize || 0), CreatedAt: asset.CreatedAt || '' };
+      }),
       CreatedAt: row.CreatedAt || '', UpdatedAt: row.UpdatedAt || ''
     };
   },
@@ -129,6 +133,102 @@ const PrintTemplateService = {
       EntityType: 'PRINT_TEMPLATE', EntityID: id, OldData: this._public(previous), NewData: this._public(current),
       Reason: 'ویرایش قالب چاپ مرکزی' });
     return Response.success(this._public(current), { message: 'قالب به‌روزرسانی شد.' });
+  },
+  _imageAssets: function(row) {
+    const assets = this._parse(row && row.ImageAssetsJSON, []);
+    return Array.isArray(assets) ? assets : [];
+  },
+  uploadImage: function(id, data, params) {
+    const user = this._user(params);
+    const existing = this._template(id, user.TenantID);
+    data = data || {};
+    const fileName = String(data.fileName || '').trim();
+    const mimeType = String(data.mimeType || '').trim().toLowerCase();
+    const base64 = String(data.base64 || '').replace(/^data:[^,]*;base64,/i, '').replace(/\s/g, '');
+    const extensions = { 'image/jpeg': ['jpg','jpeg'], 'image/png': ['png'], 'image/webp': ['webp'] };
+    const extension = fileName.indexOf('.') >= 0 ? fileName.split('.').pop().toLowerCase() : '';
+    if (!extensions[mimeType] || extensions[mimeType].indexOf(extension) < 0 ||
+        (AppConfig.FILES.ALLOWED_MIME_TYPES || []).indexOf(mimeType) < 0) {
+      throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'فقط تصاویر JPG، PNG و WebP با پسوند معتبر قابل بارگذاری هستند.');
+    }
+    if (!fileName || fileName.length > 180 || /[\\/\\\\\u0000-\u001f\u007f]/.test(fileName)) {
+      throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'نام فایل تصویر معتبر نیست.');
+    }
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(base64) || base64.length % 4 !== 0) {
+      throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'محتوای تصویر معتبر نیست.');
+    }
+    const maxBytes = Number(AppConfig.FILES.MAX_SIZE_MB || 10) * 1024 * 1024;
+    if (base64.length > Math.ceil(maxBytes * 4 / 3) + 8) {
+      throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'حجم تصویر بیشتر از حد مجاز است.');
+    }
+    let bytes;
+    try { bytes = Utilities.base64Decode(base64); }
+    catch (error) { throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'محتوای تصویر قابل خواندن نیست.'); }
+    if (!bytes.length || bytes.length > maxBytes) {
+      throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'حجم تصویر خالی یا بیشتر از حد مجاز است.');
+    }
+    const byte = function(index) { return (Number(bytes[index]) + 256) % 256; };
+    const isJpeg = mimeType === 'image/jpeg' && bytes.length >= 3 && byte(0) === 255 && byte(1) === 216 && byte(2) === 255;
+    const pngSignature = [137,80,78,71,13,10,26,10];
+    const isPng = mimeType === 'image/png' && bytes.length >= 8 &&
+      pngSignature.every(function(value, index) { return byte(index) === value; });
+    const isWebp = mimeType === 'image/webp' && bytes.length >= 12 &&
+      String.fromCharCode(byte(0),byte(1),byte(2),byte(3)) === 'RIFF' &&
+      String.fromCharCode(byte(8),byte(9),byte(10),byte(11)) === 'WEBP';
+    if (!isJpeg && !isPng && !isWebp) {
+      throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'محتوای فایل با فرمت اعلام‌شده تصویر مطابقت ندارد.');
+    }
+    const assets = this._imageAssets(existing);
+    if (assets.length >= 100) {
+      throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'هر قالب حداکثر می‌تواند ۱۰۰ تصویر داشته باشد.');
+    }
+    const stored = GoogleDriveStorage.uploadBase64ToTenant({
+      fileName: fileName, mimeType: mimeType, base64: base64
+    }, user.TenantID);
+    const asset = {
+      ID: 'IMG_' + Utilities.getUuid().replace(/-/g, ''),
+      FileName: stored.fileName || fileName, MimeType: mimeType,
+      FileSize: Number(stored.fileSize || bytes.length), StorageKey: stored.storageKey,
+      CreatedAt: this._now()
+    };
+    const nextAssets = assets.concat([asset]);
+    const patch = { ImageAssetsJSON: JSON.stringify(nextAssets), UpdatedBy: user.ID,
+      UpdatedAt: this._now(), Version: Number(existing.Version || 1) + 1 };
+    try { PrintTemplateRepository.update(id, patch); }
+    catch (error) {
+      try { GoogleDriveStorage.delete(stored.storageKey); } catch (cleanupError) {}
+      throw error;
+    }
+    AuditService.log({
+      TenantID: user.TenantID, UserID: user.ID, Action: Constants.ACTION.UPDATE,
+      EntityType: 'PRINT_TEMPLATE', EntityID: id,
+      OldData: { ImageCount: assets.length },
+      NewData: { ImageCount: nextAssets.length, ImageID: asset.ID },
+      Reason: 'افزودن تصویر مستقل به قالب چاپ'
+    });
+    return Response.success({
+      ID: asset.ID, FileName: asset.FileName, MimeType: asset.MimeType,
+      FileSize: asset.FileSize, CreatedAt: asset.CreatedAt
+    }, { message: 'تصویر قالب ذخیره شد.' });
+  },
+  downloadImage: function(id, assetId, params) {
+    const user = this._user(params);
+    const template = this._template(id, user.TenantID);
+    const asset = this._imageAssets(template).find(function(item) {
+      return String(item.ID) === String(assetId);
+    });
+    if (!asset || !asset.StorageKey) {
+      throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'تصویر موردنظر در این قالب پیدا نشد.');
+    }
+    const file = GoogleDriveStorage.getFileAsBase64(asset.StorageKey);
+    if (String(file.mimeType || '').toLowerCase() !== String(asset.MimeType || '').toLowerCase()) {
+      throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'نوع فایل ذخیره‌شده با مشخصات تصویر مطابقت ندارد.');
+    }
+    return Response.success({
+      ID: asset.ID, fileName: asset.FileName || file.fileName || 'template-image',
+      mimeType: asset.MimeType, fileSize: Number(asset.FileSize || file.fileSize || 0),
+      base64: file.base64
+    });
   },
   uploadPdf: function(id, data, params) {
     const user = this._user(params);
