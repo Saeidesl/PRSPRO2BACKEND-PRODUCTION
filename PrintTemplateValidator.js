@@ -24,21 +24,13 @@ const PrintTemplateValidator = {
     if (definition.bindings !== undefined && !Array.isArray(definition.bindings)) {
       throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'فهرست منابع داده قالب معتبر نیست.');
     }
-    const normalized = Object.assign({
-      schemaVersion: 1,
-      page: { size: 'A4', orientation: 'portrait' },
-      elements: [],
-      bindings: []
-    }, definition);
+    const normalized = {
+      schemaVersion: definition.schemaVersion === undefined ? 1 : definition.schemaVersion,
+      page: Object.assign({ size: 'A4', orientation: 'portrait' }, definition.page || {}),
+      elements: Array.isArray(definition.elements) ? definition.elements : [],
+      bindings: Array.isArray(definition.bindings) ? definition.bindings : []
+    };
     normalized.page = Object.assign({ size: 'A4', orientation: 'portrait' }, normalized.page || {});
-    if (!['A4','A5','LETTER','CUSTOM'].includes(String(normalized.page.size || 'A4').toUpperCase())) {
-      throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'اندازه صفحه قالب معتبر نیست.');
-    }
-    if (!['portrait','landscape'].includes(String(normalized.page.orientation || 'portrait').toLowerCase())) {
-      throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'جهت صفحه قالب معتبر نیست.');
-    }
-    // Legacy background-PDF metadata is intentionally ignored; print templates now use page geometry only.
-    if (Object.prototype.hasOwnProperty.call(normalized, 'pdf')) delete normalized.pdf;
     const seen = Object.create(null);
     normalized.bindings.forEach(function(binding, index) {
       if (!binding || typeof binding !== 'object' || Array.isArray(binding)) {
