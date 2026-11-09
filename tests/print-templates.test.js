@@ -234,3 +234,22 @@ test('router exposes preview through PROJECT_VIEW and delegates to the non-persi
   assert.match(route[0],/AccessControlService\.require\(params, 'PROJECT_VIEW'\)/);
   assert.match(route[0],/PrintTemplateService\.preview\(body, params\)/);
 });
+
+test('legacy PDF background metadata is ignored and is not exposed by the template contract',()=>{
+  const h=loadPrintTemplates();
+  const created=h.service.create({Code:'LEGACY_BG',Name:'قالب قدیمی',Definition:{
+    page:{size:'A4',orientation:'portrait'},pdf:{pageCount:1,pages:[{widthMm:210,heightMm:297}]},
+    elements:[{id:'e1',type:'text',pageIndex:0,text:'متن'}],bindings:[]
+  }}, {});
+  assert.equal(Object.hasOwn(created.data.Definition,'pdf'),false);
+  assert.equal(Object.hasOwn(created.data,'Pdf'),false);
+  const source=fs.readFileSync(path.join(__dirname,'..','PrintTemplateValidator.js'),'utf8');
+  assert.match(source,/Legacy background-PDF metadata is intentionally ignored/);
+});
+
+test('print-template API has no dedicated PDF background upload or download route while image asset routes remain',()=>{
+  const source=fs.readFileSync(path.join(__dirname,'..','Router.js'),'utf8');
+  assert.doesNotMatch(source,/printTemplatePdfMatch|printTemplatePdfUploadMatch|downloadPdf\(|uploadPdf\(/);
+  assert.match(source,/printTemplateImageMatch/);
+  assert.match(source,/printTemplateImageUploadMatch/);
+});
