@@ -278,7 +278,7 @@ const Router = {
       AccessControlService.require(params, 'SYSTEM_SETTINGS');
       return PrintTemplateService.sources(params);
     }
-    const printTemplateImageMatch = path.match(/^\/print-templates\\/([^/]+)\\/images\\/([^/]+)$/);
+    const printTemplateImageMatch = path.match(/^\/print-templates\/([^/]+)\/images\/([^/]+)$/);
     if (printTemplateImageMatch) {
       this.requireAny(params, ['SYSTEM_SETTINGS', 'PROJECT_VIEW']);
       return PrintTemplateService.downloadImage(decodeURIComponent(printTemplateImageMatch[1]),
@@ -529,7 +529,7 @@ const Router = {
       AccessControlService.require(params, 'SYSTEM_SETTINGS');
       return PrintTemplateService.create(body, params);
     }
-    const printTemplateImageUploadMatch = path.match(/^\/print-templates\\/([^/]+)\\/images$/);
+    const printTemplateImageUploadMatch = path.match(/^\/print-templates\/([^/]+)\/images$/);
     if (printTemplateImageUploadMatch) {
       AccessControlService.require(params, 'SYSTEM_SETTINGS');
       return PrintTemplateService.uploadImage(decodeURIComponent(printTemplateImageUploadMatch[1]), body, params);
