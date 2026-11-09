@@ -254,3 +254,16 @@ test('print-template API has no dedicated PDF background upload or download rout
   assert.match(source,/printTemplateImageMatch/);
   assert.match(source,/printTemplateImageUploadMatch/);
 });
+
+test('page size and orientation validation remain enforced after removing PDF background metadata',()=>{
+  const source=fs.readFileSync(path.join(__dirname,'..','PrintTemplateValidator.js'),'utf8');
+  const context={ErrorHandler:{create:(_c,m)=>new Error(m)},Constants:{ERROR:{VALIDATION_ERROR:'VALIDATION_ERROR'}},
+    Validator:{required:(v,l)=>{if(!v)throw new Error(l);}},Date,Object,String,Array,JSON,Number,isFinite};
+  vm.runInNewContext(source+'\\nthis.validator=PrintTemplateValidator;',context);
+  assert.throws(()=>context.validator.parseDefinition({page:{size:'INVALID',orientation:'portrait'}}),/اندازه صفحه/);
+  assert.throws(()=>context.validator.parseDefinition({page:{size:'A4',orientation:'diagonal'}}),/جهت صفحه/);
+  const valid=context.validator.parseDefinition({page:{size:'A5',orientation:'landscape'},pdf:{pages:[]},elements:[],bindings:[]});
+  assert.equal(valid.page.size,'A5');
+  assert.equal(valid.page.orientation,'landscape');
+  assert.equal(Object.hasOwn(valid,'pdf'),false);
+});
