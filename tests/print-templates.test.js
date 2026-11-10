@@ -190,6 +190,14 @@ test('event field bindings resolve the latest event and all matching events with
   assert.deepEqual(Array.from(result.data.data.all_descriptions),['ارسال اول','ارسال دوم']);
 });
 
+test('event field bindings cannot resolve another tenant event type',()=>{
+  const h=loadPrintTemplates();
+  const created=h.service.create({Code:'FOREIGN_EVENT',Name:'رویداد خارج از مجموعه',Definition:{bindings:[
+    {id:'foreign',sourceType:'EVENT_FIELD',eventTypeId:'ET2',field:'Description',selection:'LATEST'}
+  ]}}, {});
+  assert.throws(()=>h.service.resolve(created.data.ID,{ProjectID:'P1'},{}),/پیدا نشد/);
+});
+
 test('event field bindings reject unsupported fields and invalid event selections',()=>{
   const h=loadPrintTemplates();
   const source=fs.readFileSync(path.join(__dirname,'..','PrintTemplateValidator.js'),'utf8');
