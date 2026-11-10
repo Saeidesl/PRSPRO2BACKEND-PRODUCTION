@@ -38,10 +38,29 @@ function loadPrintTemplates() {
     },
     EventRepository: {
       findByProjectId: () => [
-        {ID:'E1',TenantID:'T1',Status:'ACTIVE'},
-        {ID:'E2',TenantID:'T1',Status:'ACTIVE'},
-        {ID:'E3',TenantID:'T2',Status:'ACTIVE'}
+        {ID:'E1',TenantID:'T1',EventTypeID:'ET1',OccurredAt:'2026-01-01T09:00:00Z',CreatedAt:'2026-01-01T09:05:00Z',Description:'ارسال اول',CreatedBy:'U1',PerformedBy:'U2',DepartmentID:'D1',Status:'ACTIVE'},
+        {ID:'E2',TenantID:'T1',EventTypeID:'ET1',OccurredAt:'2026-01-02T09:00:00Z',CreatedAt:'2026-01-02T09:05:00Z',Description:'ارسال دوم',CreatedBy:'U2',PerformedBy:'U1',DepartmentID:'D1',Status:'ACTIVE'},
+        {ID:'E3',TenantID:'T2',EventTypeID:'ET2',OccurredAt:'2026-01-03T09:00:00Z',CreatedAt:'2026-01-03T09:05:00Z',Description:'خارج از tenant',Status:'ACTIVE'}
       ]
+    },
+    EventTypeRepository: {
+      getAll: () => [
+        {ID:'ET1',TenantID:'T1',Code:'CUT_SEND',Name:'ارسال به برش',Status:'ACTIVE'},
+        {ID:'ET2',TenantID:'T2',Code:'OTHER',Name:'رویداد دیگر',Status:'ACTIVE'}
+      ]
+    },
+    UserRepository: {
+      getAll: () => [
+        {ID:'U1',TenantID:'T1',Name:'کاربر اول'},
+        {ID:'U2',TenantID:'T1',Name:'کاربر دوم'},
+        {ID:'U3',TenantID:'T2',Name:'کاربر خارجی'}
+      ]
+    },
+    DepartmentRepository: {
+      getAll: () => [{ID:'D1',TenantID:'T1',Name:'واحد برش'}]
+    },
+    EventService: {
+      getUserDisplayName: user => user.Name
     },
     FormRepository: {
       getForms: () => [{ID:'F1',TenantID:'T1',Code:'F',Name:'فرم',Version:3,Status:'ACTIVE'}],
@@ -138,12 +157,50 @@ test('resolve rejects projects outside the current tenant or access boundary',()
     assert.throws(()=>h.service.resolve(created.data.ID,{ProjectID:'OTHER'},{}),/پیدا نشد/);
 });
 
-test('source catalog exposes active tenant information types and reusable forms',()=>{
+test('source catalog exposes active tenant information types, forms and event types',()=>{
   const h=loadPrintTemplates();
   const result=h.service.sources({});
   assert.equal(result.data.informationTypes.length,1);
   assert.equal(result.data.forms.length,1);
   assert.equal(result.data.forms[0].Fields[0].InformationTypeID,'I1');
+  assert.equal(result.data.eventTypes.length,1);
+  assert.equal(result.data.eventTypes[0].ID,'ET1');
+  assert.equal(result.data.eventTypes[0].Fields.some(field=>field.field==='CreatorName'),true);
+});
+
+test('event field bindings resolve the latest event and all matching events with human-readable relations',()=>{
+  const h=loadPrintTemplates();
+  const created=h.service.create({Code:'EVENT_REPORT',Name:'گزارش رویداد',Definition:{bindings:[
+    {id:'event_name',sourceType:'EVENT_FIELD',eventTypeId:'ET1',field:'EventTypeName',selection:'LATEST'},
+    {id:'event_time',sourceType:'EVENT_FIELD',eventTypeId:'ET1',field:'OccurredAt',selection:'LATEST'},
+    {id:'event_description',sourceType:'EVENT_FIELD',eventTypeId:'ET1',field:'Description',selection:'LATEST'},
+    {id:'event_creator',sourceType:'EVENT_FIELD',eventTypeId:'ET1',field:'CreatorName',selection:'LATEST'},
+    {id:'event_performer',sourceType:'EVENT_FIELD',eventTypeId:'ET1',field:'PerformedByName',selection:'LATEST'},
+    {id:'event_department',sourceType:'EVENT_FIELD',eventTypeId:'ET1',field:'DepartmentName',selection:'LATEST'},
+    {id:'all_descriptions',sourceType:'EVENT_FIELD',eventTypeId:'ET1',field:'Description',selection:'ALL'}
+  ]}}, {});
+  const result=h.service.resolve(created.data.ID,{ProjectID:'P1'}, {});
+  assert.equal(result.data.data.event_name,'ارسال به برش');
+  assert.equal(result.data.data.event_time,'2026-01-02T09:00:00Z');
+  assert.equal(result.data.data.event_description,'ارسال دوم');
+  assert.equal(result.data.data.event_creator,'کاربر دوم');
+  assert.equal(result.data.data.event_performer,'کاربر اول');
+  assert.equal(result.data.data.event_department,'واحد برش');
+  assert.deepEqual(Array.from(result.data.data.all_descriptions),['ارسال اول','ارسال دوم']);
+});
+
+test('event field bindings reject unsupported fields and invalid event selections',()=>{
+  const h=loadPrintTemplates();
+  const source=fs.readFileSync(path.join(__dirname,'..','PrintTemplateValidator.js'),'utf8');
+  const context={ErrorHandler:{create:(_c,m)=>new Error(m)},Constants:{ERROR:{VALIDATION_ERROR:'VALIDATION_ERROR'}},
+    Validator:{required:(v,l)=>{if(!v)throw new Error(l);}},Date,Object,String,Array,JSON,Number};
+  vm.runInNewContext(source+'\\nthis.validator=PrintTemplateValidator;',context);
+  assert.throws(()=>context.validator.parseDefinition({bindings:[
+    {id:'bad',sourceType:'EVENT_FIELD',eventTypeId:'ET1',field:'RawSecret'}
+  ]}),/فیلد رویداد/);
+  assert.throws(()=>context.validator.parseDefinition({bindings:[
+    {id:'bad',sourceType:'EVENT_FIELD',eventTypeId:'ET1',field:'Description',selection:'EVENT'}
+  ]}),/شناسه رویداد/);
 });
 
 test('template deletion is logical and retains the stored record',()=>{
