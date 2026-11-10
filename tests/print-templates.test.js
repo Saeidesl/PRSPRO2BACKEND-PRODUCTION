@@ -17,7 +17,7 @@ function loadPrintTemplates() {
       ResponseJSON:JSON.stringify({I1:'جدید'}),DefinitionSnapshotJSON:JSON.stringify({Version:3,Fields:[{ID:'FF1',InformationTypeID:'I1'}]}) },
     { ID:'R3',TenantID:'T2',EventID:'E3',FormID:'F1',FormVersion:3,CreatedAt:'2026-01-03T10:00:00Z',
       ResponseJSON:JSON.stringify({I1:'خارج از tenant'}),DefinitionSnapshotJSON:'{}' },
-    { ID:'R4',TenantID:'T1',EventID:'E4',FormID:'F1',FormVersion:3,CreatedAt:'2026-01-04T10:00:00Z',
+    { ID:'R4',TenantID:'T1',EventID:'E4',FormID:'F2',FormVersion:3,CreatedAt:'2026-01-04T10:00:00Z',
       ResponseJSON:JSON.stringify({I1:'پاسخ نوع دیگر'}),DefinitionSnapshotJSON:JSON.stringify({Version:3,Fields:[{ID:'FF1',InformationTypeID:'I1'}]}) }
   ];
   const context = {
@@ -68,10 +68,14 @@ function loadPrintTemplates() {
       getUserDisplayName: user => user.Name
     },
     FormRepository: {
-      getForms: () => [{ID:'F1',TenantID:'T1',Code:'F',Name:'فرم',Version:3,Status:'ACTIVE'}],
-      findFieldsByForm: () => [{ID:'FF1',TenantID:'T1',Status:'ACTIVE',InformationTypeID:'I1'}],
+      getForms: () => [
+        {ID:'F1',TenantID:'T1',Code:'F',Name:'فرم',Version:3,Status:'ACTIVE'},
+        {ID:'F2',TenantID:'T1',Code:'F2',Name:'فرم نوع دیگر',Version:3,Status:'ACTIVE'}
+      ],
+      findFieldsByForm: formId => [{ID:String(formId)==='F2'?'FF2':'FF1',TenantID:'T1',Status:'ACTIVE',InformationTypeID:'I1'}],
       findMappingsByEventType: eventTypeId => String(eventTypeId)==='ET1'
-        ? [{ID:'MAP1',TenantID:'T1',EventTypeID:'ET1',FormID:'F1',IsRequired:true,FieldOrder:1,Status:'ACTIVE'}] : [],
+        ? [{ID:'MAP1',TenantID:'T1',EventTypeID:'ET1',FormID:'F1',IsRequired:true,FieldOrder:1,Status:'ACTIVE'}]
+        : (String(eventTypeId)==='ET4' ? [{ID:'MAP2',TenantID:'T1',EventTypeID:'ET4',FormID:'F2',IsRequired:true,FieldOrder:1,Status:'ACTIVE'}] : []),
       getEventResponses: () => responses
     },
     AuditService: { log: entry => audits.push(entry) },
@@ -168,7 +172,7 @@ test('source catalog exposes active tenant information types, forms and event ty
   const h=loadPrintTemplates();
   const result=h.service.sources({});
   assert.equal(result.data.informationTypes.length,1);
-  assert.equal(result.data.forms.length,1);
+  assert.equal(result.data.forms.length,2);
   assert.equal(result.data.forms[0].Fields[0].InformationTypeID,'I1');
   assert.equal(result.data.eventTypes.length,2);
   assert.equal(result.data.eventTypes[0].ID,'ET1');
@@ -176,6 +180,7 @@ test('source catalog exposes active tenant information types, forms and event ty
   assert.equal(result.data.eventTypes[0].Forms.length,1);
   assert.equal(result.data.eventTypes[0].Forms[0].ID,'F1');
   assert.equal(result.data.eventTypes[0].Forms[0].Fields[0].ID,'FF1');
+  assert.equal(result.data.eventTypes[1].Forms[0].Fields[0].ID,'FF2');
 });
 
 test('event field bindings resolve the latest event and all matching events with human-readable relations',()=>{
@@ -203,7 +208,7 @@ test('event form bindings are scoped to the selected event type',()=>{
   const h=loadPrintTemplates();
   const created=h.service.create({Code:'EVENT_TYPE_FORM',Name:'فرم بر اساس نوع رویداد',Definition:{bindings:[
     {id:'cut_form_latest',sourceType:'EVENT_FORM_FIELD',eventTypeId:'ET1',formId:'F1',fieldId:'FF1',informationTypeId:'I1',selection:'LATEST'},
-    {id:'other_form_latest',sourceType:'EVENT_FORM_FIELD',eventTypeId:'ET4',formId:'F1',fieldId:'FF1',informationTypeId:'I1',selection:'LATEST'},
+    {id:'other_form_latest',sourceType:'EVENT_FORM_FIELD',eventTypeId:'ET4',formId:'F2',fieldId:'FF2',informationTypeId:'I1',selection:'LATEST'},
     {id:'cut_form_all',sourceType:'EVENT_FORM_FIELD',eventTypeId:'ET1',formId:'F1',fieldId:'FF1',informationTypeId:'I1',selection:'ALL'}
   ]}}, {});
   const result=h.service.resolve(created.data.ID,{ProjectID:'P1'}, {});
