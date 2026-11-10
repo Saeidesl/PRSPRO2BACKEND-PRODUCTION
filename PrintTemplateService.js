@@ -384,7 +384,8 @@ const PrintTemplateService = {
     let resolvedEvents = [];
     if (needsEventFields) {
       EventTypeRepository.getAll().forEach(function(type) {
-        if (String(type.TenantID) === String(user.TenantID) && String(type.Status || 'ACTIVE').toUpperCase() === 'ACTIVE') {
+        if (String(type.TenantID) === String(user.TenantID) && String(type.Status || 'ACTIVE').toUpperCase() === 'ACTIVE' &&
+            String(type.ConnectionType || 'PROJECT').toUpperCase() !== 'INDEPENDENT') {
           eventTypeById[String(type.ID)] = type;
         }
       });
