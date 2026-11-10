@@ -170,7 +170,7 @@ test('source catalog exposes active tenant information types, forms and event ty
   assert.equal(result.data.informationTypes.length,1);
   assert.equal(result.data.forms.length,1);
   assert.equal(result.data.forms[0].Fields[0].InformationTypeID,'I1');
-  assert.equal(result.data.eventTypes.length,1);
+  assert.equal(result.data.eventTypes.length,2);
   assert.equal(result.data.eventTypes[0].ID,'ET1');
   assert.equal(result.data.eventTypes[0].Fields.some(field=>field.field==='CreatorName'),true);
   assert.equal(result.data.eventTypes[0].Forms.length,1);
