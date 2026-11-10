@@ -209,7 +209,7 @@ test('event field bindings reject unsupported fields and invalid event selection
   ]}),/فیلد رویداد/);
   assert.throws(()=>context.validator.parseDefinition({bindings:[
     {id:'bad',sourceType:'EVENT_FIELD',eventTypeId:'ET1',field:'Description',selection:'EVENT'}
-  ]}),/شناسه رویداد/);
+  ]}),/روش انتخاب رویداد/);
 });
 
 test('template deletion is logical and retains the stored record',()=>{
