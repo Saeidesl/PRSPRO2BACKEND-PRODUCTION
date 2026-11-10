@@ -233,9 +233,9 @@ const PrintTemplateService = {
   _isStorageKeyReferenced: function(storageKey, tenantId, excludedTemplateId) {
     if (!storageKey) return false;
     return PrintTemplateRepository.getAll().some(function(row) {
-      if (String(row.TenantID) !== String(tenantId) ||
-          String(row.ID) === String(excludedTemplateId || '')) return false;
-      if (String(row.PdfStorageKey || '') === String(storageKey)) return true;
+      if (String(row.TenantID) !== String(tenantId)) return false;
+      if (String(row.ID) !== String(excludedTemplateId || '') &&
+          String(row.PdfStorageKey || '') === String(storageKey)) return true;
       return this._imageAssets(row).some(function(asset) {
         return String(asset.StorageKey || '') === String(storageKey);
       });
