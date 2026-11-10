@@ -99,6 +99,10 @@ const PrintTemplateValidator = {
           !String(binding.fieldId || binding.informationTypeId || '').trim()) {
         throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'شناسه فیلد فرم برای منبع داده الزامی است.');
       }
+      if ((sourceType === 'EVENT_FORM_FIELD' || sourceType === 'EVENT_FORM_RESPONSE') && binding.eventTypeId !== undefined &&
+          !String(binding.eventTypeId || '').trim()) {
+        throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'شناسه نوع رویداد برای اتصال فرم معتبر نیست.');
+      }
       if (sourceType === 'EVENT_FORM_FIELD' || sourceType === 'EVENT_FORM_RESPONSE') {
         const selection = String(binding.selection || 'LATEST').toUpperCase();
         if (['LATEST','ALL','EVENT','RESPONSE'].indexOf(selection) === -1) {
