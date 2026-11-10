@@ -61,6 +61,7 @@
   - یافته‌ها و قرارداد اولیه در بخش Technical Spec ثبت شد.
 
 - [ ] **Task 2 — Unified data-source picker & direct canvas insertion (IN PROGRESS)**
+  - اصلاح منبع رویداد: `GET /print-templates/sources` اکنون فرم‌های فعال متصل به هر نوع رویداد را از نگاشت `34_EventTypeForms` برمی‌گرداند؛ resolve پاسخ فرم با `eventTypeId` محدود می‌شود تا داده انواع رویداد مخلوط نشود.
   - Frontend: جایگزینی source pickerهای پراکنده با دکمه «افزودن اطلاعات» و مودال سه‌تب مرکزی/فرم‌ها/رویدادها؛ جستجو، باز/بسته‌کردن گروه‌ها، شمارنده انتخاب و وضعیت +/✓.
   - Frontend: افزودن کل فرم یا فیلد تکی؛ افزودن کل گروه رویداد یا فیلد تکی؛ افزودن خودکار المان‌های متصل به بوم با جلوگیری از هم‌پوشانی و حفظ undo/redo، inspector و bindings موجود.
   - Backend: گسترش پاسخ `GET /print-templates/sources` با انواع رویداد فعال و tenant-scoped؛ اعتبارسنجی و resolve فیلدهای رویداد در همان سرویس/Definition موجود.
