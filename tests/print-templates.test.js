@@ -46,7 +46,8 @@ function loadPrintTemplates() {
     EventTypeRepository: {
       getAll: () => [
         {ID:'ET1',TenantID:'T1',Code:'CUT_SEND',Name:'ارسال به برش',Status:'ACTIVE'},
-        {ID:'ET2',TenantID:'T2',Code:'OTHER',Name:'رویداد دیگر',Status:'ACTIVE'}
+        {ID:'ET2',TenantID:'T2',Code:'OTHER',Name:'رویداد دیگر',Status:'ACTIVE'},
+        {ID:'ET3',TenantID:'T1',Code:'INDEPENDENT',Name:'رویداد مستقل',ConnectionType:'INDEPENDENT',Status:'ACTIVE'}
       ]
     },
     UserRepository: {
