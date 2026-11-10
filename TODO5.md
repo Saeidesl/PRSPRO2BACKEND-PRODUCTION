@@ -3,8 +3,8 @@
 
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
 ### مخازن و شاخه‌های عملیاتی
-- Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه `revert/restore-print-template-pdf-background-20261110`، بر پایه `main`.
-- Frontend: `Saeidesl/PRSPRO2-PRODUCTION`، شاخه `revert/restore-print-template-pdf-background-20261110`، بر پایه `main`.
+- Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه `main`، merge commit بازگردانی `ef3289d81a00f66de0b06e79a2f76149843128a2`.
+- Frontend: `Saeidesl/PRSPRO2-PRODUCTION`، شاخه `main`، merge commit بازگردانی `35a1af8c4d768753fafca57bcbde9feb69b426d3`.
 - بازگردانی فقط تغییرات PRهای Backend #50 و Frontend #78 را هدف می‌گیرد؛ سایر تغییرات قبلی، از جمله حذف تشخیص هوشمند فیلدها و پیش‌نمایش زنده، حفظ می‌شوند.
 
 ### نقشه فنی قابلیت بازگردانی‌شده
@@ -25,11 +25,14 @@
 
 ## 📋 Macro-Task Queue & Implementation Log
 - [x] **Task 1 — Discovery & Planning:** بررسی TODO5.md و ARCHITECTURE.md دو مخزن، وضعیت main و PRهای ادغام‌شده #50 و #78، تعیین دقیق فایل‌های runtime و تست‌های تحت تأثیر.
-  - *Log:* Backend PR #50 با merge commit `8351dca4ceb9045e0e720b9aa7c8bb162cc119ba` و Frontend PR #78 با merge commit `f54cb45986034c92c7805d54fbbc4d765542f5fa` شناسایی شدند. والد اول commitهای merge به‌ترتیب `ffa4403f8fbb3d0033758fd3ee0a9a4cea91319b` و `0d7d314e907865bf952bf3fd1f5263d9e493823d` است و مبنای بازگردانی فایل‌های قبل از حذف قرار گرفت. شاخه‌های کاری جدید از main ایجاد شدند؛ main و داده عملیاتی دست‌نخورده‌اند.
-- [ ] **Task 2 — بازگردانی قابلیت PDF Background Import در Backend و Frontend (IN PROGRESS):** بازگردانی فایل‌های اجرایی و تست‌های پیش از PR #50/#78؛ اجرای تست‌های کامل، بررسی سازگاری API و حفظ قابلیت‌های مستقل.
-- [ ] **Task 3 — ادغام، انتشار و تأیید عملیاتی:** ایجاد PRهای کنترل‌شده، ادغام فقط پس از موفقیت CI و تأیید مالک محصول؛ انتشار Frontend و پس از تأیید صریح، Push/Deploy Backend؛ تست نسخه زنده توسط Product Owner.
+  - *Log:* Backend PR #50 با merge commit `8351dca4ceb9045e0e720b9aa7c8bb162cc119ba` و Frontend PR #78 با merge commit `f54cb45986034c92c7805d54fbbc4d765542f5fa` شناسایی شدند. والد اول commitهای merge به‌ترتیب `ffa4403f8fbb3d0033758fd3ee0a9a4cea91319b` و `0d7d314e907865bf952bf3fd1f5263d9e493823d` است و مبنای بازگردانی فایل‌های قبل از حذف قرار گرفت.
+- [x] **Task 2 — بازگردانی قابلیت PDF Background Import در Backend و Frontend:** بازگردانی دقیق کد و تست‌های پیش از PRهای حذف #50 و #78؛ حفظ تغییرات مستقل و سازگاری دو سمت.
+  - *Log:* Backend: `Router.js` مسیرهای `GET/POST /print-templates/:id/pdf` را با مجوزهای موجود بازگرداند؛ `PrintTemplateService.js` متدهای `uploadPdf()` و `downloadPdf()`، metadata عمومی `Pdf` و ذخیره/بازیابی tenant-scoped از طریق `GoogleDriveStorage.uploadBase64ToTenant()` و `getFileAsBase64()` را بازگرداند؛ `PrintTemplateRepository.js` ستون‌های metadata در شیت موجود `36_PrintTemplates` شامل `PdfStorageKey`, `PdfFileName`, `PdfMimeType`, `PdfFileSize`, `PdfPageCount` را در قرارداد حفظ کرد؛ `PrintTemplateValidator.js` اعتبارسنجی `Definition.pdf.pages` و محدودیت صفحات/ابعاد/`pageIndex` را بازگرداند؛ `tests/print-templates.test.js` تست‌های PDF و image asset را پوشش می‌دهد. Frontend: `pages/print-designer.html` ورودی‌های PDF/تصویر پس‌زمینه را بازگرداند؛ `js/modules/print-designer.js` توابع `handleImportFile()`, `handlePdfFile()`, `imageFileToPdf()`, `loadTemplatePdf()`, `renderPdfBackgrounds()` و state/جریان ذخیره و بارگذاری سند و خروجی PDF با overlay را بازگرداند؛ `index.html` وابستگی‌های PDF.js و pdf-lib را بازگرداند؛ `pages/print-output.html` و `css/print-template-library.css` و تست‌های `tests/print-template-library.test.js` همگام شدند. قابلیت درج مستقیم تصویر، پیش‌نمایش زنده، حذف تشخیص هوشمند فیلدها و مسیرهای عمومی پیوست حفظ شدند. هیچ Sheet، فایل Drive یا داده عملیاتی حذف یا migrate نشد.
+- [x] **Task 3 — ادغام، انتشار و تأیید عملیاتی:** ادغام Backend و Frontend، اجرای CI، انتشار Google Apps Script و GitHub Pages و تست نسخه زنده توسط Product Owner.
+  - *Log:* Backend PR #51 با merge commit `ef3289d81a00f66de0b06e79a2f76149843128a2` و Frontend PR #79 با merge commit `35a1af8c4d768753fafca57bcbde9feb69b426d3` در `main` ادغام شدند. Backend source checks، PMS agent suite و procurement performance diagnostics روی main موفق شدند؛ Frontend checks، PMS frontend agent suite، cross-repository QA و browser audit پیش از ادغام موفق شدند و workflowهای پس از ادغام Frontend نیز با موفقیت پایان یافتند. GitHub Pages با workflow انتشار main منتشر شد. Backend workflow رسمی `sync-apps-script.yml` با run `42817777636` موفق شد؛ source validation، clasp push و `clasp deploy` همگی موفق بودند و نسخه Web App با شناسه نسخه `@13` منتشر شد. Product Owner تست عملیاتی ورود PDF و تصویر پس‌زمینه، ذخیره/بازگشایی قالب و چاپ را موفق تأیید کرد. هیچ تغییر مخربی در داده‌های عملیاتی انجام نشد.
 
 ---
+
 
 ## 🎯 Current Objective
 حذف کامل قابلیت واردکردن PDF و تصویر به‌عنوان پس‌زمینه قالب چاپ، به‌همراه ذخیره‌سازی/بازیابی PDF پس‌زمینه و رندر وابسته به آن؛ حفظ کامل قابلیت مستقل افزودن مستقیم تصویر به صفحه به‌صورت عنصر تصویری قابل ویرایش.
