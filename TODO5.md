@@ -73,4 +73,5 @@
   - اجرای تست‌های Frontend و Backend، syntax و CI؛ بررسی PDF اصلی، تصویر مستقل، پیش‌نمایش، چاپ، ذخیره/بازگشایی و قالب‌های قدیمی.
   - بازبینی diff، قرارداد API، مجوزها و عدم تغییر داده/Sheet.
   - پس از موفقیت، ایجاد PRهای جداگانه به main؛ ادغام/انتشار فقط طبق چرخه مجاز و بدون ادعای استقرار تا تأیید workflow و بررسی نسخه زنده.
+  - *Log:* بازبینی Regression Backend: `tests/print-templates.test.js` شامل ۲۰ آزمون برای اعتبارسنجی binding، tenant isolation، منابع فعال، آخرین/همه رویدادها، تفکیک فرم بر اساس نوع رویداد، preview و lifecycle فایل‌هاست. اجرای GitHub Actions روی کد Backend موفق بود: `Backend source checks` و `PMS agent suite`، شامل تست‌های واحد/یکپارچه، بررسی syntax فایل‌های Apps Script و manifest و کنترل‌های ایمنی انتشار؛ workflow runهای `42874168227` و `42874168244` تمام jobها را با نتیجه success تکمیل کردند. این نتایج مربوط به کد Backend هستند و به‌معنای استقرار جدید Apps Script نیستند.
   - تحویل به Product Owner برای تست عملی؛ تا تأیید کاربر تسک بسته نمی‌شود.
