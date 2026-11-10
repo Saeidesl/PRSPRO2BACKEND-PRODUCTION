@@ -194,7 +194,7 @@ test('event field bindings reject unsupported fields and invalid event selection
   const source=fs.readFileSync(path.join(__dirname,'..','PrintTemplateValidator.js'),'utf8');
   const context={ErrorHandler:{create:(_c,m)=>new Error(m)},Constants:{ERROR:{VALIDATION_ERROR:'VALIDATION_ERROR'}},
     Validator:{required:(v,l)=>{if(!v)throw new Error(l);}},Date,Object,String,Array,JSON,Number};
-  vm.runInNewContext(source+'\\nthis.validator=PrintTemplateValidator;',context);
+  vm.runInNewContext(source+'\nthis.validator=PrintTemplateValidator;',context);
   assert.throws(()=>context.validator.parseDefinition({bindings:[
     {id:'bad',sourceType:'EVENT_FIELD',eventTypeId:'ET1',field:'RawSecret'}
   ]}),/فیلد رویداد/);
