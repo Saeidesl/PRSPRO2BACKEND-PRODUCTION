@@ -64,7 +64,7 @@ const PrintTemplateValidator = {
       if (!id || id.length > 100 || seen[id]) {
         throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'شناسه منبع داده خالی یا تکراری است.');
       }
-      if (['PROJECT_FIELD','PROJECT_INFORMATION','EVENT_FORM_FIELD','EVENT_FORM_RESPONSE'].indexOf(sourceType) === -1) {
+      if (['PROJECT_FIELD','PROJECT_INFORMATION','EVENT_FORM_FIELD','EVENT_FORM_RESPONSE','EVENT_FIELD'].indexOf(sourceType) === -1) {
         throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'نوع منبع داده پشتیبانی نمی‌شود.');
       }
       if (sourceType === 'PROJECT_FIELD') {
@@ -73,6 +73,23 @@ const PrintTemplateValidator = {
         if (allowedProjectFields.indexOf(projectField) === -1) {
           throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'فیلد پروژه برای منبع داده مجاز نیست.');
         }
+      }
+      if (sourceType === 'EVENT_FIELD') {
+        if (!String(binding.eventTypeId || '').trim()) {
+          throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'شناسه نوع رویداد برای منبع داده الزامی است.');
+        }
+        const allowedEventFields = ['EventTypeName','OccurredAt','CreatedAt','Description','CreatorName','PerformedByName','DepartmentName','Status'];
+        if (allowedEventFields.indexOf(String(binding.field || '').trim()) === -1) {
+          throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'فیلد رویداد برای منبع داده مجاز نیست.');
+        }
+        const selection = String(binding.selection || 'LATEST').toUpperCase();
+        if (['LATEST','ALL','EVENT'].indexOf(selection) === -1) {
+          throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'روش انتخاب رویداد معتبر نیست.');
+        }
+        if (selection === 'EVENT' && !String(binding.eventId || '').trim()) {
+          throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'شناسه رویداد برای انتخاب رویداد مشخص الزامی است.');
+        }
+        binding.selection = selection;
       }
       if (sourceType === 'PROJECT_INFORMATION' && !String(binding.informationTypeId || '').trim()) {
         throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'شناسه اطلاعات مرکزی الزامی است.');
