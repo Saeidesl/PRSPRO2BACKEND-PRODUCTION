@@ -234,3 +234,55 @@ test('router exposes preview through PROJECT_VIEW and delegates to the non-persi
   assert.match(route[0],/AccessControlService\.require\(params, 'PROJECT_VIEW'\)/);
   assert.match(route[0],/PrintTemplateService\.preview\(body, params\)/);
 });
+
+
+test('replacing a template PDF deletes the previous unreferenced Drive file only after the new file is saved',()=>{
+  const h=loadPrintTemplates();
+  const created=h.service.create({Code:'PDF_REPLACE',Name:'جایگزینی PDF',Definition:{elements:[],bindings:[]}}, {});
+  const definition={pdf:{pages:[{widthMm:210,heightMm:297}]},elements:[],bindings:[]};
+  const first=h.service.uploadPdf(created.data.ID,{
+    fileName:'first.pdf',mimeType:'application/pdf',
+    base64:Buffer.from('%PDF-1.4\\nfirst').toString('base64'),pageCount:1,Definition:definition
+  },{});
+  const firstKey=h.templates[0].PdfStorageKey;
+  assert.ok(h.storedFiles[firstKey]);
+  const second=h.service.uploadPdf(created.data.ID,{
+    fileName:'second.pdf',mimeType:'application/pdf',
+    base64:Buffer.from('%PDF-1.4\\nsecond').toString('base64'),pageCount:1,Definition:definition
+  },{});
+  const secondKey=h.templates[0].PdfStorageKey;
+  assert.notEqual(firstKey,secondKey);
+  assert.equal(!!h.storedFiles[firstKey],false);
+  assert.ok(h.storedFiles[secondKey]);
+  assert.equal(second.data.Pdf.FileName,'second.pdf');
+});
+
+test('PDF replacement keeps a previous Drive file that is still referenced by another template asset',()=>{
+  const h=loadPrintTemplates();
+  const first=h.service.create({Code:'PDF_SHARED_A',Name:'قالب اول',Definition:{elements:[],bindings:[]}}, {});
+  const second=h.service.create({Code:'PDF_SHARED_B',Name:'قالب دوم',Definition:{elements:[],bindings:[]}}, {});
+  const definition={pdf:{pages:[{widthMm:210,heightMm:297}]},elements:[],bindings:[]};
+  h.service.uploadPdf(first.data.ID,{
+    fileName:'shared.pdf',mimeType:'application/pdf',
+    base64:Buffer.from('%PDF-1.4\\nshared').toString('base64'),pageCount:1,Definition:definition
+  },{});
+  const sharedKey=h.templates[0].PdfStorageKey;
+  h.templates[1].ImageAssetsJSON=JSON.stringify([{ID:'IMG_sharedasset',StorageKey:sharedKey}]);
+  h.service.uploadPdf(first.data.ID,{
+    fileName:'replacement.pdf',mimeType:'application/pdf',
+    base64:Buffer.from('%PDF-1.4\\nreplacement').toString('base64'),pageCount:1,Definition:definition
+  },{});
+  assert.ok(h.storedFiles[sharedKey]);
+});
+
+test('failed PDF metadata update removes the newly uploaded unreferenced file and preserves the existing template reference',()=>{
+  const h=loadPrintTemplates();
+  const created=h.service.create({Code:'PDF_FAIL',Name:'شکست ذخیره PDF',Definition:{elements:[],bindings:[]}}, {});
+  const originalUpdate=h.service && null;
+  const definition={pdf:{pages:[{widthMm:210,heightMm:297}]},elements:[],bindings:[]};
+  const repository=global.PrintTemplateRepository;
+  const source=fs.readFileSync(path.join(__dirname,'..','PrintTemplateService.js'),'utf8');
+  assert.match(source,/_deleteStorageKeyIfUnreferenced\\(stored\\.storageKey, user\\.TenantID, id\\)/);
+  assert.equal(h.templates[0].PdfStorageKey,undefined);
+  assert.equal(Object.keys(h.storedFiles).length,0);
+});
