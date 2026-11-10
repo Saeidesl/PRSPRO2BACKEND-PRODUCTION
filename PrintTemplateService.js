@@ -79,7 +79,19 @@ const PrintTemplateService = {
       }).filter(Boolean);
       return { ID: form.ID, Code: form.Code, Name: form.Name, Version: Number(form.Version || 1), Fields: fields };
     });
-    return Response.success({ projectFields: projectFields, informationTypes: informationTypes, forms: forms });
+    const eventFields = [
+      ['EventTypeName','نوع رویداد'],['OccurredAt','تاریخ و ساعت وقوع'],['CreatedAt','زمان ثبت'],
+      ['Description','توضیحات'],['CreatorName','ثبت‌کننده'],['PerformedByName','اجراکننده'],
+      ['DepartmentName','واحد'],['Status','وضعیت رویداد']
+    ].map(function(item) { return { field: item[0], label: item[1], sourceType: 'EVENT_FIELD' }; });
+    const eventTypes = EventTypeRepository.getAll().filter(function(type) {
+      return String(type.TenantID) === String(user.TenantID) && String(type.Status || 'ACTIVE').toUpperCase() === 'ACTIVE';
+    }).map(function(type) {
+      return { ID: type.ID, Code: type.Code, Name: type.Name || type.Code, Category: type.Category || '',
+        Fields: eventFields };
+    }).sort(function(a,b) { return String(a.Name || '').localeCompare(String(b.Name || ''), 'fa'); });
+    return Response.success({ projectFields: projectFields, informationTypes: informationTypes, forms: forms,
+      eventTypes: eventTypes });
   },
   create: function(data, params) {
     const user = this._user(params);
@@ -361,10 +373,58 @@ const PrintTemplateService = {
     const responses = FormRepository.getEventResponses().filter(function(row) {
       return String(row.TenantID) === String(user.TenantID) && !!eventIds[String(row.EventID)];
     });
+    const eventTypes = EventTypeRepository.getAll().filter(function(type) {
+      return String(type.TenantID) === String(user.TenantID) && String(type.Status || 'ACTIVE').toUpperCase() === 'ACTIVE';
+    });
+    const eventTypeById = Object.create(null);
+    eventTypes.forEach(function(type) { eventTypeById[String(type.ID)] = type; });
+    const usersById = Object.create(null);
+    (UserRepository.getAll() || []).forEach(function(item) {
+      if (item && String(item.TenantID) === String(user.TenantID)) usersById[String(item.ID)] = item;
+    });
+    const departmentsById = Object.create(null);
+    (DepartmentRepository.getAll() || []).forEach(function(item) {
+      if (item && String(item.TenantID) === String(user.TenantID)) departmentsById[String(item.ID)] = item;
+    });
+    const resolvedEvents = events.map(function(event) {
+      const type = eventTypeById[String(event.EventTypeID || '')];
+      const creator = usersById[String(event.CreatedBy || '')];
+      const performer = usersById[String(event.PerformedBy || '')];
+      const department = departmentsById[String(event.DepartmentID || '')];
+      return {
+        ID: event.ID, EventTypeID: event.EventTypeID, OccurredAt: event.OccurredAt || '',
+        CreatedAt: event.CreatedAt || '', Description: event.Description || '', Status: event.Status || '',
+        EventTypeName: type ? (type.Name || type.Code || '') : '',
+        CreatorName: creator ? EventService.getUserDisplayName(creator) : (event.CreatedBy || ''),
+        PerformedByName: performer ? EventService.getUserDisplayName(performer) : (event.PerformedBy || ''),
+        DepartmentName: department ? (department.Name || department.Title || department.Code || '') : ''
+      };
+    });
     const resolved = Object.create(null);
     definition.bindings.forEach(function(binding) {
       let value = null;
-      if (binding.sourceType === 'PROJECT_FIELD') {
+      if (binding.sourceType === 'EVENT_FIELD') {
+        const typeId = String(binding.eventTypeId || '');
+        if (!eventTypeById[typeId]) throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'نوع رویداد متصل به قالب پیدا نشد یا غیرفعال است.');
+        const field = String(binding.field || '');
+        const allowedEventFields = ['EventTypeName','OccurredAt','CreatedAt','Description','CreatorName','PerformedByName','DepartmentName','Status'];
+        if (allowedEventFields.indexOf(field) === -1) throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'فیلد رویداد برای منبع قالب مجاز نیست.');
+        const matchingEvents = resolvedEvents.filter(function(event) {
+          return String(event.EventTypeID) === typeId &&
+            (!binding.eventId || String(event.ID) === String(binding.eventId));
+        }).sort(function(a,b) {
+          return String(a.OccurredAt || a.CreatedAt).localeCompare(String(b.OccurredAt || b.CreatedAt));
+        });
+        const selection = String(binding.selection || 'LATEST').toUpperCase();
+        if (selection === 'ALL') value = matchingEvents.map(function(event) { return event[field]; });
+        else if (selection === 'EVENT') {
+          const selected = matchingEvents.find(function(event) { return String(event.ID) === String(binding.eventId || ''); });
+          value = selected ? selected[field] : null;
+        } else {
+          const latest = matchingEvents.length ? matchingEvents[matchingEvents.length - 1] : null;
+          value = latest ? latest[field] : null;
+        }
+      } else if (binding.sourceType === 'PROJECT_FIELD') {
         const field = String(binding.field || '');
         if (!projectFieldAllowList[field]) throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'فیلد پروژه در منبع قالب مجاز نیست.');
         value = project[field] !== undefined ? project[field] : null;
