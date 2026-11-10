@@ -1,4 +1,37 @@
 ## 🎯 Current Objective
+بازگردانی کامل قابلیت ورود PDF و تصویر به‌عنوان پس‌زمینه قالب چاپ به وضعیت پیش از Task 2، بدون تغییر سایر قابلیت‌های عملیاتی یا حذف داده‌های موجود.
+
+## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
+### مخازن و شاخه‌های عملیاتی
+- Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه `revert/restore-print-template-pdf-background-20261110`، بر پایه `main`.
+- Frontend: `Saeidesl/PRSPRO2-PRODUCTION`، شاخه `revert/restore-print-template-pdf-background-20261110`، بر پایه `main`.
+- بازگردانی فقط تغییرات PRهای Backend #50 و Frontend #78 را هدف می‌گیرد؛ سایر تغییرات قبلی، از جمله حذف تشخیص هوشمند فیلدها و پیش‌نمایش زنده، حفظ می‌شوند.
+
+### نقشه فنی قابلیت بازگردانی‌شده
+- Backend:
+  - `Router.js`: مسیرهای `GET/POST /print-templates/:id/pdf` با کنترل مجوزهای موجود.
+  - `PrintTemplateService.js`: `uploadPdf()`, `downloadPdf()` و metadata عمومی `Pdf`؛ ذخیره/بازیابی فایل از طریق `GoogleDriveStorage.uploadBase64ToTenant()` و `getFileAsBase64()`.
+  - `PrintTemplateRepository.js`: ستون‌های metadata در شیت موجود `36_PrintTemplates`: `PdfStorageKey`, `PdfFileName`, `PdfMimeType`, `PdfFileSize`, `PdfPageCount`.
+  - `PrintTemplateValidator.js`: اعتبارسنجی `Definition.pdf.pages`، تعداد صفحات، ابعاد و محدودیت `pageIndex`.
+  - `tests/print-templates.test.js`: تست‌های مسیرهای PDF، validation و image asset.
+- Frontend:
+  - `pages/print-designer.html`: ورودی PDF و تصویر پس‌زمینه و کنترل‌های import.
+  - `js/modules/print-designer.js`: `handleImportFile()`, `handlePdfFile()`, `imageFileToPdf()`, `loadTemplatePdf()`, `renderPdfBackgrounds()`، stateهای سند و صفحات PDF، ذخیره و بارگذاری قالب و خروجی PDF منبع با overlay.
+  - `index.html`: وابستگی‌های لازم PDF.js، pdf-lib و کتابخانه‌های مرتبط با مسیر خروجی.
+  - `pages/print-output.html`, `css/print-template-library.css`: پیش‌نمایش و کنترل‌های خروجی PDF.
+  - `tests/print-template-library.test.js`: تست ورود PDF/تصویر، حفظ کیفیت رندر، overlay، تصویر مستقیم و چاپ.
+- قرارداد داده: metadata در `36_PrintTemplates` و فایل‌ها در Google Drive tenant-scoped باقی می‌مانند. هیچ Sheet، فایل Drive یا داده قدیمی حذف یا migrate نمی‌شود.
+- مرز حفظ: قابلیت افزودن مستقیم تصویر به‌عنوان عنصر مستقل صفحه، پیش‌نمایش زنده، حذف تشخیص هوشمند فیلدها و سایر مسیرهای عمومی پیوست PMS باید بدون regression باقی بمانند.
+
+## 📋 Macro-Task Queue & Implementation Log
+- [x] **Task 1 — Discovery & Planning:** بررسی TODO5.md و ARCHITECTURE.md دو مخزن، وضعیت main و PRهای ادغام‌شده #50 و #78، تعیین دقیق فایل‌های runtime و تست‌های تحت تأثیر.
+  - *Log:* Backend PR #50 با merge commit `8351dca4ceb9045e0e720b9aa7c8bb162cc119ba` و Frontend PR #78 با merge commit `f54cb45986034c92c7805d54fbbc4d765542f5fa` شناسایی شدند. والد اول commitهای merge به‌ترتیب `ffa4403f8fbb3d0033758fd3ee0a9a4cea91319b` و `0d7d314e907865bf952bf3fd1f5263d9e493823d` است و مبنای بازگردانی فایل‌های قبل از حذف قرار گرفت. شاخه‌های کاری جدید از main ایجاد شدند؛ main و داده عملیاتی دست‌نخورده‌اند.
+- [ ] **Task 2 — بازگردانی قابلیت PDF Background Import در Backend و Frontend (IN PROGRESS):** بازگردانی فایل‌های اجرایی و تست‌های پیش از PR #50/#78؛ اجرای تست‌های کامل، بررسی سازگاری API و حفظ قابلیت‌های مستقل.
+- [ ] **Task 3 — ادغام، انتشار و تأیید عملیاتی:** ایجاد PRهای کنترل‌شده، ادغام فقط پس از موفقیت CI و تأیید مالک محصول؛ انتشار Frontend و پس از تأیید صریح، Push/Deploy Backend؛ تست نسخه زنده توسط Product Owner.
+
+---
+
+## 🎯 Current Objective
 حذف کامل قابلیت واردکردن PDF و تصویر به‌عنوان پس‌زمینه قالب چاپ، به‌همراه ذخیره‌سازی/بازیابی PDF پس‌زمینه و رندر وابسته به آن؛ حفظ کامل قابلیت مستقل افزودن مستقیم تصویر به صفحه به‌صورت عنصر تصویری قابل ویرایش.
 
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
