@@ -1002,3 +1002,43 @@
 - Backend main پیش از ثبت این بایگانی: `629aba38b183cd27a62de8b97ba4863943483626`.
 - Frontend main پیش از ثبت این بایگانی: `01a3429391357c0a1a1932c595d0c18fd2ba1bf5`.
 - فایل‌های پیگیری پس از انتقال سابقه این فاز به همین سند، به عبارت `Ready for the next feature` بازنشانی می‌شوند.
+
+
+## 2026-11-10 — فاز پایداری Print Designer و اصلاح دو رشته اضافی HTML
+
+### محدوده و تصمیم معماری
+- مخازن عملیاتی: `Saeidesl/PRSPRO2BACKEND-PRODUCTION` و همکار Frontend یعنی `Saeidesl/PRSPRO2-PRODUCTION`.
+- هدف Backend فاز: ایمن‌سازی چرخه ذخیره/جایگزینی PDF در Print Template؛ قرارداد API، مجوزها و ساختار داده موجود حفظ شدند.
+- اصلاح دو رشته literal `\\n` صرفاً در Frontend انجام شد؛ Backend runtime در این پیگیری تغییر نکرد.
+
+### نقشه فنی Backend
+- `Router.js`: مسیرهای موجود Print Template شامل `GET/POST /print-templates/:id/pdf` و مسیرهای list/create/update/delete/preview/resolve حفظ شدند.
+- `PrintTemplateService.js`:
+  - توابع موجود `create()`, `update()`, `get()`, `list()`, `preview()`, `resolve()`, `uploadPdf()`, `downloadPdf()`, `uploadImage()`, `downloadImage()`, `deactivate()`.
+  - توابع افزوده‌شده `_isStorageKeyReferenced(storageKey, tenantId, excludedTemplateId)` و `_deleteStorageKeyIfUnreferenced(...)` برای حفاظت از فایل‌های مشترک.
+  - `uploadPdf()`: ذخیره فایل جدید و ثبت metadata پیش از حذف فایل قدیمی؛ پاک‌سازی فایل جدیدِ بدون ارجاع در شکست update؛ حذف PDF قبلی فقط پس از موفقیت update/audit و اطمینان از نبود ارجاع دیگر.
+- `PrintTemplateRepository.js`: شیت موجود `36_PrintTemplates` و ستون‌های `PdfStorageKey`, `PdfFileName`, `PdfMimeType`, `PdfFileSize`, `PdfPageCount`؛ تصاویر در `ImageAssetsJSON`.
+- `PrintTemplateValidator.js`: `parseDefinition()` و اعتبارسنجی ساختار `Definition.pdf.pages` و عناصر.
+- `GoogleDriveStorage.js`: `uploadBase64ToTenant()`, `getFileAsBase64()`, `delete()` در فضای Tenant.
+- `tests/print-templates.test.js`: پوشش رفتار PDF، reference مشترک و شکست update.
+
+### قراردادها و ساختار داده
+- APIها و permissionهای موجود حفظ شدند؛ هیچ endpoint، Sheet، ستون یا migration جدیدی ایجاد نشد.
+- PDF در Google Drive tenant-scoped ذخیره می‌شود؛ metadata در `36_PrintTemplates` است. فایل‌های پیوست در rollback ایجاد قالب فیزیکی حذف نمی‌شوند تا از حذف ناخواسته جلوگیری شود.
+
+### Implementation Logs، کنترل کیفیت و تحویل
+- Task 1 — Discovery & Planning: بررسی TODO5/ARCHITECTURE هر دو مخزن، baseline، Router، Service، Repository، Validator، Drive Storage و تست‌ها؛ نقشه فنی و یافته‌ها ثبت شد.
+- Task 2 — Stabilize preview and save lifecycle:
+  - اصلاح Frontend با `clearLivePreview(message)` و invalidate درخواست‌های کهنه در هماهنگی با Backend موجود انجام شد.
+  - `PrintTemplateService.js` برای تشخیص referenceهای مشترک و پاک‌سازی امن PDF جایگزین‌شده توسعه یافت؛ فایل قدیمی تنها بعد از موفقیت ذخیره و اطمینان از نبود ارجاع دیگر حذف می‌شود.
+  - تست‌های `tests/print-templates.test.js` و `tests/print-template-library.test.js` توسعه یافتند.
+- Task 3 — Regression validation & delivery:
+  - Backend checks و PMS agent suite موفق؛ Frontend checks و cross-repository QA موفق.
+  - PR #52 Backend با commit `af0e82ccd2c169230e0e1785fe63b93d989f7e21` و PR #80 Frontend با commit `c72744611252c1fa45f7feac34dc9ffd2e894cd1` در main ادغام شدند.
+  - workflow رسمی Google Apps Script برای commit Backend با نتیجه success تکمیل شد؛ Frontend GitHub Pages نیز منتشر شد. کاربر تست عملی را موفق تأیید کرد.
+  - ممیزی جامع UI در آن اجرای قبلی به علت authentication failure کامل نشد؛ محدودیت ثبت شد.
+- Follow-up — اصلاح دو رشته اضافی HTML:
+  - PR #53 فقط مستندات Backend را همگام کرد؛ هیچ کد runtime، API یا داده Backend تغییر نکرد.
+  - PR #55 Log تأیید کاربر را در TODO5 ثبت کرد و با squash در main ادغام شد.
+  - تأیید نهایی Product Owner: دو رشته اضافی حذف شده‌اند و قابلیت ورود PDF و تصویر حفظ شده است.
+- هیچ Sheet، فایل Drive یا داده عملیاتی حذف یا migrate نشد.
