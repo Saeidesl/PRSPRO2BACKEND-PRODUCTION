@@ -424,17 +424,13 @@ const PrintTemplateService = {
         const allowedEventFields = ['EventTypeName','OccurredAt','CreatedAt','Description','CreatorName','PerformedByName','DepartmentName','Status'];
         if (allowedEventFields.indexOf(field) === -1) throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'فیلد رویداد برای منبع قالب مجاز نیست.');
         const matchingEvents = resolvedEvents.filter(function(event) {
-          return String(event.EventTypeID) === typeId &&
-            (!binding.eventId || String(event.ID) === String(binding.eventId));
+          return String(event.EventTypeID) === typeId;
         }).sort(function(a,b) {
           return String(a.OccurredAt || a.CreatedAt).localeCompare(String(b.OccurredAt || b.CreatedAt));
         });
         const selection = String(binding.selection || 'LATEST').toUpperCase();
         if (selection === 'ALL') value = matchingEvents.map(function(event) { return event[field]; });
-        else if (selection === 'EVENT') {
-          const selected = matchingEvents.find(function(event) { return String(event.ID) === String(binding.eventId || ''); });
-          value = selected ? selected[field] : null;
-        } else {
+        else {
           const latest = matchingEvents.length ? matchingEvents[matchingEvents.length - 1] : null;
           value = latest ? latest[field] : null;
         }
