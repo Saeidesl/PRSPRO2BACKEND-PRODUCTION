@@ -1,40 +1,47 @@
 ## 🎯 Current Objective
-حذف کامل مسیر تشخیص هوشمند فیلدها از نسخه عملیاتی PMS؛ حذف UI، الگوریتم استخراج/تشخیص، OCR، اتصال‌های تشخیص و تست‌های اختصاصی آن، بدون آسیب به ورود دستی PDF/تصویر، ویرایش دستی فیلدها، قالب‌ساز، پیش‌نمایش زنده و چاپ.
+حذف کامل قابلیت واردکردن PDF و تصویر به‌عنوان پس‌زمینه قالب چاپ، به‌همراه ذخیره‌سازی/بازیابی PDF پس‌زمینه و رندر وابسته به آن؛ حفظ کامل قابلیت مستقل افزودن مستقیم تصویر به صفحه به‌صورت عنصر تصویری قابل ویرایش.
 
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
 ### مخازن و شاخه‌های عملیاتی
-- Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه `feat/remove-smart-field-detection-20261109`، مبنا `main` با commit `682193d2f4cb0b2985947ce050116f21377fcb8e`.
-- Frontend: `Saeidesl/PRSPRO2-PRODUCTION`، شاخه `feat/remove-smart-field-detection-20261109`، مبنا `main` با commit `c88bfd9526782fc23af8a1f737b35523b7830590`.
-- تسک چاپ در قالب‌ساز به درخواست Product Owner در حالت توقف باقی می‌ماند؛ هیچ وضعیت پذیرش یا Log آن تغییر نمی‌کند.
+- Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه `feat/remove-pdf-background-import-20261109`، مبنا `main` با commit `ffa4403f8fbb3d0033758fd3ee0a9a4cea91319b`.
+- Frontend: `Saeidesl/PRSPRO2-PRODUCTION`، شاخه `feat/remove-pdf-background-import-20261109`، مبنا `main` با commit `d480a6af51880bf3b90230948299d76507594bd0`.
+- تسک چاپ زنده در قالب‌ساز همچنان به دستور Product Owner در وضعیت PAUSED باقی می‌ماند و خارج از محدوده این فاز است.
 
-### یافته‌های قطعی Frontend
-- `pages/print-designer.html`: کنترل تشخیص با شناسه `pt-smart-detect` و متن راهنمای OCR در خطوط 15–16.
-- `js/modules/print-designer.js`:
-  - محدوده مستقل تشخیص: `normalizeSmartText`, `smartSourceCatalog`, `suggestSmartBinding`, `normalizeSmartLineText`, `getSmartTextDirection`, `groupSmartTextLines`, `smartLineToElements`, `runSmartDetection` (تقریباً خطوط 615–837).
-  - اتصال UI: listener دکمه در `initLibrary`؛ enable/disable دکمه در `handlePdfFile`, `resetForm`, `editTemplate`.
-  - OCR پویا: بارگذاری `tesseract.js@5.1.1` از CDN، ساخت worker با زبان‌های `fas+eng` و `worker.recognize`.
-  - مسیر مستقل و لازم ورود دستی سند: `handleImportFile`, `handlePdfFile`, `imageFileToPdf`. این مسیر PDF یا تصویر را به‌عنوان پس‌زمینه سند در همان قالب‌ساز وارد می‌کند و باید حفظ شود؛ حذف تشخیص هوشمند نباید ورود دستی سند را حذف کند.
-  - PDF.js برای بارگذاری، بررسی صفحات و رندر PDF در بخش‌های دیگر قالب‌ساز نیز استفاده می‌شود؛ وابستگی `pdf.min.js` و worker آن حذف نشود.
-  - `pt-field-hint` و `pt-output-field` برای نمایش عمومی فیلدهای دستی نیز استفاده می‌شوند؛ این استایل‌ها حذف نشوند.
-- `css/print-template-library.css`: قواعد اختصاصی دکمه `#pt-smart-detect` حذف‌پذیرند؛ استایل عمومی hint/output field حفظ شود.
-- `tests/print-template-library.test.js`: تست‌های اختصاصی smart conversion/OCR/detection و grouping باید با تست‌های عدم وجود مسیر تشخیص جایگزین شوند؛ تست ورود دستی PDF/تصویر، فیلدهای دستی، PDF اصلی، پیش‌نمایش و چاپ حفظ شود.
-- `index.html`: PDF.js نسخه 3.11.174 برای رندر و پردازش عادی PDF لازم است؛ فقط اگر وابستگی اختصاصی دیگری برای OCR پیدا شد حذف می‌شود.
+### مرزبندی قطعی قابلیت‌ها
+- حذف: انتخاب PDF/تصویر به‌عنوان پس‌زمینه، تبدیل تصویر به PDF، بارگذاری/بازیابی PDF پس‌زمینه، canvas rendering صفحات PDF واردشده، metadata و endpointهای اختصاصی PDF قالب، overlay خروجی روی PDF منبع و ابزارهای اختصاصی این مسیر.
+- حفظ: دکمه «افزودن تصویر» در toolbar، ورودی مستقل `pt-image-file`، انتخاب JPG/PNG/WebP برای درج مستقیم در صفحه، APIهای asset تصویر `/print-templates/:id/images`، ذخیره tenant-scoped تصاویر، عناصر `type=image`، نمایش/ویرایش/جابجایی/تغییر اندازه تصویر در canvas، رندر تصویر در HTML خروجی و چاپ عادی HTML.
+- مسیرهای عمومی پیوست فایل و پشتیبانی PDF در سایر بخش‌های PMS خارج از محدوده‌اند و نباید تغییر کنند.
+- داده‌های قدیمی PDF و فایل‌های ذخیره‌شده در Google Drive حذف یا migrate نمی‌شوند؛ هیچ عملیات مخرب روی داده عملیاتی انجام نمی‌شود. ستون‌های قدیمی Sheet در صورت وجود صرفاً بدون مصرف باقی می‌مانند و کد جدید نباید آن‌ها را ایجاد یا بخواند/بنویسد.
 
-### یافته‌های قطعی Backend
-- `Router.js`, `PrintTemplateService.js`, `PrintTemplateValidator.js`: در بررسی محتوای اجرایی فعلی، منطق تشخیص فیلد، OCR، Tesseract یا endpoint مختص تشخیص پیدا نشد.
-- `POST /print-templates/preview` و resolver مربوط به پیش‌نمایش زنده، مستقل از تشخیص هوشمند هستند و باید حفظ شوند.
-- در حال حاضر هیچ تغییر runtime، API، permission، Sheet یا داده عملیاتی Backend برای حذف این قابلیت لازم/موجه نیست؛ بررسی نهایی repository-wide و تست cross-repository الزامی است.
+### یافته‌های Backend
+- `Router.js`: دو route اختصاصی `GET/POST /print-templates/:id/pdf` به `PrintTemplateService.downloadPdf/uploadPdf` متصل‌اند؛ routeهای `/print-templates/:id/images` مستقل‌اند و باید حفظ شوند.
+- `PrintTemplateService.js`: `_public()` متادیتای Pdf را برمی‌گرداند؛ `uploadPdf()` و `downloadPdf()` PDF پس‌زمینه را در Google Drive ذخیره/بازیابی می‌کنند. `uploadImage()`، `downloadImage()` و `ImageAssetsJSON` مسیر مستقل تصویرهای مستقیم هستند.
+- `PrintTemplateRepository.js`: شیت موجود `36_PrintTemplates`؛ سرستون‌های PDF عبارت‌اند از `PdfStorageKey`, `PdfFileName`, `PdfMimeType`, `PdfFileSize`, `PdfPageCount`. حذف آن‌ها از قرارداد کد/HEADERS بررسی شود؛ حذف ستون یا داده فیزیکی Sheet ممنوع است.
+- `PrintTemplateValidator.js`: اعتبارسنجی `Definition.pdf.pages` و محدودیت `pageIndex` وابسته به PDF است؛ منطق PDF باید حذف و اعتبارسنجی عنصر تصویر/شناسه asset حفظ شود.
+- `GoogleDriveStorage.js` و `AttachmentValidator.js` عمومی‌اند؛ پذیرش PDF در جریان‌های عمومی فایل نباید حذف شود.
+- هیچ endpoint، permission، Sheet یا ساختار موازی جدید ایجاد نشود.
 
-### مرزهای حذف و حفظ
-- حذف: دکمه/متن تشخیص، توابع و الگوریتم‌های تشخیص متن/برچسب/مختصات، پیشنهاد خودکار binding، OCR و بارگذاری Tesseract، اتصال event handler و stateهای مربوط، CSS اختصاصی دکمه و تست‌های مثبت قابلیت.
-- حفظ: ورود دستی PDF و JPG/PNG/WebP به‌عنوان پس‌زمینه، PDF.js و worker برای کارکردهای عادی PDF، افزودن/ویرایش دستی فیلدها، bindingهای دستی موجود، `pt-field-hint` و `pt-output-field` عمومی، preview resolver و مسیرهای ذخیره/خروجی/چاپ.
-- هیچ API، Sheet، جدول یا مسیر موازی جدید ایجاد نشود؛ هیچ داده یا قالب ذخیره‌شده حذف یا migrate نشود.
+### یافته‌های Frontend
+- `pages/print-designer.html`: بخش `#pt-pdf-file` و `.pt-pdf-import` فقط برای پس‌زمینه‌اند؛ `#pt-image-file` ورودی مستقل درج مستقیم تصویر است و باید حفظ شود.
+- `js/modules/print-designer.js`: مسیر پس‌زمینه شامل `handleImportFile`, `handlePdfFile`, `imageFileToPdf`, `loadTemplatePdf`, `renderPdfBackgrounds`, stateهای `pdfDocument/pdfFile/pdfRenderVersion/pdfPageObserver` و اتصال ورودی PDF است. مسیر تصویر مستقیم شامل `handleImageSelection`, `uploadPendingImages`, `loadTemplateImages`, عناصر `type=image`, `renderCanvas`, `renderOutputDocument` و APIهای `/images` است.
+- وابستگی‌های PDF.js، jsPDF و pdf-lib در وضعیت فعلی برای ورود/رندر پس‌زمینه و خروجی مبتنی بر PDF منبع استفاده می‌شوند؛ قبل از حذف هر وابستگی، تمام استفاده‌ها در Frontend بررسی شود تا چاپ HTML و تصویر مستقیم آسیب نبیند.
+- `generateSourcePdfOutput`, `fetchOutputPdfBytes`, `drawPdfOverlayOnSourcePage` و `renderFinalPdfPreview` مسیر خروجی مبتنی بر PDF منبع‌اند؛ چاپ HTML از `renderOutputDocument` و `printOutput` مسیر جداگانه دارد و باید حفظ شود.
+- `tests/print-template-library.test.js`: تست‌های import/background/PDF overlay باید حذف/جایگزین شوند؛ تست‌های درج مستقیم تصویر، upload/download asset، canvas rendering، HTML output، preview و print باید حفظ شوند.
+- `index.html` و CSSهای مرتبط باید از وابستگی‌ها و استایل‌های اختصاصی پس‌زمینه PDF پاک شوند؛ استایل‌های عمومی تصویر مستقیم حفظ شوند.
+
+### فاز قبلی — حذف تشخیص هوشمند فیلدها (بسته‌شده با دستور Product Owner)
+- Frontend PR #77 با commit `d480a6af51880bf3b90230948299d76507594bd0` در main ادغام شد؛ GitHub Pages deployment موفق بود.
+- Backend PR #49 با commit `ffa4403f8fbb3d0033758fd3ee0a9a4cea91319b` در main ادغام شد؛ فقط مستندات تغییر کرد و deploy جدید Apps Script لازم نبود.
+- Product Owner با دستور «تسک رو ببند» در 2026-11-09 تسک را بست. تسک چاپ زنده همچنان PAUSED است.
 
 ## 📋 Macro-Task Queue & Implementation Log
-- [x] **Task 1 — Discovery & Planning:** بررسی شاخه‌ها، آخرین commitهای main، TODO5/ARCHITECTURE و ردیابی وابستگی‌های تشخیص در دو مخزن انجام شد.
-  - *Log:* Frontend main=`c88bfd9526782fc23af8a1f737b35523b7830590`؛ Backend main=`682193d2f4cb0b2985947ce050116f21377fcb8e`. مسیر تشخیص در `pages/print-designer.html`، `js/modules/print-designer.js`، `css/print-template-library.css` و `tests/print-template-library.test.js` شناسایی شد. Backend runtime در `Router.js`، `PrintTemplateService.js` و `PrintTemplateValidator.js` فاقد پیاده‌سازی تشخیص/OCR است. PDF.js، ورود دستی سند، renderer فیلد و API preview وابستگی‌های مستقل و قابل حفظ‌اند. شاخه عملیاتی اختصاصی در هر دو مخزن از main ساخته شد.
-- [ ] **Task 2 — حذف کامل مسیر تشخیص هوشمند از Frontend (IN PROGRESS):** حذف UI، توابع تشخیص، OCR/Tesseract، اتصال‌ها و CSS اختصاصی؛ پاک‌سازی تست‌های مثبت قدیمی و جایگزینی با تست عدم وجود قابلیت؛ حفظ کامل ورود دستی PDF/تصویر، فیلدهای دستی، PDF.js، preview و چاپ.
-- [ ] **Task 3 — ممیزی نهایی، سازگاری، ادغام و انتشار:** جست‌وجوی سراسری آثار اجرایی در هر دو مخزن، اجرای تست‌های Frontend و Cross-repository QA، بررسی عدم Regression و سپس PR/ادغام/انتشار فقط از workflowهای موجود. Backend فقط در صورت کشف کد اجرایی مرتبط تغییر خواهد کرد؛ در غیر این صورت بدون تغییر runtime باقی می‌ماند.
+- [x] **Task 1 — Discovery & Planning:** بررسی وضعیت دو مخزن، TODO5/ARCHITECTURE، شاخه‌ها و commitهای اصلی؛ تفکیک مسیر PDF پس‌زمینه از تصویر مستقیم انجام شد.
+  - *Log:* Backend main `ffa4403f8fbb3d0033758fd3ee0a9a4cea91319b` و Frontend main `d480a6af51880bf3b90230948299d76507594bd0` تأیید شدند. در Frontend مسیر پس‌زمینه در `pages/print-designer.html` و `js/modules/print-designer.js` شامل `handleImportFile`, `handlePdfFile`, `imageFileToPdf`, `loadTemplatePdf`, `renderPdfBackgrounds` است؛ مسیر تصویر مستقیم با `pt-image-file`, `handleImageSelection`, `uploadPendingImages`, `loadTemplateImages` و APIهای `/images` مستقل است. در Backend مسیر PDF در `Router.js`, `PrintTemplateService.uploadPdf/downloadPdf`, متادیتای `_public()`, سرستون‌های PDF در `PrintTemplateRepository.HEADERS` و اعتبارسنجی `Definition.pdf` در `PrintTemplateValidator.js` متمرکز است. ذخیره تصاویر مستقیم در همان شیت `36_PrintTemplates.ImageAssetsJSON` و Google Drive tenant-scoped انجام می‌شود. چاپ HTML از `renderOutputDocument/printOutput` مستقل از overlay PDF منبع است.
+- [x] **Task 2 — حذف یکپارچه قابلیت PDF پس‌زمینه در Backend و Frontend:** حذف ورودی‌ها، توابع، stateها، وابستگی‌ها، routeها، metadata و validation اختصاصی PDF پس‌زمینه انجام شد؛ مسیر مستقیم تصویر، اعتبارسنجی عمومی صفحه، پیش‌نمایش و چاپ HTML حفظ شدند.
+  - *Log:* Backend: `Router.js` حذف routeهای اختصاصی `GET/POST /print-templates/:id/pdf`؛ `PrintTemplateService.js` حذف `uploadPdf/downloadPdf` و metadata PDF از خروجی عمومی؛ `PrintTemplateRepository.js` حذف ستون‌های PDF از قرارداد HEADERS بدون حذف فیزیکی ستون‌ها/داده‌های Sheet؛ `PrintTemplateValidator.js` حذف schema مربوط به PDF و حفظ اعتبارسنجی اندازه/جهت صفحه، binding و image asset. `tests/print-templates.test.js` تست نبود routeهای PDF، حفظ routeهای تصویر و اعتبارسنجی اندازه/جهت صفحه را پوشش می‌دهد. Frontend: `pages/print-designer.html` حذف ورودی و سکشن پس‌زمینه؛ `js/modules/print-designer.js` حذف stateها و توابع import/convert/render PDF background و حفظ `handleImageSelection`, `uploadPendingImages`, `loadTemplateImages`, `renderCanvas`, `renderOutputDocument`, `printOutput`؛ `index.html` حذف PDF.js و به‌روزرسانی cache key؛ `pages/print-output.html` و CSS پاکسازی شدند؛ `tests/print-template-library.test.js` تست‌های تصویر مستقیم و خروجی HTML را حفظ کرد. مستندات TODO5 در هر دو مخزن همگام شد. CI نهایی Backend و Frontend، cross-repository QA و browser audit همگی موفق شدند. PRها هنوز باز و ادغام‌نشده هستند؛ هیچ deploy یا حذف داده‌ای انجام نشده است.
+- [ ] **Task 3 — ادغام کنترل‌شده، انتشار و تأیید عملیاتی (IN PROGRESS):** ادغام PRهای تأییدشده در main؛ تعیین نیاز/عدم نیاز به استقرار Backend؛ انتشار Frontend از workflow رسمی؛ بررسی نسخه زنده و سپس تست نهایی درج مستقیم تصویر و چاپ HTML توسط Product Owner.
+
+---
 
 ---
 

@@ -24,35 +24,18 @@ const PrintTemplateValidator = {
     if (definition.bindings !== undefined && !Array.isArray(definition.bindings)) {
       throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'فهرست منابع داده قالب معتبر نیست.');
     }
-    const normalized = Object.assign({
-      schemaVersion: 1,
-      page: { size: 'A4', orientation: 'portrait' },
-      elements: [],
-      bindings: []
-    }, definition);
+    const normalized = {
+      schemaVersion: definition.schemaVersion === undefined ? 1 : definition.schemaVersion,
+      page: Object.assign({ size: 'A4', orientation: 'portrait' }, definition.page || {}),
+      elements: Array.isArray(definition.elements) ? definition.elements : [],
+      bindings: Array.isArray(definition.bindings) ? definition.bindings : []
+    };
     normalized.page = Object.assign({ size: 'A4', orientation: 'portrait' }, normalized.page || {});
     if (!['A4','A5','LETTER','CUSTOM'].includes(String(normalized.page.size || 'A4').toUpperCase())) {
       throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'اندازه صفحه قالب معتبر نیست.');
     }
     if (!['portrait','landscape'].includes(String(normalized.page.orientation || 'portrait').toLowerCase())) {
       throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'جهت صفحه قالب معتبر نیست.');
-    }
-    if (normalized.pdf !== undefined && normalized.pdf !== null) {
-      if (!normalized.pdf || typeof normalized.pdf !== 'object' || Array.isArray(normalized.pdf) ||
-          !Array.isArray(normalized.pdf.pages) || normalized.pdf.pages.length < 1 || normalized.pdf.pages.length > 50) {
-        throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'ساختار صفحات PDF معتبر نیست.');
-      }
-      normalized.pdf.pages.forEach(function(page, index) {
-        if (!page || !isFinite(Number(page.widthMm)) || !isFinite(Number(page.heightMm)) ||
-            Number(page.widthMm) < 20 || Number(page.widthMm) > 1000 ||
-            Number(page.heightMm) < 20 || Number(page.heightMm) > 1000) {
-          throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'ابعاد صفحه PDF شماره ' + (index + 1) + ' معتبر نیست.');
-        }
-        page.widthMm = Number(page.widthMm);
-        page.heightMm = Number(page.heightMm);
-        page.rotation = [0,90,180,270].indexOf(Number(page.rotation || 0)) >= 0 ? Number(page.rotation || 0) : 0;
-      });
-      normalized.pdf.pageCount = normalized.pdf.pages.length;
     }
     const seen = Object.create(null);
     normalized.bindings.forEach(function(binding, index) {
@@ -107,8 +90,7 @@ const PrintTemplateValidator = {
         throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'المان شماره ' + (index + 1) + ' معتبر نیست.');
       }
       const pageIndex = Number(element.pageIndex || 0);
-      if (!Number.isInteger(pageIndex) || pageIndex < 0 ||
-          (normalized.pdf && pageIndex >= normalized.pdf.pages.length)) {
+      if (!Number.isInteger(pageIndex) || pageIndex < 0 || pageIndex > 49) {
         throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'صفحه مقصد یکی از المان‌ها معتبر نیست.');
       }
       element.pageIndex = pageIndex;
