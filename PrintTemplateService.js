@@ -230,6 +230,29 @@ const PrintTemplateService = {
       base64: file.base64
     });
   },
+  _isStorageKeyReferenced: function(storageKey, tenantId, excludedTemplateId) {
+    if (!storageKey) return false;
+    return PrintTemplateRepository.getAll().some(function(row) {
+      if (String(row.TenantID) !== String(tenantId)) return false;
+      if (String(row.ID) !== String(excludedTemplateId || '') &&
+          String(row.PdfStorageKey || '') === String(storageKey)) return true;
+      return this._imageAssets(row).some(function(asset) {
+        return String(asset.StorageKey || '') === String(storageKey);
+      });
+    }, this);
+  },
+  _deleteStorageKeyIfUnreferenced: function(storageKey, tenantId, excludedTemplateId) {
+    if (!storageKey || this._isStorageKeyReferenced(storageKey, tenantId, excludedTemplateId)) return false;
+    try {
+      GoogleDriveStorage.delete(storageKey);
+      return true;
+    } catch (error) {
+      if (typeof Logger !== 'undefined' && Logger.log) {
+        Logger.log('Print template storage cleanup deferred for an unreferenced file.');
+      }
+      return false;
+    }
+  },
   uploadPdf: function(id, data, params) {
     const user = this._user(params);
     const existing = this._template(id, user.TenantID);
@@ -248,6 +271,7 @@ const PrintTemplateService = {
     const stored = GoogleDriveStorage.uploadBase64ToTenant({
       fileName: fileName, mimeType: 'application/pdf', base64: data.base64
     }, user.TenantID);
+    const previousStorageKey = existing.PdfStorageKey || '';
     const patch = {
       DefinitionJSON: JSON.stringify(definition),
       PdfStorageKey: stored.storageKey,
@@ -259,13 +283,21 @@ const PrintTemplateService = {
       UpdatedAt: this._now(),
       Version: Number(existing.Version || 1) + 1
     };
-    PrintTemplateRepository.update(id, patch);
+    try {
+      PrintTemplateRepository.update(id, patch);
+    } catch (error) {
+      this._deleteStorageKeyIfUnreferenced(stored.storageKey, user.TenantID, id);
+      throw error;
+    }
     const current = Object.assign({}, existing, patch);
     AuditService.log({
       TenantID: user.TenantID, UserID: user.ID, Action: Constants.ACTION.UPDATE,
       EntityType: 'PRINT_TEMPLATE', EntityID: id, OldData: this._public(existing),
       NewData: this._public(current), Reason: 'بارگذاری پس‌زمینه PDF قالب چاپ'
     });
+    if (previousStorageKey && previousStorageKey !== stored.storageKey) {
+      this._deleteStorageKeyIfUnreferenced(previousStorageKey, user.TenantID, id);
+    }
     return Response.success(this._public(current), { message: 'فایل PDF قالب ذخیره شد.' });
   },
   downloadPdf: function(id, params) {
