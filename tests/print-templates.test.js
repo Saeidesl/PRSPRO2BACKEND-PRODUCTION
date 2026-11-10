@@ -16,7 +16,9 @@ function loadPrintTemplates() {
     { ID:'R2',TenantID:'T1',EventID:'E2',FormID:'F1',FormVersion:3,CreatedAt:'2026-01-02T10:00:00Z',
       ResponseJSON:JSON.stringify({I1:'جدید'}),DefinitionSnapshotJSON:JSON.stringify({Version:3,Fields:[{ID:'FF1',InformationTypeID:'I1'}]}) },
     { ID:'R3',TenantID:'T2',EventID:'E3',FormID:'F1',FormVersion:3,CreatedAt:'2026-01-03T10:00:00Z',
-      ResponseJSON:JSON.stringify({I1:'خارج از tenant'}),DefinitionSnapshotJSON:'{}' }
+      ResponseJSON:JSON.stringify({I1:'خارج از tenant'}),DefinitionSnapshotJSON:'{}' },
+    { ID:'R4',TenantID:'T1',EventID:'E4',FormID:'F1',FormVersion:3,CreatedAt:'2026-01-04T10:00:00Z',
+      ResponseJSON:JSON.stringify({I1:'پاسخ نوع دیگر'}),DefinitionSnapshotJSON:JSON.stringify({Version:3,Fields:[{ID:'FF1',InformationTypeID:'I1'}]}) }
   ];
   const context = {
     AccessControlService: { getCurrentUser: () => ({ID:'U1',TenantID:'T1'}) },
@@ -40,14 +42,16 @@ function loadPrintTemplates() {
       findByProjectId: () => [
         {ID:'E1',TenantID:'T1',EventTypeID:'ET1',OccurredAt:'2026-01-01T09:00:00Z',CreatedAt:'2026-01-01T09:05:00Z',Description:'ارسال اول',CreatedBy:'U1',PerformedBy:'U2',DepartmentID:'D1',Status:'ACTIVE'},
         {ID:'E2',TenantID:'T1',EventTypeID:'ET1',OccurredAt:'2026-01-02T09:00:00Z',CreatedAt:'2026-01-02T09:05:00Z',Description:'ارسال دوم',CreatedBy:'U2',PerformedBy:'U1',DepartmentID:'D1',Status:'ACTIVE'},
-        {ID:'E3',TenantID:'T2',EventTypeID:'ET2',OccurredAt:'2026-01-03T09:00:00Z',CreatedAt:'2026-01-03T09:05:00Z',Description:'خارج از tenant',Status:'ACTIVE'}
+        {ID:'E3',TenantID:'T2',EventTypeID:'ET2',OccurredAt:'2026-01-03T09:00:00Z',CreatedAt:'2026-01-03T09:05:00Z',Description:'خارج از tenant',Status:'ACTIVE'},
+        {ID:'E4',TenantID:'T1',EventTypeID:'ET4',OccurredAt:'2026-01-04T09:00:00Z',CreatedAt:'2026-01-04T09:05:00Z',Description:'رویداد نوع دیگر',Status:'ACTIVE'}
       ]
     },
     EventTypeRepository: {
       getAll: () => [
         {ID:'ET1',TenantID:'T1',Code:'CUT_SEND',Name:'ارسال به برش',Status:'ACTIVE'},
         {ID:'ET2',TenantID:'T2',Code:'OTHER',Name:'رویداد دیگر',Status:'ACTIVE'},
-        {ID:'ET3',TenantID:'T1',Code:'INDEPENDENT',Name:'رویداد مستقل',ConnectionType:'INDEPENDENT',Status:'ACTIVE'}
+        {ID:'ET3',TenantID:'T1',Code:'INDEPENDENT',Name:'رویداد مستقل',ConnectionType:'INDEPENDENT',Status:'ACTIVE'},
+        {ID:'ET4',TenantID:'T1',Code:'OTHER_PROJECT',Name:'نوع رویداد دیگر',Status:'ACTIVE'}
       ]
     },
     UserRepository: {
@@ -66,6 +70,8 @@ function loadPrintTemplates() {
     FormRepository: {
       getForms: () => [{ID:'F1',TenantID:'T1',Code:'F',Name:'فرم',Version:3,Status:'ACTIVE'}],
       findFieldsByForm: () => [{ID:'FF1',TenantID:'T1',Status:'ACTIVE',InformationTypeID:'I1'}],
+      findMappingsByEventType: eventTypeId => String(eventTypeId)==='ET1'
+        ? [{ID:'MAP1',TenantID:'T1',EventTypeID:'ET1',FormID:'F1',IsRequired:true,FieldOrder:1,Status:'ACTIVE'}] : [],
       getEventResponses: () => responses
     },
     AuditService: { log: entry => audits.push(entry) },
@@ -167,6 +173,9 @@ test('source catalog exposes active tenant information types, forms and event ty
   assert.equal(result.data.eventTypes.length,1);
   assert.equal(result.data.eventTypes[0].ID,'ET1');
   assert.equal(result.data.eventTypes[0].Fields.some(field=>field.field==='CreatorName'),true);
+  assert.equal(result.data.eventTypes[0].Forms.length,1);
+  assert.equal(result.data.eventTypes[0].Forms[0].ID,'F1');
+  assert.equal(result.data.eventTypes[0].Forms[0].Fields[0].ID,'FF1');
 });
 
 test('event field bindings resolve the latest event and all matching events with human-readable relations',()=>{
@@ -188,6 +197,19 @@ test('event field bindings resolve the latest event and all matching events with
   assert.equal(result.data.data.event_performer,'کاربر اول');
   assert.equal(result.data.data.event_department,'واحد برش');
   assert.deepEqual(Array.from(result.data.data.all_descriptions),['ارسال اول','ارسال دوم']);
+});
+
+test('event form bindings are scoped to the selected event type',()=>{
+  const h=loadPrintTemplates();
+  const created=h.service.create({Code:'EVENT_TYPE_FORM',Name:'فرم بر اساس نوع رویداد',Definition:{bindings:[
+    {id:'cut_form_latest',sourceType:'EVENT_FORM_FIELD',eventTypeId:'ET1',formId:'F1',fieldId:'FF1',informationTypeId:'I1',selection:'LATEST'},
+    {id:'other_form_latest',sourceType:'EVENT_FORM_FIELD',eventTypeId:'ET4',formId:'F1',fieldId:'FF1',informationTypeId:'I1',selection:'LATEST'},
+    {id:'cut_form_all',sourceType:'EVENT_FORM_FIELD',eventTypeId:'ET1',formId:'F1',fieldId:'FF1',informationTypeId:'I1',selection:'ALL'}
+  ]}}, {});
+  const result=h.service.resolve(created.data.ID,{ProjectID:'P1'}, {});
+  assert.equal(result.data.data.cut_form_latest,'جدید');
+  assert.equal(result.data.data.other_form_latest,'پاسخ نوع دیگر');
+  assert.deepEqual(Array.from(result.data.data.cut_form_all),['قدیمی','جدید']);
 });
 
 test('event field bindings cannot resolve another tenant event type',()=>{
