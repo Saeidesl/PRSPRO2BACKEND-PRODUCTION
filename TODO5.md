@@ -44,7 +44,7 @@
 ### قرارداد پیشنهادی binding رویداد
 - نوع binding جدید: `EVENT_FIELD`.
 - فیلدهای مجاز پیشنهادی: `EventTypeName`, `OccurredAt`, `CreatedAt`, `Description`, `CreatorName`, `PerformedByName`, `DepartmentName`, `Status`.
-- binding شامل `eventTypeId`, `field`, `selection` و در حالت رویداد مشخص `eventId` است؛ selectionهای `LATEST`, `ALL`, `EVENT` با اعتبارسنجی متناسب.
+- binding شامل `eventTypeId`, `field` و `selection` است؛ selectionهای `LATEST` و `ALL` پشتیبانی می‌شوند. شناسه یک رخداد مشخص در تعریف قالب ذخیره نمی‌شود، چون قالب باید بین پروژه‌ها قابل استفاده مجدد باشد؛ انتخاب رخداد مشخص در صورت نیاز باید پارامتر زمان تولید خروجی باشد.
 - منبع‌ها در همان `GET /print-templates/sources` با آرایه `eventTypes` ارائه می‌شوند.
 - resolve رویداد باید بر اساس EventTypeID و پروژه جاری باشد؛ نام کاربر/واحد/نوع رویداد از روابط موجود resolve شود، نه از متن یا شناسه خام. Tenant و دسترسی پروژه حفظ شود.
 - «افزودن کل فرم» در UI به چند binding مستقل `EVENT_FORM_FIELD` برای فیلدهای همان فرم تبدیل می‌شود؛ برای فرم‌های چندپاسخی، انتخاب پاسخ پیش‌فرض LATEST حفظ می‌شود و نمایش مجموعه‌ای تکرارشونده با جدول/ALL در محدوده سازگار فعلی بررسی و آزمون می‌شود.
