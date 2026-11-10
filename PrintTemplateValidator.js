@@ -83,11 +83,8 @@ const PrintTemplateValidator = {
           throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'فیلد رویداد برای منبع داده مجاز نیست.');
         }
         const selection = String(binding.selection || 'LATEST').toUpperCase();
-        if (['LATEST','ALL','EVENT'].indexOf(selection) === -1) {
+        if (['LATEST','ALL'].indexOf(selection) === -1) {
           throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'روش انتخاب رویداد معتبر نیست.');
-        }
-        if (selection === 'EVENT' && !String(binding.eventId || '').trim()) {
-          throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'شناسه رویداد برای انتخاب رویداد مشخص الزامی است.');
         }
         binding.selection = selection;
       }
