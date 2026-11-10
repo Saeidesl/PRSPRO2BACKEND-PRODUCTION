@@ -234,36 +234,3 @@ test('router exposes preview through PROJECT_VIEW and delegates to the non-persi
   assert.match(route[0],/AccessControlService\.require\(params, 'PROJECT_VIEW'\)/);
   assert.match(route[0],/PrintTemplateService\.preview\(body, params\)/);
 });
-
-test('legacy PDF background metadata is ignored and is not exposed by the template contract',()=>{
-  const h=loadPrintTemplates();
-  const created=h.service.create({Code:'LEGACY_BG',Name:'قالب قدیمی',Definition:{
-    page:{size:'A4',orientation:'portrait'},pdf:{pageCount:1,pages:[{widthMm:210,heightMm:297}]},
-    elements:[{id:'e1',type:'text',pageIndex:0,text:'متن'}],bindings:[]
-  }}, {});
-  assert.equal(Object.hasOwn(created.data.Definition,'pdf'),false);
-  assert.equal(Object.hasOwn(created.data,'Pdf'),false);
-  const source=fs.readFileSync(path.join(__dirname,'..','PrintTemplateValidator.js'),'utf8');
-  assert.match(source,/schemaVersion: definition\.schemaVersion/);
-  assert.match(source,/bindings: Array\.isArray\(definition\.bindings\)/);
-});
-
-test('print-template API has no dedicated PDF background upload or download route while image asset routes remain',()=>{
-  const source=fs.readFileSync(path.join(__dirname,'..','Router.js'),'utf8');
-  assert.doesNotMatch(source,/printTemplatePdfMatch|printTemplatePdfUploadMatch|downloadPdf\(|uploadPdf\(/);
-  assert.match(source,/printTemplateImageMatch/);
-  assert.match(source,/printTemplateImageUploadMatch/);
-});
-
-test('page size and orientation validation remain enforced after removing PDF background metadata',()=>{
-  const source=fs.readFileSync(path.join(__dirname,'..','PrintTemplateValidator.js'),'utf8');
-  const context={ErrorHandler:{create:(_c,m)=>new Error(m)},Constants:{ERROR:{VALIDATION_ERROR:'VALIDATION_ERROR'}},
-    Validator:{required:(v,l)=>{if(!v)throw new Error(l);}},Date,Object,String,Array,JSON,Number,isFinite};
-  vm.runInNewContext(source+'\nthis.validator=PrintTemplateValidator;',context);
-  assert.throws(()=>context.validator.parseDefinition({page:{size:'INVALID',orientation:'portrait'}}),/اندازه صفحه/);
-  assert.throws(()=>context.validator.parseDefinition({page:{size:'A4',orientation:'diagonal'}}),/جهت صفحه/);
-  const valid=context.validator.parseDefinition({page:{size:'A5',orientation:'landscape'},pdf:{pages:[]},elements:[],bindings:[]});
-  assert.equal(valid.page.size,'A5');
-  assert.equal(valid.page.orientation,'landscape');
-  assert.equal(Object.hasOwn(valid,'pdf'),false);
-});

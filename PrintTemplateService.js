@@ -26,6 +26,10 @@ const PrintTemplateService = {
       ID: row.ID, Code: row.Code, Name: row.Name, Description: row.Description || '',
       Status: row.Status || 'ACTIVE', Version: Number(row.Version || 1),
       Definition: this._definition(row),
+      Pdf: row.PdfStorageKey ? {
+        HasFile: true, FileName: row.PdfFileName || '', MimeType: row.PdfMimeType || 'application/pdf',
+        FileSize: Number(row.PdfFileSize || 0), PageCount: Number(row.PdfPageCount || 0)
+      } : null,
       Images: this._imageAssets(row).map(function(asset) {
         return { ID: asset.ID, FileName: asset.FileName, MimeType: asset.MimeType,
           FileSize: Number(asset.FileSize || 0), CreatedAt: asset.CreatedAt || '' };
@@ -223,6 +227,62 @@ const PrintTemplateService = {
     return Response.success({
       ID: asset.ID, fileName: asset.FileName || file.fileName || 'template-image',
       mimeType: asset.MimeType, fileSize: Number(asset.FileSize || file.fileSize || 0),
+      base64: file.base64
+    });
+  },
+  uploadPdf: function(id, data, params) {
+    const user = this._user(params);
+    const existing = this._template(id, user.TenantID);
+    data = data || {};
+    const definition = PrintTemplateValidator.parseDefinition(data.Definition);
+    const pageCount = Number(data.pageCount || 0);
+    if (!Number.isInteger(pageCount) || pageCount < 1 || pageCount > 50 ||
+        !definition.pdf || definition.pdf.pages.length !== pageCount) {
+      throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'تعداد صفحات PDF معتبر نیست.');
+    }
+    if (String(data.mimeType || '').toLowerCase() !== 'application/pdf') {
+      throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'فقط فایل PDF قابل بارگذاری است.');
+    }
+    const fileName = String(data.fileName || 'template.pdf').replace(/[\\/\\\\]/g, '_').slice(0, 180);
+    Validator.required(data.base64, 'محتوای PDF');
+    const stored = GoogleDriveStorage.uploadBase64ToTenant({
+      fileName: fileName, mimeType: 'application/pdf', base64: data.base64
+    }, user.TenantID);
+    const patch = {
+      DefinitionJSON: JSON.stringify(definition),
+      PdfStorageKey: stored.storageKey,
+      PdfFileName: stored.fileName,
+      PdfMimeType: 'application/pdf',
+      PdfFileSize: Number(stored.fileSize || 0),
+      PdfPageCount: pageCount,
+      UpdatedBy: user.ID,
+      UpdatedAt: this._now(),
+      Version: Number(existing.Version || 1) + 1
+    };
+    PrintTemplateRepository.update(id, patch);
+    const current = Object.assign({}, existing, patch);
+    AuditService.log({
+      TenantID: user.TenantID, UserID: user.ID, Action: Constants.ACTION.UPDATE,
+      EntityType: 'PRINT_TEMPLATE', EntityID: id, OldData: this._public(existing),
+      NewData: this._public(current), Reason: 'بارگذاری پس‌زمینه PDF قالب چاپ'
+    });
+    return Response.success(this._public(current), { message: 'فایل PDF قالب ذخیره شد.' });
+  },
+  downloadPdf: function(id, params) {
+    const user = this._user(params);
+    const template = this._template(id, user.TenantID);
+    if (!template.PdfStorageKey) {
+      throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'برای این قالب فایل PDF ثبت نشده است.');
+    }
+    const file = GoogleDriveStorage.getFileAsBase64(template.PdfStorageKey);
+    if (String(file.mimeType || '').toLowerCase() !== 'application/pdf') {
+      throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'فایل پس‌زمینه قالب PDF معتبر نیست.');
+    }
+    return Response.success({
+      fileName: template.PdfFileName || file.fileName || 'template.pdf',
+      mimeType: 'application/pdf',
+      fileSize: Number(template.PdfFileSize || file.fileSize || 0),
+      pageCount: Number(template.PdfPageCount || 0),
       base64: file.base64
     });
   },

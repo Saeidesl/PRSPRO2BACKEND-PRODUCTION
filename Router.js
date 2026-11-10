@@ -284,6 +284,11 @@ const Router = {
       return PrintTemplateService.downloadImage(decodeURIComponent(printTemplateImageMatch[1]),
         decodeURIComponent(printTemplateImageMatch[2]), params);
     }
+    const printTemplatePdfMatch = path.match(/^\/print-templates\/([^/]+)\/pdf$/);
+    if (printTemplatePdfMatch) {
+      this.requireAny(params, ['SYSTEM_SETTINGS', 'PROJECT_VIEW']);
+      return PrintTemplateService.downloadPdf(decodeURIComponent(printTemplatePdfMatch[1]), params);
+    }
     const printTemplateGetParts = path.split('/');
     if (printTemplateGetParts.length === 3 && printTemplateGetParts[1] === 'print-templates' && printTemplateGetParts[2]) {
       this.requireAny(params, ['SYSTEM_SETTINGS', 'PROJECT_VIEW']);
@@ -532,6 +537,11 @@ const Router = {
     if (printTemplateImageUploadMatch) {
       AccessControlService.require(params, 'SYSTEM_SETTINGS');
       return PrintTemplateService.uploadImage(decodeURIComponent(printTemplateImageUploadMatch[1]), body, params);
+    }
+    const printTemplatePdfUploadMatch = path.match(/^\/print-templates\/([^/]+)\/pdf$/);
+    if (printTemplatePdfUploadMatch) {
+      AccessControlService.require(params, 'SYSTEM_SETTINGS');
+      return PrintTemplateService.uploadPdf(decodeURIComponent(printTemplatePdfUploadMatch[1]), body, params);
     }
     const printTemplateResolveParts = path.split('/');
     if (printTemplateResolveParts.length === 4 && printTemplateResolveParts[1] === 'print-templates' &&
