@@ -373,7 +373,10 @@ const PrintTemplateService = {
     const responses = FormRepository.getEventResponses().filter(function(row) {
       return String(row.TenantID) === String(user.TenantID) && !!eventIds[String(row.EventID)];
     });
-    const needsEventFields = definition.bindings.some(function(binding) { return binding.sourceType === 'EVENT_FIELD'; });
+    const eventBindings = definition.bindings.filter(function(binding) { return binding.sourceType === 'EVENT_FIELD'; });
+    const needsEventFields = eventBindings.length > 0;
+    const requestedEventFields = Object.create(null);
+    eventBindings.forEach(function(binding) { requestedEventFields[String(binding.field || '')] = true; });
     const eventTypeById = Object.create(null);
     const usersById = Object.create(null);
     const departmentsById = Object.create(null);
@@ -384,12 +387,16 @@ const PrintTemplateService = {
           eventTypeById[String(type.ID)] = type;
         }
       });
-      (UserRepository.getAll() || []).forEach(function(item) {
-        if (item && String(item.TenantID) === String(user.TenantID)) usersById[String(item.ID)] = item;
-      });
-      (DepartmentRepository.getAll() || []).forEach(function(item) {
-        if (item && String(item.TenantID) === String(user.TenantID)) departmentsById[String(item.ID)] = item;
-      });
+      if (requestedEventFields.CreatorName || requestedEventFields.PerformedByName) {
+        (UserRepository.getAll() || []).forEach(function(item) {
+          if (item && String(item.TenantID) === String(user.TenantID)) usersById[String(item.ID)] = item;
+        });
+      }
+      if (requestedEventFields.DepartmentName) {
+        (DepartmentRepository.getAll() || []).forEach(function(item) {
+          if (item && String(item.TenantID) === String(user.TenantID)) departmentsById[String(item.ID)] = item;
+        });
+      }
       resolvedEvents = events.map(function(event) {
         const type = eventTypeById[String(event.EventTypeID || '')];
         const creator = usersById[String(event.CreatedBy || '')];
