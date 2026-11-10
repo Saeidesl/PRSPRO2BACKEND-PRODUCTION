@@ -373,33 +373,38 @@ const PrintTemplateService = {
     const responses = FormRepository.getEventResponses().filter(function(row) {
       return String(row.TenantID) === String(user.TenantID) && !!eventIds[String(row.EventID)];
     });
-    const eventTypes = EventTypeRepository.getAll().filter(function(type) {
-      return String(type.TenantID) === String(user.TenantID) && String(type.Status || 'ACTIVE').toUpperCase() === 'ACTIVE';
-    });
+    const needsEventFields = definition.bindings.some(function(binding) { return binding.sourceType === 'EVENT_FIELD'; });
     const eventTypeById = Object.create(null);
-    eventTypes.forEach(function(type) { eventTypeById[String(type.ID)] = type; });
     const usersById = Object.create(null);
-    (UserRepository.getAll() || []).forEach(function(item) {
-      if (item && String(item.TenantID) === String(user.TenantID)) usersById[String(item.ID)] = item;
-    });
     const departmentsById = Object.create(null);
-    (DepartmentRepository.getAll() || []).forEach(function(item) {
-      if (item && String(item.TenantID) === String(user.TenantID)) departmentsById[String(item.ID)] = item;
-    });
-    const resolvedEvents = events.map(function(event) {
-      const type = eventTypeById[String(event.EventTypeID || '')];
-      const creator = usersById[String(event.CreatedBy || '')];
-      const performer = usersById[String(event.PerformedBy || '')];
-      const department = departmentsById[String(event.DepartmentID || '')];
-      return {
-        ID: event.ID, EventTypeID: event.EventTypeID, OccurredAt: event.OccurredAt || '',
-        CreatedAt: event.CreatedAt || '', Description: event.Description || '', Status: event.Status || '',
-        EventTypeName: type ? (type.Name || type.Code || '') : '',
-        CreatorName: creator ? EventService.getUserDisplayName(creator) : (event.CreatedBy || ''),
-        PerformedByName: performer ? EventService.getUserDisplayName(performer) : (event.PerformedBy || ''),
-        DepartmentName: department ? (department.Name || department.Title || department.Code || '') : ''
-      };
-    });
+    let resolvedEvents = [];
+    if (needsEventFields) {
+      EventTypeRepository.getAll().forEach(function(type) {
+        if (String(type.TenantID) === String(user.TenantID) && String(type.Status || 'ACTIVE').toUpperCase() === 'ACTIVE') {
+          eventTypeById[String(type.ID)] = type;
+        }
+      });
+      (UserRepository.getAll() || []).forEach(function(item) {
+        if (item && String(item.TenantID) === String(user.TenantID)) usersById[String(item.ID)] = item;
+      });
+      (DepartmentRepository.getAll() || []).forEach(function(item) {
+        if (item && String(item.TenantID) === String(user.TenantID)) departmentsById[String(item.ID)] = item;
+      });
+      resolvedEvents = events.map(function(event) {
+        const type = eventTypeById[String(event.EventTypeID || '')];
+        const creator = usersById[String(event.CreatedBy || '')];
+        const performer = usersById[String(event.PerformedBy || '')];
+        const department = departmentsById[String(event.DepartmentID || '')];
+        return {
+          ID: event.ID, EventTypeID: event.EventTypeID, OccurredAt: event.OccurredAt || '',
+          CreatedAt: event.CreatedAt || '', Description: event.Description || '', Status: event.Status || '',
+          EventTypeName: type ? (type.Name || type.Code || '') : '',
+          CreatorName: creator ? EventService.getUserDisplayName(creator) : (event.CreatedBy || ''),
+          PerformedByName: performer ? EventService.getUserDisplayName(performer) : (event.PerformedBy || ''),
+          DepartmentName: department ? (department.Name || department.Title || department.Code || '') : ''
+        };
+      });
+    }
     const resolved = Object.create(null);
     definition.bindings.forEach(function(binding) {
       let value = null;
