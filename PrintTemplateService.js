@@ -85,7 +85,8 @@ const PrintTemplateService = {
       ['DepartmentName','واحد'],['Status','وضعیت رویداد']
     ].map(function(item) { return { field: item[0], label: item[1], sourceType: 'EVENT_FIELD' }; });
     const eventTypes = EventTypeRepository.getAll().filter(function(type) {
-      return String(type.TenantID) === String(user.TenantID) && String(type.Status || 'ACTIVE').toUpperCase() === 'ACTIVE';
+      return String(type.TenantID) === String(user.TenantID) && String(type.Status || 'ACTIVE').toUpperCase() === 'ACTIVE' &&
+        String(type.ConnectionType || 'PROJECT').toUpperCase() !== 'INDEPENDENT';
     }).map(function(type) {
       return { ID: type.ID, Code: type.Code, Name: type.Name || type.Code, Category: type.Category || '',
         Fields: eventFields };
