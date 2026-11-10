@@ -966,3 +966,39 @@
 - بررسی syntax و آزمون‌های رگرسیون مرتبط انجام شد؛ کاربر جریان PDF را در نسخه عملیاتی تست و موفقیت را در 2026-11-09 تأیید کرد.
 - Backend به دلیل نبود تغییر runtime نیازمند انتشار مجدد Apps Script نبود.
 - فاز بنا به تأیید صریح Product Owner در 2026-11-09 بسته شد.
+
+
+## 2026-11-10 — بستن فاز بازگردانی PDF و تصویر پس‌زمینه قالب چاپ
+
+### وضعیت نهایی فاز
+- فاز بنا به درخواست صریح Product Owner در 2026-11-10 بسته شد؛ Task 1 تا Task 3 در TODO5 هر دو مخزن پیش از بایگانی تکمیل و ثبت شده بودند.
+- قابلیت ورود PDF و تصویر به‌عنوان پس‌زمینه قالب چاپ، ذخیره/بازیابی PDF و خروجی مبتنی بر PDF اصلی در نسخه عملیاتی بازگردانده شد.
+- Product Owner تست عملیاتی ورود PDF و تصویر، وضوح/کیفیت، ذخیره و بازگشایی قالب، چاپ و درج تصویر مستقل در صفحه را موفق تأیید کرد.
+- هیچ Sheet، فایل Google Drive یا داده عملیاتی حذف یا migrate نشد.
+
+### نقشه فنی نهایی
+- Backend در مخزن عملیاتی `Saeidesl/PRSPRO2BACKEND-PRODUCTION`:
+  - `Router.js`: مسیرهای موجود `GET/POST /print-templates/:id/pdf` با مجوزهای فعلی.
+  - `PrintTemplateService.js`: توابع `uploadPdf()` و `downloadPdf()`، metadata عمومی PDF و ذخیره/بازیابی tenant-scoped با `GoogleDriveStorage.uploadBase64ToTenant()` و `getFileAsBase64()`.
+  - `PrintTemplateRepository.js`: metadata در شیت موجود `36_PrintTemplates` شامل `PdfStorageKey`, `PdfFileName`, `PdfMimeType`, `PdfFileSize`, `PdfPageCount`.
+  - `PrintTemplateValidator.js`: اعتبارسنجی `Definition.pdf.pages`، ابعاد، تعداد صفحات و `pageIndex`.
+  - `tests/print-templates.test.js`: پوشش مسیرهای PDF، validation و image asset.
+- Frontend در مخزن عملیاتی `Saeidesl/PRSPRO2-PRODUCTION`:
+  - `pages/print-designer.html`: ورودی و کنترل ورود PDF/تصویر پس‌زمینه.
+  - `js/modules/print-designer.js`: توابع `handleImportFile()`, `handlePdfFile()`, `imageFileToPdf()`, `loadTemplatePdf()`, `renderPdfBackgrounds()` و state/جریان ذخیره، بارگذاری و خروجی PDF اصلی با overlay.
+  - `index.html`: وابستگی‌های PDF.js و pdf-lib موردنیاز مسیر حفظ‌شده.
+  - `pages/print-output.html` و `css/print-template-library.css`: پیش‌نمایش و کنترل‌های خروجی.
+  - `tests/print-template-library.test.js`: تست ورود PDF/تصویر، کیفیت رندر، overlay، تصویر مستقیم و چاپ.
+- مسیر مستقل افزودن تصویر به صفحه، پیش‌نمایش زنده و حذف تشخیص هوشمند فیلدها حفظ شدند؛ هیچ مسیر موازی ایجاد نشد.
+
+### ادغام، کنترل کیفیت و انتشار
+- Backend PR #51 با merge commit `ef3289d81a00f66de0b06e79a2f76149843128a2` و Frontend PR #79 با merge commit `35a1af8c4d768753fafca57bcbde9feb69b426d3` در `main` ادغام شدند.
+- Backend source checks، PMS agent suite و procurement performance diagnostics موفق شدند.
+- Frontend checks، PMS frontend agent suite، cross-repository QA و browser audit موفق شدند؛ workflow انتشار GitHub Pages پس از ادغام نیز موفق بود.
+- انتشار Backend از workflow رسمی `.github/workflows/sync-apps-script.yml` انجام شد؛ run `42817777636` شامل source validation، `clasp push` و `clasp deploy` موفق بود و نسخه Web App با شناسه `@13` منتشر شد.
+- نسخه عملیاتی توسط Product Owner تست و تأیید شد. این ثبت، وضعیت انتشار و پذیرش همین فاز را مستند می‌کند و جایگزین کنترل انتشارهای آتی نیست.
+
+### شناسه‌های مستندات پایان فاز
+- Backend main پیش از ثبت این بایگانی: `629aba38b183cd27a62de8b97ba4863943483626`.
+- Frontend main پیش از ثبت این بایگانی: آخرین HEAD شاخه `main` که در زمان بایگانی بررسی شد.
+- فایل‌های پیگیری پس از انتقال سابقه این فاز به همین سند، به عبارت `Ready for the next feature` بازنشانی می‌شوند.
