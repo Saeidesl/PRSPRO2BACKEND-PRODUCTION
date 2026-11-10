@@ -77,7 +77,7 @@ function loadPrintTemplates() {
   vm.runInNewContext(fs.readFileSync(path.join(root,'PrintTemplateValidator.js'),'utf8')+'\nthis.__validator=PrintTemplateValidator;',context);
   context.PrintTemplateValidator = context.__validator;
   vm.runInNewContext(fs.readFileSync(path.join(root,'PrintTemplateService.js'),'utf8')+'\nthis.__service=PrintTemplateService;',context);
-  return {service:context.__service,templates,audits,storedFiles};
+  return {service:context.__service,templates,audits,storedFiles,context};
 }
 
 test('template definitions accept stable bindings and reject duplicate or unsupported sources',()=>{
@@ -275,14 +275,23 @@ test('PDF replacement keeps a previous Drive file that is still referenced by an
   assert.ok(h.storedFiles[sharedKey]);
 });
 
-test('failed PDF metadata update removes the newly uploaded unreferenced file and preserves the existing template reference',()=>{
+test('failed PDF metadata update removes the newly uploaded file and preserves the existing PDF reference',()=>{
   const h=loadPrintTemplates();
   const created=h.service.create({Code:'PDF_FAIL',Name:'شکست ذخیره PDF',Definition:{elements:[],bindings:[]}}, {});
-  const originalUpdate=h.service && null;
   const definition={pdf:{pages:[{widthMm:210,heightMm:297}]},elements:[],bindings:[]};
-  const repository=global.PrintTemplateRepository;
-  const source=fs.readFileSync(path.join(__dirname,'..','PrintTemplateService.js'),'utf8');
-  assert.match(source,/_deleteStorageKeyIfUnreferenced\\(stored\\.storageKey, user\\.TenantID, id\\)/);
-  assert.equal(h.templates[0].PdfStorageKey,undefined);
-  assert.equal(Object.keys(h.storedFiles).length,0);
+  h.service.uploadPdf(created.data.ID,{
+    fileName:'existing.pdf',mimeType:'application/pdf',
+    base64:Buffer.from('%PDF-1.4\\nexisting').toString('base64'),pageCount:1,Definition:definition
+  },{});
+  const previousKey=h.templates[0].PdfStorageKey;
+  const originalUpdate=h.context.PrintTemplateRepository.update;
+  h.context.PrintTemplateRepository.update=()=>{throw new Error('simulated sheet write failure');};
+  assert.throws(()=>h.service.uploadPdf(created.data.ID,{
+    fileName:'failed.pdf',mimeType:'application/pdf',
+    base64:Buffer.from('%PDF-1.4\\nfailed').toString('base64'),pageCount:1,Definition:definition
+  },{}),/simulated sheet write failure/);
+  h.context.PrintTemplateRepository.update=originalUpdate;
+  assert.equal(h.templates[0].PdfStorageKey,previousKey);
+  assert.ok(h.storedFiles[previousKey]);
+  assert.equal(Object.keys(h.storedFiles).length,1);
 });
