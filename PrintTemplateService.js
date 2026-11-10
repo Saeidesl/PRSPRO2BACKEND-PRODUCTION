@@ -84,12 +84,24 @@ const PrintTemplateService = {
       ['Description','توضیحات'],['CreatorName','ثبت‌کننده'],['PerformedByName','اجراکننده'],
       ['DepartmentName','واحد'],['Status','وضعیت رویداد']
     ].map(function(item) { return { field: item[0], label: item[1], sourceType: 'EVENT_FIELD' }; });
+    const formsById = Object.create(null);
+    forms.forEach(function(form) { formsById[String(form.ID)] = form; });
     const eventTypes = EventTypeRepository.getAll().filter(function(type) {
       return String(type.TenantID) === String(user.TenantID) && String(type.Status || 'ACTIVE').toUpperCase() === 'ACTIVE' &&
         String(type.ConnectionType || 'PROJECT').toUpperCase() !== 'INDEPENDENT';
     }).map(function(type) {
+      const linkedForms = FormRepository.findMappingsByEventType(type.ID).filter(function(mapping) {
+        return String(mapping.TenantID) === String(user.TenantID) &&
+          String(mapping.Status || 'ACTIVE').toUpperCase() === 'ACTIVE' &&
+          !!formsById[String(mapping.FormID)];
+      }).sort(function(a,b) { return Number(a.FieldOrder || 0) - Number(b.FieldOrder || 0); })
+        .map(function(mapping) {
+          const form = formsById[String(mapping.FormID)];
+          return { ID: form.ID, Code: form.Code, Name: form.Name, IsRequired: mapping.IsRequired !== false,
+            Fields: form.Fields.slice() };
+        });
       return { ID: type.ID, Code: type.Code, Name: type.Name || type.Code, Category: type.Category || '',
-        Fields: eventFields };
+        Fields: eventFields, Forms: linkedForms };
     }).sort(function(a,b) { return String(a.Name || '').localeCompare(String(b.Name || ''), 'fa'); });
     return Response.success({ projectFields: projectFields, informationTypes: informationTypes, forms: forms,
       eventTypes: eventTypes });
@@ -370,7 +382,11 @@ const PrintTemplateService = {
         status !== 'CANCELLED' && status !== 'CANCELED';
     });
     const eventIds = Object.create(null);
-    events.forEach(function(event) { eventIds[String(event.ID)] = true; });
+    const eventById = Object.create(null);
+    events.forEach(function(event) {
+      eventIds[String(event.ID)] = true;
+      eventById[String(event.ID)] = event;
+    });
     const responses = FormRepository.getEventResponses().filter(function(row) {
       return String(row.TenantID) === String(user.TenantID) && !!eventIds[String(row.EventID)];
     });
@@ -445,8 +461,19 @@ const PrintTemplateService = {
         value = row ? this._parse(row.ValueJSON, null) : null;
       } else {
         const formId = String(binding.formId || '');
+        if (binding.eventTypeId) {
+          const selectedType = EventTypeRepository.getAll().find(function(type) {
+            return String(type.ID) === String(binding.eventTypeId) &&
+              String(type.TenantID) === String(user.TenantID) &&
+              String(type.Status || 'ACTIVE').toUpperCase() === 'ACTIVE' &&
+              String(type.ConnectionType || 'PROJECT').toUpperCase() !== 'INDEPENDENT';
+          });
+          if (!selectedType) throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'نوع رویداد متصل به فرم پیدا نشد یا غیرفعال است.');
+        }
         const matching = responses.filter(function(row) {
-          return String(row.FormID) === formId &&
+          const event = eventById[String(row.EventID)];
+          return String(row.FormID) === formId && !!event &&
+            (!binding.eventTypeId || String(event.EventTypeID) === String(binding.eventTypeId)) &&
             (!binding.eventId || String(row.EventID) === String(binding.eventId)) &&
             (!binding.responseId || String(row.ID) === String(binding.responseId));
         }).map(function(row) {
