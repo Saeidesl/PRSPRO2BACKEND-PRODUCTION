@@ -51,16 +51,25 @@ const TelegramBotService = {
       const pendingTenantId = String(props.getProperty('TELEGRAM_PENDING_TENANT_ID') || '').trim();
       const expiresAt = Number(props.getProperty('TELEGRAM_PENDING_REGISTRATION_EXPIRES_AT') || 0);
       if (pendingTenantId && expiresAt > Date.now() && String(message.chat.type || '') === 'private') {
+        const tenantRows = GoogleSheetsRepository.getAll('01_Tenants') || [];
+        const activeTenants = tenantRows.filter(function(row) {
+          return String(row.Status || '').trim().toUpperCase() === 'ACTIVE' &&
+            String(row.ID || '').trim();
+        });
+        const matchedTenant = activeTenants.length === 1 &&
+          String(activeTenants[0].ID) === pendingTenantId ? activeTenants[0] : null;
+        if (!matchedTenant) {
+          props.deleteProperty('TELEGRAM_PENDING_TENANT_ID');
+          props.deleteProperty('TELEGRAM_PENDING_REGISTRATION_EXPIRES_AT');
+          this.sendMessage(chatId, 'اتصال انجام نشد؛ وضعیت شرکت فعال تغییر کرده است. مدیر سامانه باید فرایند اتصال را دوباره آغاز کند.');
+          return { ok: false, reason: 'TENANT_STATE_CHANGED' };
+        }
         this.registerTenantChat(pendingTenantId, chatId);
         props.deleteProperty('TELEGRAM_PENDING_TENANT_ID');
         props.deleteProperty('TELEGRAM_PENDING_REGISTRATION_EXPIRES_AT');
-        const tenantRows = GoogleSheetsRepository.getAll('01_Tenants') || [];
-        const matchedTenant = tenantRows.find(function(row) {
-          return String(row.ID) === pendingTenantId;
-        });
         this.sendMessage(chatId,
           'سلام ' + firstName + '، اتصال این گفت‌وگو به شرکت «' +
-          String(matchedTenant && (matchedTenant.Name || matchedTenant.Code) || 'شرکت عملیاتی') +
+          String(matchedTenant.Name || matchedTenant.Code || 'شرکت عملیاتی') +
           '» با موفقیت انجام شد. از این پس اعلان‌های مجاز سامانه در همین گفت‌وگو ارسال می‌شوند.');
         return { ok: true, registered: true };
       }
