@@ -37,6 +37,7 @@
   - `_splitNotificationMessage_`: تقسیم پیام بلند به قطعات قابل ارسال.
   - `setupPolling`, `pollUpdates`: دریافت فرمان‌های ربات با polling.
 - `Code.js`
+  - `runTelegramBotSetup()` در `Code.js` توکن را با پنجره ورودی دریافت می‌کند؛ `TelegramBotService.configureBotToken()` هویت `@PRS_Production_Notifications_Bot` را با `getMe` اعتبارسنجی، توکن را فقط در Script Properties ذخیره و polling یک‌دقیقه‌ای را فعال می‌کند.
   - `runTelegramWebhookSetup()`، `runTelegramPolling()` و `runTelegramWebhookInfo()` نقاط اجرای تنظیم/عیب‌یابی polling هستند.
   - webhook ورودی در `doPost` از API اصلی تفکیک شده است؛ راهکار polling برای اجتناب از محدودیت 401 endpoint ناشناس Apps Script موجود است.
 
@@ -58,7 +59,7 @@
   - فایل واقعی با `StorageKey` در Google Drive بازیابی می‌شود؛ ارسال فایل باید فقط پس از کنترل Tenant، مالکیت entity، وضعیت فعال، MIME و محدودیت حجم انجام شود.
   - پیوست فرم فعلی ممکن است به پروژه متصل باشد؛ پیوست رویداد نیز باید با entity واقعی خودش بررسی شود. به نام یا metadata ارسالی کلاینت اعتماد نشود.
 - Script Properties موجود در طراحی:
-  - `TELEGRAM_BOT_TOKEN`
+  - `TELEGRAM_BOT_TOKEN` (از طریق `runTelegramBotSetup()`؛ هرگز در کد/Log/GitHub ذخیره نمی‌شود)
   - `TELEGRAM_WEBHOOK_SECRET` (فقط برای webhook؛ polling موجود است)
   - `TELEGRAM_TENANT_CHAT_IDS` (JSON نگاشت TenantID به آرایه chat ID)
   - هیچ توکن یا secret نباید در GitHub commit شود.
@@ -76,5 +77,5 @@
 
 - [x] **Task 1 — Discovery & Planning:** بررسی مخازن عملیاتی، شاخه‌ها، TODO5/ARCHITECTURE، مسیرهای ثبت پروژه/رویداد، سرویس تلگرام، مدل فرم/اطلاعات مرکزی/پیوست و workflow استقرار.
   - *Log:* هر دو مخزن عملیاتی قابل دسترسی‌اند؛ HEAD شاخه `main` در Backend برابر `4f9855585cb4290b0b79c0e9330bfa97628c62c0` و در Frontend برابر `a29612d6ed916824819fa2600b0e143eb317cd84` بود. `TODO5.md` در هر دو مخزن عبارت Ready for the next feature داشت. شاخه قدیمی `feat/telegram-event-notifications-20261107` در هر دو مخزن موجود اما از main منشعب و diverged است (Backend: پنج commit جلو و ۷۲ عقب؛ Frontend: دو commit جلو و ۱۴۷ عقب)؛ بنابراین هیچ commit آن بدون بازبینی/ادغام انتخابی وارد نمی‌شود. زیرساخت TelegramBotService و hook اعلان رویداد در main بک‌اند موجود است؛ اعلان پروژه وجود ندارد، داده‌های پویای EventData و اطلاعات مرکزی مرتبط باید به اعلان افزوده شوند و پیوست‌ها فعلاً فقط با نام نمایش داده می‌شوند. شاخه تازه `feature/telegram-notifications-20261111` از main در هر دو مخزن ایجاد شد.
-- [ ] **Task 2 — تکمیل یکپارچه اعلان‌های پروژه و رویداد (IN PROGRESS):** توسعه TelegramBotService و hook موجود ProjectService/EventService برای اعلان ایجاد پیش‌نویس و پروژه فعال؛ تکمیل اطلاعات نوع رویداد، داده‌های پویای رویداد، اطلاعات مرکزی متصل به SourceEventID، snapshot فرم‌ها و ارسال امن فایل/تصویر از Google Drive؛ حفظ tenant isolation، NotifyEnabled، idempotency و عدم تأثیر خطای تلگرام بر ثبت.
+- [ ] **Task 2 — تکمیل یکپارچه اعلان‌های پروژه و رویداد (IN PROGRESS):** توسعه TelegramBotService و hook موجود ProjectService/EventService برای اعلان ایجاد پیش‌نویس و پروژه فعال؛ تکمیل اطلاعات نوع رویداد، داده‌های پویای رویداد، اطلاعات مرکزی متصل به SourceEventID، snapshot فرم‌ها و ارسال امن فایل/تصویر از Google Drive؛ افزودن راه‌اندازی تعاملی ربات اختصاصی Production با اعتبارسنجی username و ذخیره امن token؛ حفظ tenant isolation، NotifyEnabled، idempotency و عدم تأثیر خطای تلگرام بر ثبت.
 - [ ] **Task 3 — آزمون یکپارچگی، همگام‌سازی و پذیرش عملیاتی:** افزودن/اجرای تست‌های واحد و رگرسیون، بررسی API و دسترسی فایل، بررسی workflow و سازگاری نسخه‌ها؛ سپس آماده‌سازی sync/deploy طبق workflow عملیاتی و انجام تست زنده با تنظیمات امن تلگرام. وضعیت GitHub، Apps Script sync، Web App deploy و live verification جداگانه گزارش شود.
