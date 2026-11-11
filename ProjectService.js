@@ -1,18 +1,41 @@
 const ProjectService = {
 
   _normalizeCreatedAt_: function(value, fallback) {
-    if (value === undefined || value === null || String(value).trim() === '') return fallback || new Date().toISOString();
+    if (value === undefined || value === null || String(value).trim() === '') {
+      return fallback || new Date().toISOString();
+    }
+
     const raw = String(value).trim();
-    const match = /^(\\d{4})-(\\d{2})-(\\d{2})(?:T.*)?$/.exec(raw);
-    if (!match) {
+    const invalidDate = function() {
       throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'تاریخ ایجاد پروژه معتبر نیست.');
+    };
+
+    // Legacy clients may still send a date without a time. Keep the original
+    // noon-UTC representation so existing date-only records remain compatible.
+    const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+    if (dateOnly) {
+      const year = Number(dateOnly[1]), month = Number(dateOnly[2]), day = Number(dateOnly[3]);
+      const date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+      if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+        invalidDate();
+      }
+      return date.toISOString();
     }
-    const year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
-    const date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
-    if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
-      throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'تاریخ ایجاد پروژه معتبر نیست.');
+
+    // New clients send a complete ISO-8601 timestamp, including Z or an
+    // explicit offset. Never reinterpret a browser-local datetime on the server.
+    const dateTime = /^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d)(?:\.\d{1,3})?)?(Z|[+-](?:0\d|1[0-4]):[0-5]\d)$/i.exec(raw);
+    if (!dateTime || (/^[+-]14:(?!00)/.test(dateTime[7]))) invalidDate();
+
+    const year = Number(dateTime[1]), month = Number(dateTime[2]), day = Number(dateTime[3]);
+    const calendarDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+    if (calendarDate.getUTCFullYear() !== year || calendarDate.getUTCMonth() !== month - 1 || calendarDate.getUTCDate() !== day) {
+      invalidDate();
     }
-    return date.toISOString();
+
+    const timestamp = new Date(raw);
+    if (!isFinite(timestamp.getTime())) invalidDate();
+    return timestamp.toISOString();
   },
 
   projectFormLookups: function(params) {
