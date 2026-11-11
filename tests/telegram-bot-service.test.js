@@ -58,7 +58,7 @@ test('validates the dedicated bot username, stores its token privately and confi
     JSON, String, Object, Array, RegExp
   };
   const source = fs.readFileSync(path.join(__dirname, '..', 'TelegramBotService.js'), 'utf8');
-  vm.runInNewContext(source + '\\nthis.__service = TelegramBotService;', context);
+  vm.runInNewContext(source + '\nthis.__service = TelegramBotService;', context);
   const result = context.__service.configureBotToken('123456:private-token');
   assert.equal(result.ok, true);
   assert.equal(result.username, 'PRS_Production_Notifications_Bot');
