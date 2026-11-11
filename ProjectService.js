@@ -426,6 +426,18 @@ const ProjectService = {
   },
 
 
+  _notifyProjectCreated_: function(project, user) {
+    if (!project || !user || !user.TenantID ||
+        typeof TelegramBotService === 'undefined' ||
+        typeof TelegramBotService.notifyProject !== 'function') return;
+    try {
+      TelegramBotService.notifyProject(project, user, user.TenantID);
+    } catch (telegramError) {
+      console.warn('Telegram project notification failed: ' +
+        String(telegramError && telegramError.message || telegramError));
+    }
+  },
+
   create: function(project, params) {
 
     const user =
@@ -506,6 +518,7 @@ const ProjectService = {
         EntityType: Constants.ENTITY.PROJECT, EntityID: draft.ID,
         OldData: null, NewData: createdDraft, Reason: 'ایجاد پیش‌نویس پروژه'
       });
+      this._notifyProjectCreated_(createdDraft, user);
       return Response.success(createdDraft, { message: 'پیش‌نویس پروژه ایجاد شد.' });
     }
 
@@ -843,6 +856,8 @@ const ProjectService = {
         'ایجاد پروژه'
 
     });
+
+    this._notifyProjectCreated_(created, user);
 
     return Response.success(
       created,

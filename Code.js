@@ -20,6 +20,20 @@ function runTelegramWebhookSetup() {
   return TelegramBotService.setupPolling();
 }
 
+/**
+ * Start a secure 10-minute pairing window for the only active tenant.
+ * Run this once, then send /start to the bot from the intended private chat.
+ * The chat ID and TenantID are discovered and linked automatically.
+ */
+function runTelegramTenantRegistration() {
+  const result = TelegramBotService.armTenantRegistration();
+  Logger.log(
+    'اتصال برای «' + result.tenantName + '» تا ' + result.expiresInMinutes +
+    ' دقیقه فعال شد. اکنون از گفت‌وگوی خصوصی موردنظر /start را ارسال کنید.'
+  );
+  return result;
+}
+
 /** Poll Telegram updates. Also invoked automatically by a one-minute trigger. */
 function runTelegramPolling() {
   return TelegramBotService.pollUpdates();
@@ -31,6 +45,6 @@ function runTelegramWebhookInfo() {
 }
 
 /**
- * Telegram tenant/chat registration is intentionally not preconfigured in Production.
- * Configure a production-specific tenant and chat only after Telegram credentials are added.
+ * Production tenant/chat mapping is created through the one-time
+ * runTelegramTenantRegistration pairing flow; no TenantID or chat ID is hardcoded.
  */

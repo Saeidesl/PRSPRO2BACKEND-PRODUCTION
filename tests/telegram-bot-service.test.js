@@ -31,6 +31,57 @@ function loadService(options = {}) {
   return { service: context.__service, sent };
 }
 
+test('automatically pairs the first private chat with the only active tenant during the armed window', () => {
+  const properties = { TELEGRAM_BOT_TOKEN: 'test-token', TELEGRAM_TENANT_CHAT_IDS: '{}' };
+  const messages = [];
+  const context = {
+    PropertiesService: { getScriptProperties: () => ({
+      getProperty: key => properties[key] || '',
+      setProperty: (key, value) => { properties[key] = String(value); },
+      deleteProperty: key => { delete properties[key]; }
+    }) },
+    GoogleSheetsRepository: { getAll: name => name === '01_Tenants'
+      ? [{ ID: 'TENANT_MAIN', Name: 'شرکت اصلی', Status: 'ACTIVE' }]
+      : [] },
+    UrlFetchApp: { fetch: (url, options) => {
+      messages.push({ url, options });
+      return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ ok: true }) };
+    } },
+    Date, JSON, String, Object, Array, RegExp, Math,
+    console: { warn() {} }
+  };
+  const source = fs.readFileSync(path.join(__dirname, '..', 'TelegramBotService.js'), 'utf8');
+  vm.runInNewContext(source + '\nthis.__service = TelegramBotService;', context);
+  const result = context.__service.armTenantRegistration();
+  assert.equal(result.ok, true);
+  const processed = context.__service._processUpdate_({
+    message: { chat: { id: 556677, type: 'private' }, from: { first_name: 'Admin' }, text: '/start' }
+  });
+  assert.equal(processed.registered, true);
+  assert.deepEqual(JSON.parse(properties.TELEGRAM_TENANT_CHAT_IDS), { TENANT_MAIN: ['556677'] });
+  assert.equal(properties.TELEGRAM_PENDING_TENANT_ID, undefined);
+  assert.equal(properties.TELEGRAM_PENDING_REGISTRATION_EXPIRES_AT, undefined);
+  assert.match(JSON.parse(messages[0].options.payload).text, /اتصال/);
+});
+
+test('refuses automatic pairing when more than one active tenant exists', () => {
+  const properties = { TELEGRAM_BOT_TOKEN: 'test-token' };
+  const context = {
+    PropertiesService: { getScriptProperties: () => ({
+      getProperty: key => properties[key] || '',
+      setProperty: (key, value) => { properties[key] = String(value); }
+    }) },
+    GoogleSheetsRepository: { getAll: () => [
+      { ID: 'T1', Status: 'ACTIVE' }, { ID: 'T2', Status: 'ACTIVE' }
+    ] },
+    JSON, String, Object, Array, Date, Math
+  };
+  const source = fs.readFileSync(path.join(__dirname, '..', 'TelegramBotService.js'), 'utf8');
+  vm.runInNewContext(source + '\nthis.__service = TelegramBotService;', context);
+  assert.throws(() => context.__service.armTenantRegistration(), /فقط یک Tenant فعال/);
+  assert.equal(properties.TELEGRAM_PENDING_TENANT_ID, undefined);
+});
+
 test('rejects webhook calls without the configured secret', () => {
   const h = loadService();
   const response = h.service.handleWebhook({ parameter: { telegramSecret: 'wrong' }, postData: { contents: '{}' } });
