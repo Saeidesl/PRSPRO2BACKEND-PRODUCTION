@@ -1,78 +1,69 @@
 ## 🎯 Current Objective
 
-بازطراحی روش افزودن اطلاعات به قالب‌ساز در همان Print Designer عملیاتی:
-- جایگزینی فهرست پراکنده اتصال منابع با دکمه «افزودن اطلاعات» و مودال سه‌تب.
-- افزودن گروهی کل اطلاعات هر فرم و امکان افزودن تکی فیلدها.
-- افزودن گروهی یا تکی اطلاعات هر نوع رویداد، با انتخاب آخرین/همه رویدادها.
-- افزودن مستقیم المان‌های متصل به بوم، جلوگیری از تکرار و حفظ Definition و APIهای موجود.
+افزودن انتخاب ساعت به فیلد «تاریخ ایجاد پروژه» با استفاده دقیق از تقویم مشترک جلالی/ساعت که در ثبت رویدادها عملیاتی است؛ حفظ زمان انتخابی تا ذخیره در پروژه و نمایش مجدد در فرم ویرایش.
 
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
 
-### مخازن و مبنا
+### مخازن و شاخه مبنا
 - Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`
 - Frontend: `Saeidesl/PRSPRO2-PRODUCTION`
-- شاخه کاری فاز: `feature/print-template-data-source-picker-20261110` در هر دو مخزن؛ از `main` فعلی منشعب شده است.
-- آخرین commitهای مبنا هنگام آغاز فاز: Backend `f39a38e7c67170cd0950a3852f089017ca29ed90`؛ Frontend `d79edebaec08976f5947e85c90b4c5ddfa6df6f0`.
-- در هر دو مخزن، TODO5 پیش از آغاز فاز برابر `Ready for the next feature` بود. ARCHITECTURE.md خوانده شد و سوابق فاز قبلی حفظ می‌شوند؛ این فاز تا زمان بسته‌شدن در آن فایل آرشیو نمی‌شود.
+- شاخه فاز جاری در هر دو مخزن: `feature/project-created-at-datetime-20261111`
+- شاخه مبنا: `main`؛ Backend baseline: `45965b49af3d1b5c6e61c8ce2b4e978555802c20`؛ Frontend baseline: `bbe5a91cd0078f8b3f5d6d045bc412b313cfe171`.
+- شاخه جدید فقط از main عملیاتی ساخته شده است؛ main و مخازن توسعه دست‌نخورده‌اند.
 
-### Frontend — مسیرهای موجود
-- `pages/print-designer.html`: toolbar فعلی شامل `data-pt-action="add-field"` و `add-table`؛ دو منبع‌لیست قدیمی `#pt-source-list` و `#pt-editor-source-list`؛ پنل اتصال اطلاعات در `details.pt-editor-source-picker`. این ورودی‌ها باید با یک دکمه اصلی و مودال جایگزین شوند، نه اینکه مسیر/صفحه جدید ساخته شود.
-- `js/modules/print-designer.js`، ماژول `PMS.Modules.PrintDesigner`:
-  - `loadLibrary()`: دریافت `GET /print-templates` و `GET /print-templates/sources` و نگهداری `this.sources`.
-  - `renderSources()`: ساخت فهرست فعلی از `projectFields`, `informationTypes`, `forms`.
-  - `addBinding(binding,label)`: افزودن binding با جلوگیری از تکرار شناسه؛ سپس renderBindings/renderInspector/renderCanvas/commitHistory.
-  - `renderBindings()`: مدیریت منابع متصل و حذف منبع؛ حذف منبع، bindingId المان‌های وابسته را خالی می‌کند.
-  - `createElement('field', ...)`: ساخت المان فیلد؛ باید برای انتخاب منبع، المان متصل را مستقیم و با چیدمان امن روی بوم بسازد.
-  - `renderInspector()`, `applyInspectorChange()`: حفظ تنظیمات المان و انتخاب پاسخ.
-- `css/print-template-library.css`: استایل فعلی toolbar، source picker، inspector و canvas؛ استایل مودال/تب/درخت منابع باید همین‌جا و همسو با طراحی موجود اضافه شود.
-- `tests/print-template-library.test.js`: مجموعه آزمون رگرسیون Print Designer؛ تست رفتار مودال، گروه‌بندی، dedupe، افزودن مستقیم به بوم و عدم حذف PDF/تصویر باید توسعه یابد.
-- `index.html`: بارگذاری ماژول و cache-busting؛ فقط در صورت نیاز واقعی به‌روزرسانی شود.
+### Frontend — مسیرهای موجود و جریان داده
+- `js/components/jalali-calendar.js` — کامپوننت مشترک `window.PMS.JalaliCalendar`:
+  - `init()` ورودی‌های `input[type="date"]` و `input[type="datetime-local"]` را با MutationObserver شناسایی می‌کند.
+  - `enhance(original)` ورودی اصلی را نگه می‌دارد، نمایشگر تاریخ جلالی می‌سازد و برای `datetime-local` پس از انتخاب روز، مرحله انتخاب ساعت/دقیقه را با `renderTimePicker()` باز می‌کند.
+  - انتخاب ساعت در `draftTime` نگهداری می‌شود؛ دکمه `data-cal="confirm"` مقدار نهایی را یکجا از `setValue()` commit می‌کند و رویدادهای input/change را منتشر می‌کند.
+  - ساعت ۲۴ساعته با ۲۴ گزینه ساعت و ۶۰ گزینه دقیقه؛ تاریخ جلالی و ارقام فارسی.
+  - فایل CSS: `css/jalali-calendar.css`؛ cache key فعلی در `index.html`: `20261106-date-then-time-2` و JS: `20261106-date-then-time-3`.
+- `js/modules/events.js`:
+  - فرم ثبت رویداد، ورودی `#event-form-date[name="OccurredAt"][type="datetime-local"]` را استفاده می‌کند.
+  - `Events.submitEvent()` مقدار محلی ورودی را با `new Date(occurredAt)` اعتبارسنجی و در payload با `date.toISOString()` ارسال می‌کند.
+  - این الگو مرجع سازگاری برای فرم پروژه است؛ زمان ثبت‌شده از همان picker مشترک می‌آید.
+- `js/modules/projects.js`:
+  - `Projects.openCreateForm(editProject, options)` فرم ایجاد/ویرایش موجود را می‌سازد.
+  - فیلد فعلی `#new-project-created-at[name="CreatedAt"]` از نوع `date` است؛ به همین علت مرحله ساعت فعال نمی‌شود.
+  - `Projects.createProject(modal)` مقدار `CreatedAt` را در payload موجود `POST /projects` یا `PUT /projects/:id` قرار می‌دهد.
+  - در حالت ویرایش، مقدار `CreatedAt` فعلاً با `.slice(0, 10)` به فیلد برگردانده می‌شود و ساعت از دست می‌رود؛ این تبدیل باید با datetime-local سازگار شود.
+- `pages/projects.html`: دکمه ورود به همان فرم موجود؛ صفحه/مسیر جدید لازم نیست.
+- `tests/jalali-calendar-datetime.test.js` و `tests/jalali-calendar-datetime.browser.cjs`: پوشش مرحله تاریخ→ساعت، انتخاب ساعت/دقیقه، تأیید نهایی، سازگاری date-only و رفتار موبایل.
+- آزمون‌های فرم پروژه در `tests/project-modal-accessibility.test.js` و `tests/single-project-entry.test.js`؛ تست اختصاصی قرارداد تاریخ/ساعت پروژه باید افزوده شود.
+- `index.html`: بارگذاری کامپوننت مشترک پیش از ماژول‌های صفحه؛ فقط cache-busting لازم در همین مسیر اعمال می‌شود.
 
-### Backend — منابع و قراردادهای موجود
-- `Router.js`: route موجود `GET /print-templates/sources` به `PrintTemplateService.sources` متصل است؛ endpoint موازی نساز.
-- `PrintTemplateService.js:sources(params)`: اکنون `projectFields`, `informationTypes` و `forms` را tenant-scoped و فقط از انواع/فرم‌های ACTIVE برمی‌گرداند. فیلدهای فرم از `FormRepository.findFieldsByForm(form.ID)` و `InformationTypeRepository` ساخته می‌شوند.
-- `PrintTemplateService.js:_resolveProjectData(projectId, definition, user)`: داده پروژه، اطلاعات مرکزی، رویدادهای پروژه و پاسخ‌های فرم را tenant-scoped دریافت می‌کند؛ رویدادهای VOID/CANCELLED/CANCELED حذف می‌شوند. پاسخ فرم از `FormRepository.getEventResponses()` و snapshotهای `ResponseJSON` و `DefinitionSnapshotJSON` resolve می‌شوند.
-- `PrintTemplateValidator.js:parseDefinition()`: allow-list فعلی `PROJECT_FIELD`, `PROJECT_INFORMATION`, `EVENT_FORM_FIELD`, `EVENT_FORM_RESPONSE`؛ نوع منبع رویداد عمومی جدید باید با اعتبارسنجی شناسه و فهرست فیلدهای مجاز افزوده شود.
-- `EventRepository.findByProjectId(projectId)`: رویدادهای پروژه را مرتب‌شده با `OccurredAt || CreatedAt` می‌دهد.
-- `EventTypeRepository.getAll()` و `findById()`: منبع نوع رویداد؛ باید tenant و ACTIVE فیلتر شود.
-- `EventService.enrichEvent(event, tenantId)`: الگوی موجود برای استخراج `EventTypeName`, `CreatorName`, `PerformedByName`, `DepartmentName` با کنترل Tenant. از همان منطق/فیلدهای مرجع استفاده شود؛ در resolver از lookupهای تکراری برای هر فیلد اجتناب شود.
-- ساختار شیت `13_Events` شامل `EventTypeID`, `PerformedBy`, `CreatedBy`, `DepartmentID`, `OccurredAt`, `CreatedAt`, `Description`, `Status` و شناسه‌های workflow است.
-- `EventDataService.getByEventId()` و شیت `14_EventData` فقط مسیر legacy/read-only هستند؛ در این فاز به‌عنوان منبع پویای فعال معرفی نشوند.
-- پاسخ‌های فرم در شیت `35_EventFormData` و تعریف فرم‌ها در `32_Forms` و `33_FormFields` قرار دارند؛ داده فرم به EventID متصل است. افزودن کل فرم باید فیلدهای فعال همان فرم را با binding پایدار موجود اضافه کند، نه اینکه پاسخ JSON خام به کاربر نمایش داده شود.
-- Definition فعلی در `36_PrintTemplates` و `DefinitionJSON` ذخیره می‌شود؛ هیچ Sheet، migration، endpoint یا مدل ذخیره‌سازی موازی لازم نیست.
+### Backend — قرارداد و ذخیره‌سازی موجود
+- `Router.js`: مسیرهای اصلی ایجاد و ویرایش پروژه `POST /projects` و `PUT /projects/:id`؛ مسیر جدید لازم نیست.
+- `ProjectValidator.js:validateCreate()` و `validateUpdate()`: اعتبارسنجی فیلدهای پروژه؛ `CreatedAt` اکنون اعتبارسنجی اختصاصی ندارد.
+- `ProjectService.js:create(project, params)`: مقدار زمان پروژه را در رکورد پروژه از `_normalizeCreatedAt_(project.CreatedAt, now)` می‌سازد؛ این تابع فعلی بخش ساعت ورودی را نادیده می‌گیرد و تاریخ را به ساعت ۱۲:۰۰ UTC تبدیل می‌کند.
+- `ProjectService.js:_normalizeCreatedAt_(value, fallback)`: باید timestamp کامل ISO ورودی را اعتبارسنجی و حفظ کند؛ برای ورودی قدیمی date-only، رفتار سازگار فعلی (ظهر UTC) حفظ شود؛ ورودی خالی همچنان fallback زمان فعلی باشد.
+- `ProjectRepository.js`: رکورد پروژه را در شیت موجود `08_Projects` ذخیره می‌کند؛ ستون موجود `CreatedAt` همان محل ذخیره timestamp است.
+- هیچ Sheet، ستون، migration، endpoint یا مدل داده جدیدی لازم نیست. زمان ورودی باید ISO 8601 با offset/Z باشد و در ذخیره‌سازی استاندارد UTC نگهداری شود؛ زمان خالی باید رفتار فعلی (زمان جاری سرور) را حفظ کند.
 
-### قرارداد پیشنهادی binding رویداد
-- نوع binding جدید: `EVENT_FIELD`.
-- فیلدهای مجاز پیشنهادی: `EventTypeName`, `OccurredAt`, `CreatedAt`, `Description`, `CreatorName`, `PerformedByName`, `DepartmentName`, `Status`.
-- binding شامل `eventTypeId`, `field` و `selection` است؛ selectionهای `LATEST` و `ALL` پشتیبانی می‌شوند. شناسه یک رخداد مشخص در تعریف قالب ذخیره نمی‌شود، چون قالب باید بین پروژه‌ها قابل استفاده مجدد باشد؛ انتخاب رخداد مشخص در صورت نیاز باید پارامتر زمان تولید خروجی باشد.
-- منبع‌ها در همان `GET /print-templates/sources` با آرایه `eventTypes` ارائه می‌شوند.
-- resolve رویداد باید بر اساس EventTypeID و پروژه جاری باشد؛ نام کاربر/واحد/نوع رویداد از روابط موجود resolve شود، نه از متن یا شناسه خام. Tenant و دسترسی پروژه حفظ شود.
-- «افزودن کل فرم» در UI به چند binding مستقل `EVENT_FORM_FIELD` برای فیلدهای همان فرم تبدیل می‌شود؛ برای فرم‌های چندپاسخی، انتخاب پاسخ پیش‌فرض LATEST حفظ می‌شود و نمایش مجموعه‌ای تکرارشونده با جدول/ALL در محدوده سازگار فعلی بررسی و آزمون می‌شود.
-- هر منبع فقط یک‌بار به قالب اضافه شود؛ افزودن گروهی باید موارد موجود را رد کند و موارد جدید را اضافه کند. شناسه binding پایدار و label فارسی حفظ شود.
-- افزودن به بوم باید المان‌های متصل واقعی ایجاد کند و موقعیت/صفحه را با اندازه canvas و المان‌های قبلی هماهنگ کند؛ افزودن منبع به Definition بدون المان کافی نیست.
+### تصمیم‌های محصول و سازگاری
+- دقیقاً از `PMS.JalaliCalendar` استفاده شود؛ تقویم دوم یا منطق انتخاب ساعت مستقل ایجاد نشود.
+- فیلد ایجاد پروژه و همان فیلد در فرم ویرایش به datetime-local تبدیل شوند تا زمان حذف یا بازنویسی نشود.
+- ارسال مقدار از Frontend مانند رویدادها به ISO UTC تبدیل شود؛ Backend timestamp کامل را حفظ کند.
+- ورودی‌های قدیمی date-only و رکوردهای فعلی بدون migration پشتیبانی شوند.
+- زمان ثبت واقعی سیستم و سایر audit fields تغییر نکنند؛ این تغییر فقط مقدار انتخابی `CreatedAt` پروژه را پوشش می‌دهد.
 
 ## 📋 Macro-Task Queue & Implementation Log
 
 - [x] **Task 1 — Discovery & Planning**
-  - بررسی TODO5 و ARCHITECTURE هر دو مخزن و سوابق فاز قبلی.
-  - بررسی شاخه‌های موجود، آخرین commitهای main و ساخت شاخه feature عملیاتی مشترک.
-  - ترسیم جریان واقعی منابع، API، Definition، event/form repositories و آزمون‌های فعلی.
-  - تصمیم معماری: توسعه همان Print Designer و API منابع موجود؛ عدم ایجاد Sheet، endpoint، صفحه یا مسیر ذخیره‌سازی موازی.
-  - یافته‌ها و قرارداد اولیه در بخش Technical Spec ثبت شد.
+  - خواندن `TODO5.md` و `ARCHITECTURE.md` در هر دو مخزن عملیاتی.
+  - بررسی main، آخرین commitها، دسترسی مخازن و ساخت شاخه feature مشترک از main.
+  - بررسی دقیق کامپوننت تقویم مشترک، نحوه استفاده در فرم رویداد، فرم پروژه، payloadهای API و ذخیره CreatedAt در Backend.
+  - تصمیم: استفاده مجدد از کامپوننت و APIهای فعلی؛ بدون مسیر یا ساختار داده موازی.
 
-- [x] **Task 2 — Unified data-source picker & direct canvas insertion**
-  - اصلاح منبع رویداد: `GET /print-templates/sources` اکنون فرم‌های فعال متصل به هر نوع رویداد را از نگاشت `34_EventTypeForms` برمی‌گرداند؛ resolve پاسخ فرم با `eventTypeId` محدود می‌شود تا داده انواع رویداد مخلوط نشود.
-  - Frontend: جایگزینی source pickerهای پراکنده با دکمه «افزودن اطلاعات» و مودال سه‌تب مرکزی/فرم‌ها/رویدادها؛ جستجو، باز/بسته‌کردن گروه‌ها، شمارنده انتخاب و وضعیت +/✓.
-  - Frontend: افزودن کل فرم یا فیلد تکی؛ افزودن کل گروه رویداد یا فیلد تکی؛ افزودن خودکار المان‌های متصل به بوم با جلوگیری از هم‌پوشانی و حفظ undo/redo، inspector و bindings موجود.
-  - Backend: گسترش پاسخ `GET /print-templates/sources` با انواع رویداد فعال و tenant-scoped؛ اعتبارسنجی و resolve فیلدهای رویداد در همان سرویس/Definition موجود.
-  - تست: گروه کامل/انتخاب تکی، dedupe، رویدادهای متعدد، آخرین/همه/مشخص، نام‌های انسانی، tenant isolation و سازگاری قالب‌های قدیمی.
+- [ ] **Task 2 — Reuse shared datetime picker & preserve project timestamp (IN PROGRESS)**
+  - Frontend: تبدیل فیلد موجود `#new-project-created-at` به `datetime-local`؛ حفظ UI جلالی و انتخاب ساعت/دقیقه دقیقاً مانند ثبت رویداد.
+  - Frontend: ارسال مقدار به‌صورت ISO UTC با همان الگوی `Events.submitEvent()`؛ بازیابی تاریخ و ساعت در حالت ویرایش.
+  - Backend: اصلاح `ProjectService._normalizeCreatedAt_()` برای حفظ timestamp کامل و اعتبارسنجی زمان؛ حفظ رفتار date-only و fallback فعلی.
+  - افزودن تست‌های رگرسیون برای حفظ ساعت، تاریخ نامعتبر، ورودی قدیمی date-only و مقادیر خالی؛ بدون تغییر Sheet/API.
 
-  - *Log:* اصلاح نهایی چیدمان مودال انتخاب اطلاعات در Frontend عملیاتی و ادغام‌شده در main: `css/print-template-library.css` — افزودن `.pt-data-picker-content` با `flex-flow: row nowrap` و `overflow-x: auto`، تثبیت عرض کارت‌های `.pt-data-group`، اسکرول عمودی مستقل `.pt-data-items`، محدودیت ارتفاع و تنظیمات موبایل؛ `tests/print-template-library.test.js` — افزودن آزمون رگرسیون برای ریل افقی گروه‌ها و اسکرول مستقل فهرست فیلدها؛ `index.html` — به‌روزرسانی cache key استایل به `20261111-data-picker-horizontal-scroll-1`. هیچ API، تابع JavaScript، ساختار Google Sheets، مدل داده یا تغییر Backend برای این اصلاح لازم نبود. PR فرانت‌اند #91 با commit ادغام `80345c997153a0bb9ffbf59cb1f18fcd549f7168` در `main` ادغام شد؛ تست عملی سه تب در موبایل توسط Product Owner تأیید شد.
-
-- [x] **Task 3 — Integration, regression & delivery**
-  - *Log:* ادغام و تحویل نهایی فاز Print Designer: در Frontend فقط آزمون cache-busting در `tests/print-template-library.test.js` اصلاح شد تا مقدار CSS با cache key واقعی `index.html` یعنی `20261111-data-picker-horizontal-scroll-1` هماهنگ باشد؛ هیچ کد اجرایی، API، Backend یا ساختار Google Sheets تغییر نکرد. تغییر از طریق PR #93 با روش squash در مخزن عملیاتی Frontend ادغام شد؛ head قبل از ادغام `89bd86957246c3bc5002cd4f48cbf276a0a6ad76` و merge commit نهایی `5046cdc4448a9830fa79f26700b787cb87a75ebe` است. شاخه `main` به همین commit رسید. پس از ادغام، workflowهای Print designer regression (`42986295436`)، Frontend checks (`42986295143`)، PMS frontend agent suite (`42986295136`)، PMS cross-repository QA (`42986295254`)، GitHub Pages build/deployment (`42986295106`) و Publish frontend to GitHub Pages (`42986295205`) همگی روی همین SHA با نتیجه success تکمیل شدند. ممیزی جامع مرورگر (`42986295197`) در زمان ثبت این Log هنوز در وضعیت in_progress و مرحله UI inventory/performance audit متوقف‌مانده بود؛ این وضعیت جداگانه ثبت شد و نتیجه موفق برای آن ادعا نمی‌شود. Product Owner تست عملی نسخه منتشرشده شامل انتخاب‌گر سه‌تب، پیمایش افقی گروه‌ها، افزودن اطلاعات به بوم، ذخیره/بازگشایی، پیش‌نمایش چاپ، PDF و ورود مستقیم تصویر را تأیید کرد. Backend تغییر اجرایی نداشت و استقرار مجدد GAS لازم نبود.
-  - اجرای تست‌های Frontend و Backend، syntax و CI؛ بررسی PDF اصلی، تصویر مستقل، پیش‌نمایش، چاپ، ذخیره/بازگشایی و قالب‌های قدیمی.
-  - بازبینی diff، قرارداد API، مجوزها و عدم تغییر داده/Sheet.
-  - پس از موفقیت، ایجاد PRهای جداگانه به main؛ ادغام/انتشار فقط طبق چرخه مجاز و بدون ادعای استقرار تا تأیید workflow و بررسی نسخه زنده.
-  - *Log:* بازبینی Regression Backend: `tests/print-templates.test.js` شامل ۲۰ آزمون برای اعتبارسنجی binding، tenant isolation، منابع فعال، آخرین/همه رویدادها، تفکیک فرم بر اساس نوع رویداد، preview و lifecycle فایل‌هاست. اجرای GitHub Actions روی کد Backend موفق بود: `Backend source checks` و `PMS agent suite`، شامل تست‌های واحد/یکپارچه، بررسی syntax فایل‌های Apps Script و manifest و کنترل‌های ایمنی انتشار؛ workflow runهای `42874168227` و `42874168244` تمام jobها را با نتیجه success تکمیل کردند. این نتایج مربوط به کد Backend هستند و به‌معنای استقرار جدید Apps Script نیستند.
-  - تحویل به Product Owner برای تست عملی؛ تا تأیید کاربر تسک بسته نمی‌شود.
+- [ ] **Task 3 — Integration, regression & delivery**
+  - اجرای تست‌های تقویم، فرم پروژه و تست‌های Backend؛ بررسی syntax و قرارداد POST/PUT.
+  - بررسی سازگاری تاریخ‌های قبلی، ویرایش پروژه، پیش‌نویس و ایجاد پروژه عادی؛ اطمینان از عدم تغییر داده‌های عملیاتی.
+  - بازبینی diff و CI؛ ادغام از طریق PR به main فقط پس از تست و تأیید لازم.
+  - اگر تغییر Backend به استقرار GAS نیاز داشته باشد، workflow رسمی sync/deploy و نسخه Web App جداگانه بررسی شود؛ Push به‌تنهایی استقرار محسوب نمی‌شود.
+  - تحویل برای تست Product Owner؛ تا تأیید عملی، تسک بسته نمی‌شود.
