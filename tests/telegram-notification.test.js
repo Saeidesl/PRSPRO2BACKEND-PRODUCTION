@@ -29,6 +29,16 @@ function loadTelegramService(options) {
     FormRepository: {
       findResponsesByEvent: () => options.responses || []
     },
+    ProjectInformationRepository: {
+      findByProject: () => options.projectInformation || []
+    },
+    InformationTypeRepository: {
+      findById: id => (options.informationTypes || []).find(item => String(item.ID) === String(id)) || null,
+      findColumns: id => {
+        const item = (options.informationTypes || []).find(type => String(type.ID) === String(id));
+        return item && item.Columns || [];
+      }
+    },
     AttachmentRepository: {
       findById: id => (options.attachments || []).find(item => String(item.ID) === String(id)) || null,
       findByEntity: (type, id) => (options.attachments || []).filter(item => String(item.EntityType) === String(type) && String(item.EntityID) === String(id))
@@ -119,6 +129,15 @@ test('sends project details and canonical image names while excluding other-tena
         ResponseJSON: '{}'
       }
     ],
+    projectInformation: [{
+      ID: 'PI1', TenantID: 'T1', ProjectID: 'P1', InformationTypeID: 'IMG',
+      SourceEventID: 'EVT1', Status: 'ACTIVE',
+      ValueJSON: JSON.stringify([{ AttachmentID: 'A1', FileName: 'نام جعلی.png' }])
+    }],
+    informationTypes: [{
+      ID: 'IMG', TenantID: 'T1', Name: 'تصویر نمونه تأییدشده',
+      DataType: 'image', Cardinality: 'SINGLE'
+    }],
     attachments: [{
       ID: 'A1', TenantID: 'T1', EntityType: 'PROJECT', EntityID: 'P1',
       Status: 'ACTIVE', FileName: 'sample-approved.png', MimeType: 'image/png'
@@ -137,6 +156,9 @@ test('sends project details and canonical image names while excluding other-tena
   assert.match(harness.sent[0].payload.text, /sample-approved.png/);
   assert.doesNotMatch(harness.sent[0].payload.text, /نام جعلی/);
   assert.doesNotMatch(harness.sent[0].payload.text, /اطلاعات محرمانه/);
+  assert.match(harness.sent[0].payload.text, /🧾اطلاعات مرکزی ثبت‌شده توسط این رویداد:/);
+  assert.doesNotMatch(harness.sent[0].payload.text, /📋 فرم:/);
+  assert.equal((harness.sent[0].payload.text.match(/sample-approved\\.png/g) || []).length, 1);
 });
 
 test('respects project NotifyEnabled=false but does not require a project for independent events', () => {
