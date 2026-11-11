@@ -1066,3 +1066,54 @@
 - انتشار Web App در همان run موفق شد؛ خروجی clasp نسخه deployment را `@17` گزارش کرد.
 - تست نهایی Product Owner در محیط عملیاتی موفق تأیید شد.
 - هیچ تغییر ساختاری در Google Sheets، API یا migration انجام نشد.
+
+
+## 2026-11-11 — تثبیت اعلان‌های تلگرام در نسخه عملیاتی PMS
+
+### محدوده و تصمیم‌های معماری
+- مخازن عملیاتی: `Saeidesl/PRSPRO2BACKEND-PRODUCTION` و `Saeidesl/PRSPRO2-PRODUCTION`.
+- هدف: ارسال اعلان قابل اتکا برای ایجاد پروژه (DRAFT و ACTIVE) و ثبت رویداد، همراه با داده‌های معتبر، اطلاعات مرکزی مرتبط و فایل‌های واقعی.
+- مسیرهای موجود حفظ شدند: `POST /projects` از `ProjectService.create(project, params)` و `POST /events` از `EventService.create(event, params)`. هیچ مسیر موازی، endpoint، Sheet، ستون یا migration جدید ایجاد نشد.
+- ارسال اعلان best-effort است؛ خطای Telegram نباید عملیات ثبت پروژه/رویداد را ناموفق کند. جداسازی Tenant، وضعیت مجاز پیوست و idempotency مسیرهای موجود حفظ می‌شوند.
+- هیچ داده عملیاتی، رکورد Google Sheets یا فایل Google Drive حذف یا migrate نشد.
+
+### نقشه فنی Backend
+- `ProjectService.js`:
+  - `ProjectService.create(project, params)` مسیر اصلی ایجاد پروژه است.
+  - hook موجود `_notifyProjectCreated_` پس از ذخیره موفق و Audit در هر دو مسیر DRAFT و ACTIVE فراخوانی می‌شود.
+  - نتیجه و خطای اعلان در Execution log ثبت می‌شود و شکست Telegram مانع ثبت پروژه نیست.
+- `EventService.js`:
+  - `EventService.create(event, params)` و `_createUnlocked_(event, params)` مسیر اصلی ثبت رویداد هستند.
+  - پس از ذخیره رویداد، داده‌های فرم، تغییرات پروژه، Audit و تکمیل idempotency، متد `TelegramBotService.notifyEvent(...)` فراخوانی می‌شود.
+- `TelegramBotService.js`:
+  - `notifyProject` اعلان پروژه و پیوست‌های معتبر آن را ارسال می‌کند.
+  - `notifyEvent` اطلاعات رویداد، فرم‌ها/داده‌های مستقل و اطلاعات مرکزی مرتبط را ارسال می‌کند.
+  - `_formatNotificationDate_` تاریخ را با تقویم شمسی و timezone برابر `Asia/Tehran` قالب‌بندی می‌کند.
+  - `_collectProjectNotificationAttachments_` پیوست‌های پروژه را با کنترل Tenant، Entity، وضعیت و اندازه گردآوری می‌کند.
+  - `_sendNotificationAttachment_` فایل اصلی را از Google Drive بازیابی و با Telegram `sendDocument` ارسال می‌کند؛ باینری اصلی حفظ می‌شود.
+  - `_formatNotificationForms_`, `_formatNotificationValue_`, `_notificationAttachmentLabel_` و `_splitNotificationMessage_` برای قالب‌بندی و تقسیم پیام استفاده می‌شوند.
+  - در پیام پروژه شناسه داخلی پروژه و وضعیت فنی تکراری `ACTIVE` نمایش داده نمی‌شود؛ newlineها واقعی هستند و وضعیت تجاری فارسی حفظ می‌شود.
+  - در رویداد دارای اطلاعات مرکزی مرتبط، ارتباط از طریق `SourceEventID` تشخیص داده شده و فقط snapshot همان رویداد با عنوان «🧾 اطلاعات مرکزی ثبت‌شده توسط این رویداد» نمایش داده می‌شود؛ پاسخ فرم/legacy تکراری حذف می‌شود. رویدادهای مستقل یا فاقد snapshot مرکزی همچنان از مسیر قبلی داده فرم/legacy استفاده می‌کنند.
+- `ProjectInformationRepository.findByProject` برای یافتن اطلاعات مرکزی و `SourceEventID` استفاده می‌شود.
+- مدل داده موجود حفظ شد:
+  - `08_Projects` برای پروژه‌ها.
+  - `30_ProjectInformation.ValueJSON` و `31_ProjectInformationHistory` برای اطلاعات مرکزی و تاریخچه.
+  - `32_Forms`, `33_FormFields`, `34_EventTypeForms`, `35_EventFormData` برای فرم‌ها و پاسخ‌ها.
+  - `15_Attachments` برای metadata فایل؛ فایل واقعی در Google Drive و از طریق `StorageKey` بازیابی می‌شود.
+- تنظیمات محرمانه فقط در Script Properties باقی می‌مانند؛ `TELEGRAM_BOT_TOKEN` و سایر secrets در کد، Log یا GitHub قرار نمی‌گیرند.
+- اتصال چت به Tenant از طریق pairing موجود، تنها Tenant فعال، پنجره ده‌دقیقه‌ای و اولین `/start` خصوصی انجام می‌شود؛ polling موجود حفظ شده است.
+
+### Frontend و قرارداد یکپارچگی
+- در این فاز تغییر runtime در Frontend لازم نبود؛ کد اجرایی UI، API و payloadها تغییر نکردند.
+- تغییرات Frontend در PRهای این فاز صرفاً همگام‌سازی مستندات و Log پذیرش بودند.
+- قراردادهای موجود Router و API حفظ شدند؛ تغییر ساختاری در Google Sheets یا فایل‌های Drive انجام نشد.
+
+### آزمون، انتشار و پذیرش
+- تست‌های رگرسیون در `tests/telegram-notification.test.js` برای تاریخ شمسی، حذف شناسه داخلی، ارسال فایل اصلی، اعلان پروژه، حذف داده‌های تکراری و قالب پیام توسعه یافتند.
+- Backend CI روی commit نهایی موفق بود: `Backend source checks` و `PMS agent suite` هر دو Success.
+- Backend PR #62 و Frontend PR #96 برای اصلاحات اولیه ادغام شدند؛ Backend PR #63 و Frontend PR #97 اصلاح قالب و اطلاعات مرکزی را ادغام کردند.
+- Backend PR #64 و Frontend PR #98 سوابق پذیرش و مستندات را همگام کردند.
+- commit نهایی Backend main: `773c4b9af6a383fc3b6fbf1b84c9bcb3f5281adf`.
+- commit نهایی Frontend main: `ee1b95f55b04d54c4efcc7f1d74225007b62dda8`.
+- Product Owner ارسال فایل واقعی، اعلان ایجاد پروژه، قالب پیام، نبود شناسه‌های داخلی، نبود وضعیت فنی تکراری، نمایش یکتای اطلاعات مرکزی و آزمون زنده اعلان‌های پروژه/رویداد را تأیید کرد.
+- وضعیت GitHub، CI، Apps Script sync/deploy و تست زنده مستقل از یکدیگر در نظر گرفته شدند؛ پذیرش زنده بر اساس تأیید صریح کاربر ثبت شده است.
