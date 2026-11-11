@@ -69,6 +69,8 @@
 
 ### Task 2 — Shared Cache، سیاست freshness و حفظ وضعیت صفحه (IN PROGRESS)
 - پیاده‌سازی مشترک با تکیه بر `PMS.Api` و `PMS.Cache` موجود؛ بدون ساخت مسیر موازی.
+- پیشرفت پیاده‌سازی در Frontend: گزینه `refreshCached: false` به `Api.getCached` افزوده شد تا cache معتبر بدون GET پس‌زمینه برگردد؛ cache منقضی/ناموجود همچنان از API خوانده می‌شود.
+- بررسی فعلی نشان می‌دهد تغییر Backend، API، مجوزها یا schema شیت برای این مرحله لازم نیست؛ هیچ فایل runtime بک‌اند تغییر نکرده است. Task 2 تا تکمیل invalidation و آزمون همچنان باز است.
 - تعریف سیاست روشن برای cache hit تازه، cache منقضی، force refresh و خطای شبکه.
 - جداسازی cache بر اساس نشست/کاربر و query؛ پاک‌سازی امن در خروج و تغییر نشست.
 - حذف GET تکراری در navigation عادی؛ refresh فقط طبق TTL/رویداد invalidation یا درخواست دستی.
