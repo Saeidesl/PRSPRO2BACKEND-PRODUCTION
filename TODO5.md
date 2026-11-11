@@ -24,9 +24,9 @@
   - این الگو مرجع سازگاری برای فرم پروژه است؛ زمان ثبت‌شده از همان picker مشترک می‌آید.
 - `js/modules/projects.js`:
   - `Projects.openCreateForm(editProject, options)` فرم ایجاد/ویرایش موجود را می‌سازد.
-  - فیلد فعلی `#new-project-created-at[name="CreatedAt"]` از نوع `date` است؛ به همین علت مرحله ساعت فعال نمی‌شود.
+  - فیلد موجود `#new-project-created-at[name="CreatedAt"]` در حالت ایجاد از نوع `datetime-local` و در حالت ویرایش همچنان `date` است؛ مرحله ساعت فقط برای ایجاد پروژه فعال می‌شود.
   - `Projects.createProject(modal)` مقدار `CreatedAt` را در payload موجود `POST /projects` یا `PUT /projects/:id` قرار می‌دهد.
-  - در حالت ویرایش، مقدار `CreatedAt` فعلاً با `.slice(0, 10)` به فیلد برگردانده می‌شود و ساعت از دست می‌رود؛ این تبدیل باید با datetime-local سازگار شود.
+  - در حالت ویرایش، مقدار `CreatedAt` با `.slice(0, 10)` به فیلد date برگردانده می‌شود؛ این رفتار حفظ می‌شود چون API ویرایش فعلی زمان ایجاد را تغییر نمی‌دهد.
 - `pages/projects.html`: دکمه ورود به همان فرم موجود؛ صفحه/مسیر جدید لازم نیست.
 - `tests/jalali-calendar-datetime.test.js` و `tests/jalali-calendar-datetime.browser.cjs`: پوشش مرحله تاریخ→ساعت، انتخاب ساعت/دقیقه، تأیید نهایی، سازگاری date-only و رفتار موبایل.
 - آزمون‌های فرم پروژه در `tests/project-modal-accessibility.test.js` و `tests/single-project-entry.test.js`؛ تست اختصاصی قرارداد تاریخ/ساعت پروژه باید افزوده شود.
@@ -42,7 +42,7 @@
 
 ### تصمیم‌های محصول و سازگاری
 - دقیقاً از `PMS.JalaliCalendar` استفاده شود؛ تقویم دوم یا منطق انتخاب ساعت مستقل ایجاد نشود.
-- فیلد ایجاد پروژه و همان فیلد در فرم ویرایش به datetime-local تبدیل شوند تا زمان حذف یا بازنویسی نشود.
+- فقط حالت ایجاد پروژه به datetime-local تبدیل شود؛ حالت ویرایش date-only باقی بماند تا رفتار فعلی و محدودیت قرارداد PUT تغییر نکند.
 - ارسال مقدار از Frontend مانند رویدادها به ISO UTC تبدیل شود؛ Backend timestamp کامل را حفظ کند.
 - ورودی‌های قدیمی date-only و رکوردهای فعلی بدون migration پشتیبانی شوند.
 - زمان ثبت واقعی سیستم و سایر audit fields تغییر نکنند؛ این تغییر فقط مقدار انتخابی `CreatedAt` پروژه را پوشش می‌دهد.
@@ -56,8 +56,8 @@
   - تصمیم: استفاده مجدد از کامپوننت و APIهای فعلی؛ بدون مسیر یا ساختار داده موازی.
 
 - [ ] **Task 2 — Reuse shared datetime picker & preserve project timestamp (IN PROGRESS)**
-  - Frontend: تبدیل فیلد موجود `#new-project-created-at` به `datetime-local`؛ حفظ UI جلالی و انتخاب ساعت/دقیقه دقیقاً مانند ثبت رویداد.
-  - Frontend: ارسال مقدار به‌صورت ISO UTC با همان الگوی `Events.submitEvent()`؛ بازیابی تاریخ و ساعت در حالت ویرایش.
+  - Frontend: تبدیل فیلد موجود `#new-project-created-at` فقط در حالت ایجاد به `datetime-local`؛ حفظ UI جلالی و انتخاب ساعت/دقیقه دقیقاً مانند ثبت رویداد. حالت ویرایش date-only باقی بماند.
+  - Frontend: ارسال مقدار حالت ایجاد به‌صورت ISO UTC با همان الگوی `Events.submitEvent()`؛ عدم تغییر رفتار فیلد تاریخ در حالت ویرایش.
   - Backend: اصلاح `ProjectService._normalizeCreatedAt_()` برای حفظ timestamp کامل و اعتبارسنجی زمان؛ حفظ رفتار date-only و fallback فعلی.
   - افزودن تست‌های رگرسیون برای حفظ ساعت، تاریخ نامعتبر، ورودی قدیمی date-only و مقادیر خالی؛ بدون تغییر Sheet/API.
 
