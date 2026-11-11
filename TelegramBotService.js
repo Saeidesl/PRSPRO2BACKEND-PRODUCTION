@@ -20,6 +20,53 @@ const TelegramBotService = {
     return String(this._properties_().getProperty('TELEGRAM_WEBHOOK_SECRET') || '').trim();
   },
 
+  /**
+   * Validate and activate the dedicated Production bot.
+   * The token is stored only in Script Properties and is never returned or logged.
+   */
+  configureBotToken: function(token) {
+    token = String(token || '').trim();
+    if (!token) throw new Error('توکن ربات وارد نشده است.');
+
+    let verification;
+    try {
+      const response = UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/getMe', {
+        method: 'post',
+        muteHttpExceptions: true
+      });
+      verification = JSON.parse(response.getContentText() || '{}');
+      if (response.getResponseCode() < 200 || response.getResponseCode() >= 300 ||
+          !verification.ok || !verification.result) {
+        throw new Error('invalid');
+      }
+    } catch (error) {
+      throw new Error('توکن معتبر نیست یا تلگرام در دسترس نیست؛ توکن ذخیره نشد.');
+    }
+
+    const username = String(verification.result.username || '');
+    if (username.toLowerCase() !== 'prs_production_notifications_bot'.toLowerCase()) {
+      throw new Error('این توکن متعلق به ربات @PRS_Production_Notifications_Bot نیست؛ هیچ تنظیمی تغییر نکرد.');
+    }
+
+    const props = this._properties_();
+    const previousToken = String(props.getProperty('TELEGRAM_BOT_TOKEN') || '');
+    props.setProperty('TELEGRAM_BOT_TOKEN', token);
+    props.deleteProperty('TELEGRAM_UPDATE_OFFSET');
+    try {
+      const polling = this.setupPolling();
+      return {
+        ok: true,
+        username: username,
+        mode: polling.mode,
+        intervalMinutes: polling.intervalMinutes
+      };
+    } catch (error) {
+      if (previousToken) props.setProperty('TELEGRAM_BOT_TOKEN', previousToken);
+      else props.deleteProperty('TELEGRAM_BOT_TOKEN');
+      throw new Error('ربات شناسایی شد، اما فعال‌سازی دریافت پیام کامل نشد. دوباره اجرا کنید و گزارش اجرا را بررسی کنید.');
+    }
+  },
+
   _json_: function(value) {
     return ContentService.createTextOutput(JSON.stringify(value))
       .setMimeType(ContentService.MimeType.JSON);
