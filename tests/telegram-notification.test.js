@@ -201,7 +201,7 @@ test('sends event attachments as original documents, not links or photo conversi
       TenantID: 'T1', EventID: 'EVT1',
       DefinitionSnapshotJSON: JSON.stringify({ Name: 'فرم طراحی', Fields: [{ InformationTypeID: 'IMG', InformationType: { ID: 'IMG', Name: 'تصویر', DataType: 'image' } }] }),
       ResponseJSON: JSON.stringify({ IMG: [{ AttachmentID: 'A1', FileName: 'طرح-اولیه.jpg' }] })
-    })
+    }]
   });
   const result = harness.service.notifyEvent(
     { ID: 'EVT1', TenantID: 'T1', ProjectID: 'P1' },
