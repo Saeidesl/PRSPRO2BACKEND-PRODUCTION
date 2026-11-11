@@ -19,7 +19,7 @@ function loadTelegramService(options) {
     },
     UrlFetchApp: {
       fetch: (url, request) => {
-        sent.push({ url, payload: JSON.parse(request.payload) });
+        sent.push({ url, payload: typeof request.payload === 'string' ? JSON.parse(request.payload) : request.payload });
         return {
           getResponseCode: () => 200,
           getContentText: () => JSON.stringify({ ok: true, result: { message_id: sent.length } })
@@ -30,7 +30,23 @@ function loadTelegramService(options) {
       findResponsesByEvent: () => options.responses || []
     },
     AttachmentRepository: {
-      findById: id => (options.attachments || []).find(item => String(item.ID) === String(id)) || null
+      findById: id => (options.attachments || []).find(item => String(item.ID) === String(id)) || null,
+      findByEntity: (type, id) => (options.attachments || []).filter(item => String(item.EntityType) === String(type) && String(item.EntityID) === String(id))
+    },
+    StorageRepository: {
+      getFile: key => ({ getName: () => key, getBlob: () => ({ setName: name => ({ name }) }) })
+    },
+    Utilities: {
+      formatDate: (date, timezone, format) => {
+        const parts = new Intl.DateTimeFormat('en-CA', {
+          timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+        }).formatToParts(date).reduce((result, part) => {
+          if (part.type !== 'literal') result[part.type] = part.value;
+          return result;
+        }, {});
+        return parts.year + '-' + parts.month + '-' + parts.day + ' ' + parts.hour + ':' + parts.minute + ':' + parts.second;
+      }
     },
     console: { warn: () => {}, log: () => {} },
     JSON, String, Number, Array, Object, Math, RegExp, isFinite
@@ -158,4 +174,61 @@ test('does not send to a different tenant and handles missing Telegram configura
   );
   assert.equal(result.status, 'NOT_CONFIGURED');
   assert.equal(harness.sent.length, 0);
+});
+
+test('formats event timestamps as Jalali Tehran time and omits the internal event ID', () => {
+  const harness = loadTelegramService({ mapping: { T1: ['1001'] } });
+  const result = harness.service.notifyEvent(
+    { ID: 'EVT-PRIVATE-ID', TenantID: 'T1', ProjectID: '', OccurredAt: '2026-11-11T15:03:00.000Z', CreatedAt: '2026-11-11T15:04:39.584Z' },
+    null, { Name: 'ثبت آزمایشی' }, null, { Name: 'مدیر' }, 'T1'
+  );
+  assert.equal(result.status, 'SENT');
+  assert.match(harness.sent[0].payload.text, /1405\/08\/20 18:33/);
+  assert.match(harness.sent[0].payload.text, /1405\/08\/20 18:34/);
+  assert.doesNotMatch(harness.sent[0].payload.text, /EVT-PRIVATE-ID/);
+});
+
+test('sends event attachments as original documents, not links or photo conversions', () => {
+  const attachment = {
+    ID: 'A1', TenantID: 'T1', EntityType: 'PROJECT', EntityID: 'P1',
+    Status: 'ACTIVE', FileName: 'طرح-اولیه.jpg', MimeType: 'image/jpeg',
+    StorageKey: 'DRIVE_FILE_1', FileSize: 1024
+  };
+  const harness = loadTelegramService({
+    mapping: { T1: ['1001'] },
+    attachments: [attachment],
+    responses: [{
+      TenantID: 'T1', EventID: 'EVT1',
+      DefinitionSnapshotJSON: JSON.stringify({ Name: 'فرم طراحی', Fields: [{ InformationTypeID: 'IMG', InformationType: { ID: 'IMG', Name: 'تصویر', DataType: 'image' } }] }),
+      ResponseJSON: JSON.stringify({ IMG: [{ AttachmentID: 'A1', FileName: 'طرح-اولیه.jpg' }] })
+    }]
+  });
+  const result = harness.service.notifyEvent(
+    { ID: 'EVT1', TenantID: 'T1', ProjectID: 'P1' },
+    { ID: 'P1', TenantID: 'T1', NotifyEnabled: true },
+    { Name: 'تحویل طرح' }, null, null, 'T1'
+  );
+  assert.equal(result.mediaSent, 1);
+  const mediaCall = harness.sent.find(call => call.url.indexOf('/sendDocument') >= 0);
+  assert.ok(mediaCall);
+  assert.equal(mediaCall.payload.document.name, 'طرح-اولیه.jpg');
+  assert.doesNotMatch(harness.sent[0].payload.text, /https?:\/\//);
+});
+
+test('sends project creation notices to the matching tenant and includes its Jalali timestamp', () => {
+  const harness = loadTelegramService({ mapping: { T1: ['1001'] } });
+  const result = harness.service.notifyProject({
+    ID: 'P-NEW', TenantID: 'T1', ProjectCode: 'P-01', Title: 'نمونه',
+    RecordState: 'ACTIVE', NotifyEnabled: true, CreatedAt: '2026-11-11T15:03:00.000Z'
+  }, { Name: 'مدیر سیستم' }, 'T1');
+  assert.equal(result.status, 'SENT');
+  assert.equal(harness.sent.length, 1);
+  assert.match(harness.sent[0].payload.text, /پروژه جدید/);
+  assert.match(harness.sent[0].payload.text, /1405\/08\/20 18:33/);
+});
+
+test('project creation service invokes the existing notification hook for drafts and active projects', () => {
+  const projectService = fs.readFileSync(path.join(__dirname, '..', 'ProjectService.js'), 'utf8');
+  assert.match(projectService, /this\._notifyProjectCreated_\(createdDraft, user\)/);
+  assert.match(projectService, /this\._notifyProjectCreated_\(created, user\)/);
 });

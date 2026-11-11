@@ -220,6 +220,43 @@ const TelegramBotService = {
     return { ok: true, tenantId: tenantId, registered: true };
   },
 
+  _formatNotificationDate_: function(value) {
+    if (value === undefined || value === null || String(value).trim() === '') return '';
+    const date = value instanceof Date ? value : new Date(value);
+    if (!isFinite(date.getTime())) return String(value);
+    let local;
+    try {
+      local = Utilities.formatDate(date, 'Asia/Tehran', 'yyyy-MM-dd HH:mm:ss');
+    } catch (error) {
+      return String(value);
+    }
+    const match = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})(?::\d{2})?$/.exec(local);
+    if (!match) return String(value);
+    const gy = Number(match[1]), gm = Number(match[2]), gd = Number(match[3]);
+    const gdm = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+    const gy2 = gm > 2 ? gy + 1 : gy;
+    let days = 355666 + (365 * gy) + Math.floor((gy2 + 3) / 4) -
+      Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) + gd + gdm[gm - 1];
+    let jy = -1595 + 33 * Math.floor(days / 12053);
+    days %= 12053;
+    jy += 4 * Math.floor(days / 1461);
+    days %= 1461;
+    if (days > 365) {
+      jy += Math.floor((days - 1) / 365);
+      days = (days - 1) % 365;
+    }
+    let jm, jd;
+    if (days < 186) {
+      jm = 1 + Math.floor(days / 31);
+      jd = 1 + (days % 31);
+    } else {
+      jm = 7 + Math.floor((days - 186) / 30);
+      jd = 1 + ((days - 186) % 30);
+    }
+    const pad = function(number) { return String(number).padStart(2, '0'); };
+    return jy + '/' + pad(jm) + '/' + pad(jd) + ' ' + match[4] + ':' + match[5];
+  },
+
   _parseNotificationJson_: function(value, fallback) {
     if (value === undefined || value === null || String(value).trim() === '') return fallback;
     try { return JSON.parse(String(value)); } catch (error) { return fallback; }
@@ -520,6 +557,23 @@ const TelegramBotService = {
     });
   },
 
+  _collectProjectNotificationAttachments_: function(project, tenantId) {
+    if (!project || !project.ID || typeof AttachmentRepository === 'undefined' ||
+        typeof AttachmentRepository.findByEntity !== 'function') return [];
+    const maxBytes = typeof AppConfig !== 'undefined' && AppConfig.FILES
+      ? Number(AppConfig.FILES.MAX_SIZE_MB || 10) * 1024 * 1024
+      : 10 * 1024 * 1024;
+    return (AttachmentRepository.findByEntity('PROJECT', project.ID) || []).filter(function(item) {
+      return item &&
+        String(item.TenantID) === String(tenantId) &&
+        String(item.EntityType || '').toUpperCase() === 'PROJECT' &&
+        String(item.EntityID) === String(project.ID) &&
+        ['DELETED', 'VOID'].indexOf(String(item.Status || 'ACTIVE').toUpperCase()) === -1 &&
+        String(item.StorageKey || '').trim() &&
+        Number(item.FileSize || 0) <= maxBytes;
+    });
+  },
+
   _sendNotificationAttachment_: function(chatId, attachment) {
     const token = this._getToken_();
     if (!token || !chatId || !attachment || !attachment.StorageKey ||
@@ -533,11 +587,13 @@ const TelegramBotService = {
       if (blob && typeof blob.setName === 'function') {
         blob = blob.setName(String(attachment.FileName || file.getName() || 'attachment'));
       }
-      const isImage = String(attachment.MimeType || '').toLowerCase().indexOf('image/') === 0;
-      const method = isImage ? 'sendPhoto' : 'sendDocument';
-      const payload = { chat_id: String(chatId) };
-      payload[isImage ? 'photo' : 'document'] = blob;
-      payload.caption = String(attachment.FileName || 'پیوست رویداد').slice(0, 900);
+      // Send the original binary as a document to preserve image quality and file contents.
+      const method = 'sendDocument';
+      const payload = {
+        chat_id: String(chatId),
+        document: blob,
+        caption: String(attachment.FileName || 'پیوست سامانه').slice(0, 900)
+      };
       const response = UrlFetchApp.fetch(
         'https://api.telegram.org/bot' + token + '/' + method,
         { method: 'post', payload: payload, muteHttpExceptions: true }
@@ -598,25 +654,41 @@ const TelegramBotService = {
       stepName ? 'مرحله فعلی: ' + stepName : '',
       createdByUser && (createdByUser.Name || createdByUser.Username)
         ? 'ثبت‌کننده: ' + (createdByUser.Name || createdByUser.Username) : '',
-      project.CreatedAt ? 'زمان ثبت: ' + project.CreatedAt : '',
+      project.CreatedAt ? '🕒 زمان ثبت: ' + this._formatNotificationDate_(project.CreatedAt) : '',
       String(project.Description || '').trim()
-        ? 'توضیحات: ' + String(project.Description).trim() : '',
-      'شناسه پروژه: ' + String(project.ID || '-')
+        ? '📝 توضیحات: ' + String(project.Description).trim() : '',
+      '🆔 شناسه پروژه: ' + String(project.ID || '-')
     ].filter(Boolean);
-    const chunks = this._splitNotificationMessage_(lines.join('\n'), 3800);
+    const attachments = this._collectProjectNotificationAttachments_(project, tenantId);
+    if (attachments.length) {
+      lines.push('📎 فایل‌های پروژه: ' + attachments.map(function(item) {
+        return String(item.FileName || 'فایل');
+      }).join('، '));
+    }
+    const chunks = this._splitNotificationMessage_(lines.join('\\n'), 3800);
     let sent = 0;
     let failed = 0;
+    let mediaSent = 0;
+    let mediaFailed = 0;
     recipients.forEach(function(chatId) {
       chunks.forEach(function(chunk, index) {
         const result = TelegramBotService.sendMessage(
-          chatId, (chunks.length > 1 ? '[' + (index + 1) + '/' + chunks.length + ']\n' : '') + chunk
+          chatId, (chunks.length > 1 ? '[' + (index + 1) + '/' + chunks.length + ']\\n' : '') + chunk
         );
         if (result && result.ok) sent += 1;
         else failed += 1;
       });
+      attachments.forEach(function(attachment) {
+        const result = TelegramBotService._sendNotificationAttachment_(chatId, attachment);
+        if (result && result.ok) mediaSent += 1;
+        else mediaFailed += 1;
+      });
     });
-    return { sent: sent, failed: failed, chunks: chunks.length,
-      status: sent && !failed ? 'SENT' : (sent ? 'PARTIAL' : 'FAILED') };
+    const hasFailure = failed > 0 || mediaFailed > 0;
+    const hasSuccess = sent > 0 || mediaSent > 0;
+    return { sent: sent, failed: failed, mediaSent: mediaSent, mediaFailed: mediaFailed,
+      attachments: attachments.length, chunks: chunks.length,
+      status: hasSuccess && !hasFailure ? 'SENT' : (hasSuccess ? 'PARTIAL' : 'FAILED') };
   },
 
   notifyEvent: function(event, project, eventType, department, performedUser, tenantId) {
@@ -659,17 +731,16 @@ const TelegramBotService = {
       return parts.length ? 'ردیف ' + (index + 1) + ': ' + parts.join(' | ') : '';
     }).filter(Boolean) : [];
     const lines = [
-      '🔔 ثبت رویداد جدید در سامانه مدیریت تولید',
-      'پروژه: ' + (project
+      '🔔 🏭 ثبت رویداد جدید در سامانه مدیریت تولید',
+      '🧵 پروژه: ' + (project
         ? projectCode + (projectTitle ? ' — ' + projectTitle : '')
         : 'رویداد مستقل (بدون پروژه)'),
-      'نوع رویداد: ' + eventName,
-      departmentName ? 'واحد: ' + departmentName : '',
-      performerName ? 'ثبت‌کننده/انجام‌دهنده: ' + performerName : '',
-      event.OccurredAt ? 'زمان وقوع: ' + event.OccurredAt : '',
-      event.CreatedAt ? 'زمان ثبت: ' + event.CreatedAt : '',
-      event.ID ? 'شناسه رویداد: ' + event.ID : '',
-      String(event.Description || '').trim() ? 'توضیحات: ' + String(event.Description).trim() : ''
+      '📌 نوع رویداد: ' + eventName,
+      departmentName ? '🏢 واحد: ' + departmentName : '',
+      performerName ? '👤 ثبت‌کننده/انجام‌دهنده: ' + performerName : '',
+      event.OccurredAt ? '🕒 زمان وقوع: ' + this._formatNotificationDate_(event.OccurredAt) : '',
+      event.CreatedAt ? '🗓️ زمان ثبت: ' + this._formatNotificationDate_(event.CreatedAt) : '',
+      String(event.Description || '').trim() ? '📝 توضیحات: ' + String(event.Description).trim() : ''
     ].filter(Boolean);
     if (variantLines.length) lines.push('ترکیب رنگ/سایز:\n' + variantLines.join('\n'));
     else {
@@ -684,13 +755,13 @@ const TelegramBotService = {
 
     const forms = this._formatNotificationForms_(event, tenantId);
     forms.forEach(function(form) {
-      lines.push('فرم: ' + form.name + '\n' + form.lines.join('\n'));
+      lines.push('📋 فرم: ' + form.name + '\n' + form.lines.join('\n'));
     });
     const centralLines = this._formatNotificationCentralInformation_(event, project, tenantId);
     if (centralLines.length) lines.push('اطلاعات مرکزی ثبت‌شده توسط این رویداد:\n' + centralLines.join('\n'));
     const attachments = this._collectNotificationAttachments_(event, project, tenantId);
     if (attachments.length) {
-      lines.push('پیوست‌های ثبت‌شده: ' + attachments.map(function(item) {
+      lines.push('📎 فایل‌های پیوست‌شده: ' + attachments.map(function(item) {
         return String(item.FileName || 'فایل');
       }).join('، '));
     }

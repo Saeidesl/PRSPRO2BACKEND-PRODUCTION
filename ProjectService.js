@@ -431,10 +431,21 @@ const ProjectService = {
         typeof TelegramBotService === 'undefined' ||
         typeof TelegramBotService.notifyProject !== 'function') return;
     try {
-      TelegramBotService.notifyProject(project, user, user.TenantID);
+      const result = TelegramBotService.notifyProject(project, user, user.TenantID);
+      if (!result || !Number(result.sent || 0)) {
+        console.warn('Telegram project notification was not delivered. Status: ' +
+          String(result && result.status || 'NO_RESULT') +
+          '; projectId: ' + String(project.ID || ''));
+      } else {
+        console.log('Telegram project notification delivered. Messages: ' +
+          Number(result.sent || 0) + '; media: ' + Number(result.mediaSent || 0));
+      }
+      return result;
     } catch (telegramError) {
-      console.warn('Telegram project notification failed: ' +
+      console.warn('Telegram project notification failed for project ' +
+        String(project.ID || '') + ': ' +
         String(telegramError && telegramError.message || telegramError));
+      return { sent: 0, status: 'ERROR' };
     }
   },
 
