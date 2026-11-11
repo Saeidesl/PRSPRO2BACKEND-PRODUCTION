@@ -61,7 +61,10 @@
   - تصمیم: ممیزی روی شاخه تازه منشعب‌شده از main؛ بدون تغییر main، بدون دست‌کاری شاخه feature قبلی و بدون تغییر Backend runtime/داده.
   - محدودیت اجرایی: گزارش مرورگر موجود تنها viewport 390px را پوشش می‌دهد؛ اجرای تازه چندرزولوشنی و سناریوهای واقعی تعامل باید تکمیل شود.
 
-- [ ] **Task 2 — Multi-viewport browser audit (IN PROGRESS)**
+- [x] **Task 2 — Multi-viewport browser audit**
+  - ممیزی ایستا و بررسی پوشش تست‌های مرورگر انجام شد؛ محدودیت viewport ثابت اتوماسیون در بخش یافته‌های تکمیلی ثبت شد.
+  - Product Owner اعلام کرد صفحات را شخصاً در دسکتاپ و موبایل بررسی کرده و مشکلی مشاهده نکرده است؛ این تأیید دستی به‌عنوان نتیجه پذیرش بصری ثبت می‌شود و جایگزین ادعای اجرای خودکار ماتریس ۸ اندازه نیست.
+  - *Log:* بررسی `index.html`، `css/layout.css`، `css/responsive.css`، `css/events.css`، `css/procurement.css`، `css/print-template-library.css`، `css/jalali-calendar.css` و `js/modules/{projects,events,procurement,print-designer}.js`؛ تحلیل گزارش `test-results/latest-performance-report.md/json` و workflowهای `pms-ui-performance-audit.yml` و `frontend-check.yml`؛ ثبت محدودیت viewportهای تست؛ تأیید دستی Product Owner مبنی بر نبود مشکل در دسکتاپ و موبایل. هیچ کد اجرایی یا داده‌ای تغییر نکرد.
 ### یافته‌های اولیه Task 2 — هنوز نیازمند بازتولید در مرورگر چندرزولوشنی
 - **بهینه‌سازی با اطمینان بالا:** `index.html:97` کتابخانه PDF.js را برای تمام صفحات بارگذاری می‌کند؛ مصرف مستقیم `window.pdfjsLib` در بررسی فایل‌های ماژول فقط در `js/modules/print-designer.js` مشاهده شد. پیشنهاد بررسی انتقال بارگذاری PDF.js به زمان ورود/نیاز واقعی طراح چاپ؛ قبل از اصلاح باید تست چاپ و پیش‌نمایش حفظ شود.
 - **ریسک cascade CSS:** `css/layout.css` شامل بلوک‌های breakpoint تکراری (از جمله 1100/768/520px) است؛ `css/responsive.css` نیز override عمومی جداگانه دارد. فایل‌های `css/dark-theme.css` (2145 خط) و `css/unified-theme.css` (860 خط) هم‌زمان و سراسری بارگذاری می‌شوند. این‌ها ریسک نگهداری/تعارض‌اند، نه باگ قطعی تا زمان بازتولید بصری.
@@ -76,13 +79,16 @@
   - ثبت screenshot/console/network و تفکیک باگ قطعی از coverage gap و ریسک احتمالی.
   - بازتولید latency procurement و ثبت اندازه‌گیری frontend/backend؛ بدون ارسال فرم یا تغییر داده Production.
 
-- [ ] **Task 3 — Confirmed UI/UX and performance corrections**
+- [x] **Task 3 — Confirmed UI/UX and performance corrections**
+  - بر اساس بررسی دستی Product Owner و شواهد موجود، هیچ ایراد قطعی UI/UX برای اصلاح تأیید نشد؛ از اعمال تغییرات حدسی و پرریسک خودداری شد.
+  - بهینه‌سازی PDF.js و بازآرایی CSS صرفاً پیشنهادهای نیازمند اندازه‌گیری/تأیید باقی ماندند و در این فاز اعمال نشدند.
+  - *Log:* هیچ فایل اجرایی، API، Sheet یا workflow عملیاتی تغییر نکرد؛ تصمیم ثبت‌شده: عدم اعمال اصلاح بدون باگ بازتولیدشده و تأییدشده.
   - رفع فقط ایرادهای بازتولیدشده با حفظ DOM/API/workflow موجود و بدون تغییرات غیرضروری.
   - بررسی بارگذاری تنبل PDF.js (در حال حاضر در shell سراسری است ولی مصرف مستقیم در Print Designer دیده شده) و CSSهای تکراری فقط پس از اثبات اثر و تست رگرسیون.
   - اصلاح واکنش‌گرایی مودال‌ها، scroll/touch و چیدمان فقط در صورت اثبات مشکل در ماتریس دستگاه‌ها.
   - عدم تغییر Backend/Sheets مگر با دلیل فنی مستند و تأیید محدوده.
 
-- [ ] **Task 4 — Regression, integration & delivery**
+- [ ] **Task 4 — Regression, integration & delivery (IN PROGRESS)**
   - اجرای تست‌های موجود، syntax checks، تست مرورگری چندرزولوشنی و regression روی مسیرهای اصلی.
   - بررسی سازگاری Frontend/API، مجوزها، درخواست‌ها، داده و عدم ایجاد regression.
   - ادغام از طریق PR به main فقط پس از تست و تأیید Product Owner؛ انتشار Frontend/Backend جداگانه و با راستی‌آزمایی مستقل گزارش شود.
