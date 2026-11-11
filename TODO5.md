@@ -88,7 +88,11 @@
   - اصلاح واکنش‌گرایی مودال‌ها، scroll/touch و چیدمان فقط در صورت اثبات مشکل در ماتریس دستگاه‌ها.
   - عدم تغییر Backend/Sheets مگر با دلیل فنی مستند و تأیید محدوده.
 
-- [ ] **Task 4 — Regression, integration & delivery (IN PROGRESS)**
+- [x] **Task 4 — Regression, integration & delivery**
+  - بازبینی نهایی اختلاف شاخه با `main` انجام شد؛ در هر دو مخزن تنها فایل تغییرکرده `TODO5.md` است و هیچ کد اجرایی، API، Sheet یا تنظیم deployment تغییر نکرده است.
+  - به دلیل نبود تغییر اجرایی، تست‌های عملکردی Backend/Frontend و deployment مجدد لازم/انجام نشدند؛ اجرای خودکار چندرزولوشنی نیز به‌علت محدودیت ابزار dispatch نشده است. این محدودیت‌ها صریحاً در گزارش ممیزی حفظ شده‌اند.
+  - نتیجه پذیرش بصری دسکتاپ و موبایل طبق اعلام مستقیم Product Owner بدون مشکل است.
+  - *Log:* Backend commit `044c1abfc6432c662ac64c960353932adf06903f` و Frontend commit `94b9a2e100c7e974899deed0e92ca6487e50e7d3`؛ مقایسه هر دو شاخه با `main` نشان داد 4 commit جلو و 0 عقب هستند و تنها `TODO5.md` تغییر کرده؛ هیچ merge، deployment یا تغییر داده انجام نشد.
   - اجرای تست‌های موجود، syntax checks، تست مرورگری چندرزولوشنی و regression روی مسیرهای اصلی.
   - بررسی سازگاری Frontend/API، مجوزها، درخواست‌ها، داده و عدم ایجاد regression.
   - ادغام از طریق PR به main فقط پس از تست و تأیید Product Owner؛ انتشار Frontend/Backend جداگانه و با راستی‌آزمایی مستقل گزارش شود.
