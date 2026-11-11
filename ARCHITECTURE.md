@@ -1042,3 +1042,27 @@
   - PR #55 Log تأیید کاربر را در TODO5 ثبت کرد و با squash در main ادغام شد.
   - تأیید نهایی Product Owner: دو رشته اضافی حذف شده‌اند و قابلیت ورود PDF و تصویر حفظ شده است.
 - هیچ Sheet، فایل Drive یا داده عملیاتی حذف یا migrate نشد.
+
+## 2026-11-11 — افزودن حفظ ساعت انتخابی در تاریخ ایجاد پروژه
+
+### محدوده و تصمیم معماری
+- مخزن عملیاتی: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه `main`.
+- هدف: حفظ timestamp انتخاب‌شده توسط کاربر در فیلد `CreatedAt` پروژه؛ بدون ایجاد API، Sheet، ستون یا migration جدید.
+- مسیرهای موجود ایجاد پروژه و ایجاد پیش‌نویس حفظ شدند؛ ورودی قدیمی date-only همچنان پشتیبانی می‌شود.
+
+### نقشه فنی Backend
+- `ProjectService.js`:
+  - تابع `_normalizeCreatedAt_(value, fallback)` timestamp کامل ISO 8601 دارای `Z` یا offset را اعتبارسنجی و به UTC normalize می‌کند و ساعت/دقیقه انتخابی را حفظ می‌کند.
+  - ورودی date-only برای سازگاری با داده‌ها و کلاینت‌های قدیمی با رفتار قبلی (ظهر UTC) تفسیر می‌شود.
+  - مقدار خالی از fallback قبلی استفاده می‌کند؛ مقدار نامعتبر رد می‌شود.
+  - `ProjectService.create(project, params)` در هر دو مسیر ایجاد عادی و پیش‌نویس از همین تابع استفاده می‌کند.
+- `Router.js`: مسیرهای موجود `POST /projects` و `PUT /projects/:id` حفظ شدند؛ endpoint جدیدی اضافه نشد.
+- `ProjectRepository.js`: timestamp در ستون موجود `CreatedAt` از شیت `08_Projects` ذخیره می‌شود؛ ساختار دیتابیس تغییر نکرد.
+- آزمون `tests/project-created-at-datetime.test.js`: timestamp دقیق، offset، date-only قدیمی، fallback خالی، تاریخ/زمان/offset نامعتبر و مسیرهای ایجاد را پوشش می‌دهد.
+
+### یکپارچه‌سازی، انتشار و پذیرش
+- Backend PR #60 با squash merge commit `0ec2b711da6438ddbfe8bbcdeb1df0ff08327923` در `main` ادغام شد.
+- GitHub Actions workflow رسمی `.github/workflows/sync-apps-script.yml`، run `43014220825`، اعتبارسنجی ۸۵ فایل منبع و push تعداد ۸۶ فایل به Apps Script را با موفقیت انجام داد.
+- انتشار Web App در همان run موفق شد؛ خروجی clasp نسخه deployment را `@17` گزارش کرد.
+- تست نهایی Product Owner در محیط عملیاتی موفق تأیید شد.
+- هیچ تغییر ساختاری در Google Sheets، API یا migration انجام نشد.
