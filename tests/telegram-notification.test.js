@@ -158,7 +158,7 @@ test('sends project details and canonical image names while excluding other-tena
   assert.doesNotMatch(harness.sent[0].payload.text, /اطلاعات محرمانه/);
   assert.match(harness.sent[0].payload.text, /🧾اطلاعات مرکزی ثبت‌شده توسط این رویداد:/);
   assert.doesNotMatch(harness.sent[0].payload.text, /📋 فرم:/);
-  assert.equal((harness.sent[0].payload.text.match(/sample-approved\.png/g) || []).length, 1);
+  assert.equal((harness.sent[0].payload.text.match(/تصویر نمونه تأییدشده: sample-approved\.png/g) || []).length, 1);
 });
 
 test('respects project NotifyEnabled=false but does not require a project for independent events', () => {
