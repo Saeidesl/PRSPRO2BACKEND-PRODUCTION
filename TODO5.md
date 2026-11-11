@@ -35,9 +35,10 @@
   - `_formatNotificationForms_`: خواندن snapshot و پاسخ فرم‌ها از `FormRepository.findResponsesByEvent`.
   - `_formatNotificationValue_` و `_notificationAttachmentLabel_`: قالب‌بندی داده‌ها و بررسی metadata فایل؛ نسخه فعلی نام فایل را نمایش می‌دهد و فایل واقعی را ارسال نمی‌کند.
   - `_splitNotificationMessage_`: تقسیم پیام بلند به قطعات قابل ارسال.
-  - `setupPolling`, `pollUpdates`: دریافت فرمان‌های ربات با polling.
+  - `setupPolling`, `pollUpdates`, `_processUpdate_`, `armTenantRegistration`, `registerTenantChat`: دریافت فرمان‌ها و اتصال یک‌باره Chat ID به Tenant فعال؛ پنجره pairing پس از ۱۰ دقیقه منقضی و پس از ثبت اولین گفت‌وگوی خصوصی بسته می‌شود.
 - `Code.js`
   - `runTelegramBotSetup()` در `Code.js` توکن را با پنجره ورودی دریافت می‌کند؛ `TelegramBotService.configureBotToken()` هویت `@PRS_Production_Notifications_Bot` را با `getMe` اعتبارسنجی، توکن را فقط در Script Properties ذخیره و polling یک‌دقیقه‌ای را فعال می‌کند.
+  - `runTelegramTenantRegistration()` با `TelegramBotService.armTenantRegistration()` تنها Tenant فعال را از `GoogleSheetsRepository.getAll('01_Tenants')` پیدا می‌کند و یک پنجره pairing ده‌دقیقه‌ای می‌سازد؛ اولین `/start` در گفت‌وگوی خصوصی، Chat ID را از Telegram update می‌گیرد و با `registerTenantChat()` به همان Tenant متصل می‌کند. اگر تعداد Tenant فعال دقیقاً یک نباشد، ثبت متوقف می‌شود.
   - `runTelegramWebhookSetup()`، `runTelegramPolling()` و `runTelegramWebhookInfo()` نقاط اجرای تنظیم/عیب‌یابی polling هستند.
   - webhook ورودی در `doPost` از API اصلی تفکیک شده است؛ راهکار polling برای اجتناب از محدودیت 401 endpoint ناشناس Apps Script موجود است.
 
@@ -61,7 +62,8 @@
 - Script Properties موجود در طراحی:
   - `TELEGRAM_BOT_TOKEN` (از طریق `runTelegramBotSetup()`؛ هرگز در کد/Log/GitHub ذخیره نمی‌شود)
   - `TELEGRAM_WEBHOOK_SECRET` (فقط برای webhook؛ polling موجود است)
-  - `TELEGRAM_TENANT_CHAT_IDS` (JSON نگاشت TenantID به آرایه chat ID)
+  - `TELEGRAM_TENANT_CHAT_IDS` (JSON نگاشت TenantID به آرایه chat ID؛ توسط pairing خودکار مدیریت می‌شود)
+  - `TELEGRAM_PENDING_TENANT_ID`, `TELEGRAM_PENDING_REGISTRATION_EXPIRES_AT` (وضعیت موقت pairing ده‌دقیقه‌ای)
   - هیچ توکن یا secret نباید در GitHub commit شود.
 
 ### استقرار و آزمون
