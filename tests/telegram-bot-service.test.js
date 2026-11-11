@@ -89,7 +89,7 @@ test('automatically pairs the first private chat with the only active tenant dur
     console: { warn() {} }
   };
   const source = fs.readFileSync(path.join(__dirname, '..', 'TelegramBotService.js'), 'utf8');
-  vm.runInNewContext(source + '\\nthis.__service = TelegramBotService;', context);
+  vm.runInNewContext(source + '\nthis.__service = TelegramBotService;', context);
   const result = context.__service.armTenantRegistration();
   assert.equal(result.ok, true);
   const processed = context.__service._processUpdate_({
@@ -115,7 +115,7 @@ test('refuses automatic pairing when more than one active tenant exists', () => 
     JSON, String, Object, Array, Date, Math
   };
   const source = fs.readFileSync(path.join(__dirname, '..', 'TelegramBotService.js'), 'utf8');
-  vm.runInNewContext(source + '\\nthis.__service = TelegramBotService;', context);
+  vm.runInNewContext(source + '\nthis.__service = TelegramBotService;', context);
   assert.throws(() => context.__service.armTenantRegistration(), /فقط یک Tenant فعال/);
   assert.equal(properties.TELEGRAM_PENDING_TENANT_ID, undefined);
 });
