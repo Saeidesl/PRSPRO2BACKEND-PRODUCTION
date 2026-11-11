@@ -246,8 +246,7 @@ const TelegramBotService = {
       days = (days - 1) % 365;
     }
     let jm, jd;
-    if (days < 186) {
-      jm = 1 + Math.floor(days / 31);
+    if (days < 186) {      jm = 1 + Math.floor(days / 31);
       jd = 1 + (days % 31);
     } else {
       jm = 7 + Math.floor((days - 186) / 30);
@@ -496,8 +495,7 @@ const TelegramBotService = {
   },
 
   _collectNotificationAttachments_: function(event, project, tenantId) {
-    const ids = Object.create(null);
-    const collect = function(value, depth) {
+    const ids = Object.create(null);    const collect = function(value, depth) {
       if (depth > 12 || value === null || value === undefined) return;
       if (Array.isArray(value)) {
         value.forEach(function(item) { collect(item, depth + 1); });
@@ -649,7 +647,8 @@ const TelegramBotService = {
       project.Quantity !== undefined && project.Quantity !== null && String(project.Quantity) !== ''
         ? 'تعداد: ' + project.Quantity : '',
       'وضعیت ثبت: ' + (String(project.RecordState || 'ACTIVE').toUpperCase() === 'DRAFT' ? 'پیش‌نویس' : 'فعال'),
-      project.Status ? 'وضعیت پروژه: ' + project.Status : '',
+      project.Status && String(project.Status).trim().toUpperCase() !== 'ACTIVE'
+        ? 'وضعیت پروژه: ' + project.Status : '',
       workflowName ? 'گردش‌کار: ' + workflowName : '',
       stepName ? 'مرحله فعلی: ' + stepName : '',
       createdByUser && (createdByUser.Name || createdByUser.Username)
@@ -657,7 +656,6 @@ const TelegramBotService = {
       project.CreatedAt ? '🕒 زمان ثبت: ' + this._formatNotificationDate_(project.CreatedAt) : '',
       String(project.Description || '').trim()
         ? '📝 توضیحات: ' + String(project.Description).trim() : '',
-      '🆔 شناسه پروژه: ' + String(project.ID || '-')
     ].filter(Boolean);
     const attachments = this._collectProjectNotificationAttachments_(project, tenantId);
     if (attachments.length) {
@@ -665,7 +663,7 @@ const TelegramBotService = {
         return String(item.FileName || 'فایل');
       }).join('، '));
     }
-    const chunks = this._splitNotificationMessage_(lines.join('\\n'), 3800);
+    const chunks = this._splitNotificationMessage_(lines.join('\n'), 3800);
     let sent = 0;
     let failed = 0;
     let mediaSent = 0;
@@ -746,19 +744,23 @@ const TelegramBotService = {
     else {
       if (event.Color) lines.push('رنگ: ' + event.Color);
       if (event.Size) lines.push('سایز: ' + event.Size);
-      if (event.VariantQuantity !== undefined && event.VariantQuantity !== null &&
-          String(event.VariantQuantity) !== '') lines.push('تعداد: ' + event.VariantQuantity);
+      if (event.VariantQuantity !== undefined && event.VariantQuantity !== null &&          String(event.VariantQuantity) !== '') lines.push('تعداد: ' + event.VariantQuantity);
     }
 
-    const dynamicLines = this._formatLegacyEventData_(event, tenantId, project ? project.ID : '');
-    if (dynamicLines.length) lines.push('اطلاعات اختصاصی رویداد:\n' + dynamicLines.join('\n'));
-
-    const forms = this._formatNotificationForms_(event, tenantId);
-    forms.forEach(function(form) {
-      lines.push('📋 فرم: ' + form.name + '\n' + form.lines.join('\n'));
-    });
     const centralLines = this._formatNotificationCentralInformation_(event, project, tenantId);
-    if (centralLines.length) lines.push('اطلاعات مرکزی ثبت‌شده توسط این رویداد:\n' + centralLines.join('\n'));
+    if (centralLines.length) {
+      // Form responses are mirrored into central information; show the event-linked
+      // central snapshot once instead of repeating the same values from each form.
+      lines.push('🧾اطلاعات مرکزی ثبت‌شده توسط این رویداد:\n' + centralLines.join('\n'));
+    } else {
+      // Preserve details for independent/legacy events that have no central snapshot.
+      const dynamicLines = this._formatLegacyEventData_(event, tenantId, project ? project.ID : '');
+      if (dynamicLines.length) lines.push('اطلاعات اختصاصی رویداد:\n' + dynamicLines.join('\n'));
+      const forms = this._formatNotificationForms_(event, tenantId);
+      forms.forEach(function(form) {
+        lines.push('📋 فرم: ' + form.name + '\n' + form.lines.join('\n'));
+      });
+    }
     const attachments = this._collectNotificationAttachments_(event, project, tenantId);
     if (attachments.length) {
       lines.push('📎 فایل‌های پیوست‌شده: ' + attachments.map(function(item) {
