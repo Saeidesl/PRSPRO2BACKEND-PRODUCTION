@@ -1092,3 +1092,41 @@
 - Backend PR #63 با commit `2293ffbf9c3d277d5e2e4bacd49630b869a5571e` و Frontend PR #97 با commit `978238342113940b80362669e984e89495550e28` در `main` ادغام شدند.
 - کاربر مرحله نهایی Sync/Deploy و آزمون زنده اعلان‌های پروژه و رویداد را تأیید کرد؛ این پذیرش مربوط به همین فاز است.
 - هیچ تغییر ساختاری در Google Sheets، API یا داده عملیاتی انجام نشد.
+
+
+## 2026-11-11 — بستن فاز بازطراحی فضای کاری قالب‌ساز
+
+### محدوده و تصمیم معماری
+- فاز انتقال پنل «تنظیم المان انتخاب‌شده» و «لایه‌های صفحه» از ستون کناری به بالای بوم طراحی قالب، پس از تأیید نهایی Product Owner بسته شد.
+- هدف اصلی، آزادسازی عرض بوم و جلوگیری از فشرده‌شدن محتوای پنل‌ها بود؛ قابلیت‌ها و مسیرهای موجود حفظ شدند.
+- تغییرات اجرایی فقط در Frontend انجام شد. Backend، APIها، مدل Definition، Google Sheets، Google Drive و داده‌های عملیاتی تغییری نکردند.
+
+### نقشه فنی و جزئیات پیاده‌سازی Frontend
+- `pages/print-designer.html`:
+  - دو پنل موجود در ساختار جدید `.pt-editor-panels` و بالاتر از `.pt-editor-layout` قرار گرفتند.
+  - `details.pt-mobile-tools` برای تنظیم المان انتخاب‌شده و `details.pt-layer-details` برای فهرست لایه‌ها حفظ شدند.
+  - شناسه‌های مصرف‌شده توسط JavaScript بدون تغییر ماندند: `pt-inspector-empty`, `pt-inspector-fields`, تمام فیلدهای `pt-prop-*`, `pt-table-properties` و `pt-layer-list`.
+  - `aside.pt-editor-inspector` حذف شد و بوم در ساختار مستقل `.pt-editor-layout` باقی ماند.
+- `css/print-template-library.css`:
+  - چیدمان دسکتاپ پنل‌ها با grid دو ستونه `minmax(0,1.4fr) minmax(260px,.8fr)` تعریف شد.
+  - در breakpointهای موجود، پنل‌ها به چیدمان تک‌ستونه و تمام‌عرض تبدیل می‌شوند؛ بوم و اسکرول مستقل آن حفظ شده است.
+  - selectorهای حالت preview و print به `.pt-editor-panels` منتقل شدند تا پنل‌های ویرایش در پیش‌نمایش/چاپ نمایش داده نشوند.
+  - استایل کنترل‌های پنل از selectorهای قدیمی `.pt-editor-inspector` به `.pt-editor-panels` منتقل شد.
+- `js/modules/print-designer.js` تغییر نکرد؛ وابستگی‌های موجود `renderInspector()`, `renderLayers()`, `renderEditor()`, `selectElement()` و `applyInspectorChange()` با همان IDهای DOM کار می‌کنند.
+- `index.html`: cache key فایل CSS به `20261111-workspace-panels-1` تغییر کرد تا نسخه جدید استایل بارگذاری شود.
+- `tests/print-template-library.test.js`: آزمون ساختاری برای ترتیب پنل‌ها بالای بوم، حذف sidebar قدیمی، چیدمان grid و رفتار preview اضافه شد؛ assertion مربوط به cache key نیز به‌روزرسانی شد.
+
+### آزمون، یکپارچگی و پذیرش
+- Frontend Checks: موفق.
+- Print Designer Regression: موفق.
+- PMS Cross-Repository QA: موفق.
+- PMS Frontend Agent Suite و بررسی asset/stylesheet: موفق.
+- تست‌های واقعی مرورگر برای modal keyboard و تقویم جلالی/ساعت: موفق.
+- ممیزی جامع UI/Performance اجرا شد، اما نتیجه کلی آن `authentication-failed` بود؛ در همان گزارش، `failedRoutes=0`, `failedNetworkRequests=0`, `consoleErrors=0` و `pageErrors=0` ثبت شد. این مورد محدودیت احراز هویت محیط ممیزی است و به‌عنوان تست موفق ممیزی گزارش نمی‌شود.
+- Product Owner تست عملی نهایی تغییرات را تأیید کرد؛ بر همین اساس Task 2 و Task 3 و کل فاز بسته شدند.
+
+### ادغام و محدوده انتشار
+- Frontend PR #102 با squash merge commit `fcf40bd0066aaf80f35917d3be57f9b874cd47af` در شاخه `main` مخزن عملیاتی ادغام شد.
+- Backend PR #67 با commit `69520aa5fec78d3d597be29bd7c1187e5491bb15` صرفاً برای ثبت TODO5 و نقشه فنی فاز بود؛ هیچ فایل runtime بک‌اند تغییر نکرد.
+- هیچ API، Sheet، ستون، migration یا داده عملیاتی جدید/حذف‌شده‌ای وجود ندارد.
+- تأیید کاربر به‌عنوان پذیرش عملیاتی ثبت شد؛ این Log ادعای مستقل درباره اجرای deployment جدید GitHub Pages یا تغییر deployment بک‌اند ندارد.
