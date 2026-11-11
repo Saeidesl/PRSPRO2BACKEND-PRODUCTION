@@ -1066,3 +1066,29 @@
 - انتشار Web App در همان run موفق شد؛ خروجی clasp نسخه deployment را `@17` گزارش کرد.
 - تست نهایی Product Owner در محیط عملیاتی موفق تأیید شد.
 - هیچ تغییر ساختاری در Google Sheets، API یا migration انجام نشد.
+
+
+## 2026-11-11 — بستن فاز اتصال اعلان‌های تلگرام
+
+### محدوده و تصمیم معماری
+- فاز اتصال اعلان‌های پروژه و رویداد در نسخه عملیاتی، پس از تأیید صریح Product Owner در 2026-11-11 بسته شد.
+- اعلان‌ها در مسیرهای اصلی موجود ثبت پروژه و ثبت رویداد باقی ماندند؛ مسیر موازی، endpoint جدید، Sheet یا migration ایجاد نشد.
+- خطای Telegram به‌صورت best-effort مدیریت می‌شود و نباید ثبت اصلی پروژه/رویداد را ناموفق کند؛ تنظیمات محرمانه فقط در Script Properties باقی می‌مانند.
+
+### نقشه فنی Backend
+- `ProjectService.js`: مسیر `ProjectService.create()` و hook اعلان پروژه در هر دو حالت DRAFT و ACTIVE؛ `_notifyProjectCreated_()` برای ثبت نتیجه/علت ارسال در Execution log.
+- `EventService.js`: فراخوانی `TelegramBotService.notifyEvent()` پس از تکمیل ثبت رویداد، فرم‌ها، اطلاعات و idempotency.
+- `TelegramBotService.js`: `notifyProject()`, `notifyEvent()`, `_formatNotificationDate_()`, `_collectProjectNotificationAttachments_()`, `_sendNotificationAttachment_()`, `_formatNotificationForms_()` و قالب‌بندی پیام؛ تاریخ شمسی با ساعت تهران، حذف شناسه‌های داخلی از متن، تفکیک بخش‌ها و ارسال فایل واقعی مجاز با `sendDocument`.
+- داده‌های فرم از ساختار موجود `32_Forms`, `33_FormFields`, `34_EventTypeForms`, `35_EventFormData` و snapshotها؛ اطلاعات مرکزی از `30_ProjectInformation` و `SourceEventID`؛ metadata پیوست از `15_Attachments` و فایل واقعی از Google Drive tenant-scoped خوانده می‌شود.
+- `Code.js`: ابزارهای موجود polling و pairing ده‌دقیقه‌ای Tenant برای اتصال Chat ID؛ هیچ token/secret در مخزن ثبت نمی‌شود.
+- APIهای موجود `POST /projects` و `POST /events` و ساختار Sheets حفظ شدند.
+
+### نقشه Frontend و آزمون
+- کد اجرایی Frontend برای اعلان تلگرام تغییر نکرد؛ PR #97 صرفاً ثبت مستندات/پذیرش بود.
+- آزمون‌های `tests/telegram-notification.test.js` برای تاریخ شمسی، حذف شناسه داخلی، ارسال باینری فایل و قالب اعلان پروژه توسعه یافتند.
+- Backend source checks و PMS agent suite روی commit نهایی موفق شدند؛ کاربر اعلان ایجاد پروژه و ارسال فایل واقعی را در محیط عملیاتی تست و تأیید کرد.
+
+### ادغام، انتشار و پذیرش
+- Backend PR #63 با commit `2293ffbf9c3d277d5e2e4bacd49630b869a5571e` و Frontend PR #97 با commit `978238342113940b80362669e984e89495550e28` در `main` ادغام شدند.
+- کاربر مرحله نهایی Sync/Deploy و آزمون زنده اعلان‌های پروژه و رویداد را تأیید کرد؛ این پذیرش مربوط به همین فاز است.
+- هیچ تغییر ساختاری در Google Sheets، API یا داده عملیاتی انجام نشد.
