@@ -246,8 +246,7 @@ const TelegramBotService = {
       days = (days - 1) % 365;
     }
     let jm, jd;
-    if (days < 186) {      jm = 1 + Math.floor(days / 31);
-      jd = 1 + (days % 31);
+    if (days < 186) {      jm = 1 + Math.floor(days / 31);      jd = 1 + (days % 31);
     } else {
       jm = 7 + Math.floor((days - 186) / 30);
       jd = 1 + ((days - 186) % 30);
@@ -496,8 +495,7 @@ const TelegramBotService = {
 
   _collectNotificationAttachments_: function(event, project, tenantId) {
     const ids = Object.create(null);    const collect = function(value, depth) {
-      if (depth > 12 || value === null || value === undefined) return;
-      if (Array.isArray(value)) {
+      if (depth > 12 || value === null || value === undefined) return;      if (Array.isArray(value)) {
         value.forEach(function(item) { collect(item, depth + 1); });
         return;
       }
@@ -671,7 +669,7 @@ const TelegramBotService = {
     recipients.forEach(function(chatId) {
       chunks.forEach(function(chunk, index) {
         const result = TelegramBotService.sendMessage(
-          chatId, (chunks.length > 1 ? '[' + (index + 1) + '/' + chunks.length + ']\\n' : '') + chunk
+          chatId, (chunks.length > 1 ? '[' + (index + 1) + '/' + chunks.length + ']\n' : '') + chunk
         );
         if (result && result.ok) sent += 1;
         else failed += 1;
@@ -746,7 +744,6 @@ const TelegramBotService = {
       if (event.Size) lines.push('سایز: ' + event.Size);
       if (event.VariantQuantity !== undefined && event.VariantQuantity !== null &&          String(event.VariantQuantity) !== '') lines.push('تعداد: ' + event.VariantQuantity);
     }
-
     const centralLines = this._formatNotificationCentralInformation_(event, project, tenantId);
     if (centralLines.length) {
       // Form responses are mirrored into central information; show the event-linked
