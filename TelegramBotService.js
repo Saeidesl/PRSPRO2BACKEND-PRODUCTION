@@ -292,6 +292,269 @@ const TelegramBotService = {
     return chunks;
   },
 
+  _formatInformationValue_: function(value, info, tenantId, projectId) {
+    info = info || {};
+    const columns = Array.isArray(info.Columns)
+      ? info.Columns.filter(function(column) {
+          return String(column.Status || 'ACTIVE').toUpperCase() === 'ACTIVE';
+        })
+      : [];
+    if (!columns.length) {
+      return this._formatNotificationValue_(value, info.DataType, tenantId, projectId);
+    }
+    const rows = String(info.Cardinality || 'SINGLE').toUpperCase() === 'MULTIPLE'
+      ? (Array.isArray(value) ? value : [])
+      : (value && typeof value === 'object' ? [value] : []);
+    return rows.map(function(dataRow, index) {
+      const cells = columns.map(function(column) {
+        const cell = dataRow ? dataRow[String(column.Code)] : '';
+        const formatted = this._formatNotificationValue_(
+          cell, column.DataType, tenantId, projectId
+        );
+        return formatted ? String(column.Name || column.Code) + ': ' + formatted : '';
+      }, this).filter(Boolean);
+      return cells.length ? 'ردیف ' + (index + 1) + ' — ' + cells.join(' | ') : '';
+    }, this).filter(Boolean).join('\n');
+  },
+
+  _formatNotificationCentralInformation_: function(event, project, tenantId) {
+    if (!event || !project || typeof ProjectInformationRepository === 'undefined' ||
+        typeof ProjectInformationRepository.findByProject !== 'function') return [];
+    const rows = ProjectInformationRepository.findByProject(project.ID) || [];
+    return rows.filter(function(row) {
+      return String(row.TenantID) === String(tenantId) &&
+        String(row.SourceEventID || '') === String(event.ID) &&
+        String(row.Status || 'ACTIVE').toUpperCase() === 'ACTIVE';
+    }).map(function(row) {
+      const type = typeof InformationTypeRepository !== 'undefined' &&
+        InformationTypeRepository.findById
+        ? InformationTypeRepository.findById(row.InformationTypeID)
+        : null;
+      if (!type || String(type.TenantID) !== String(tenantId)) return '';
+      const info = Object.assign({}, type, {
+        Columns: typeof InformationTypeRepository.findColumns === 'function'
+          ? InformationTypeRepository.findColumns(type.ID)
+          : []
+      });
+      const value = this._parseNotificationJson_(row.ValueJSON, null);
+      const formatted = this._formatInformationValue_(
+        value, info, tenantId, project.ID
+      );
+      return formatted ? String(type.Name || type.Code || 'اطلاعات مرکزی') + ': ' + formatted : '';
+    }, this).filter(Boolean);
+  },
+
+  _formatLegacyEventData_: function(event, tenantId, projectId) {
+    if (!event || typeof EventDataRepository === 'undefined' ||
+        typeof EventDataRepository.findByEventId !== 'function') return [];
+    const stored = EventDataRepository.findByEventId(event.ID);
+    if (!stored || (stored.TenantID && String(stored.TenantID) !== String(tenantId))) return [];
+    const data = this._parseNotificationJson_(stored.DataJSON, {});
+    const definitions = typeof EventFieldRepository !== 'undefined' &&
+      typeof EventFieldRepository.getAll === 'function'
+      ? (EventFieldRepository.getAll() || []).filter(function(field) {
+          return (!field.TenantID || String(field.TenantID) === String(tenantId)) &&
+            String(field.EventTypeID || '') === String(event.EventTypeID || '');
+        })
+      : [];
+    const getField = function(code) {
+      return definitions.find(function(field) {
+        return String(field.Code || field.FieldCode || field.ID || '') === String(code || '');
+      }) || null;
+    };
+    const entries = Array.isArray(data)
+      ? data.map(function(item, index) {
+          item = item && typeof item === 'object' ? item : { Value: item };
+          const code = item.Code || item.FieldCode || item.EventFieldID || '';
+          const definition = getField(code);
+          const value = item.Value !== undefined ? item.Value : item.FieldValue;
+          const label = item.Name || item.FieldName || item.Label ||
+            (definition && (definition.Name || definition.Label)) || code || ('فیلد ' + (index + 1));
+          const formatted = this._formatNotificationValue_(
+            value, definition && definition.DataType, tenantId, projectId
+          );
+          return formatted ? String(label) + ': ' + formatted : '';
+        }, this)
+      : (data && typeof data === 'object' ? Object.keys(data).map(function(code) {
+          const item = data[code];
+          const definition = getField(code);
+          const value = item && typeof item === 'object' && !Array.isArray(item)
+            ? (item.Value !== undefined ? item.Value :
+              (item.FieldValue !== undefined ? item.FieldValue : item))
+            : item;
+          const label = item && typeof item === 'object'
+            ? (item.Name || item.FieldName || item.Label ||
+              (definition && (definition.Name || definition.Label)) || code)
+            : ((definition && (definition.Name || definition.Label)) || code);
+          const formatted = this._formatNotificationValue_(
+            value, definition && definition.DataType, tenantId, projectId
+          );
+          return formatted ? String(label) + ': ' + formatted : '';
+        }, this) : []);
+    return entries.filter(Boolean);
+  },
+
+  _collectNotificationAttachments_: function(event, project, tenantId) {
+    const ids = Object.create(null);
+    const collect = function(value, depth) {
+      if (depth > 12 || value === null || value === undefined) return;
+      if (Array.isArray(value)) {
+        value.forEach(function(item) { collect(item, depth + 1); });
+        return;
+      }
+      if (typeof value !== 'object') return;
+      const id = String(value.AttachmentID ||
+        (value.ID && (value.FileName || value.MimeType) ? value.ID : '') || '').trim();
+      if (id) ids[id] = true;
+      Object.keys(value).forEach(function(key) {
+        if (key !== 'AttachmentID' && key !== 'ID') collect(value[key], depth + 1);
+      });
+    };
+
+    if (typeof FormRepository !== 'undefined' &&
+        typeof FormRepository.findResponsesByEvent === 'function') {
+      (FormRepository.findResponsesByEvent(event.ID) || []).forEach(function(row) {
+        if (String(row.TenantID) !== String(tenantId) ||
+            String(row.EventID) !== String(event.ID)) return;
+        collect(this._parseNotificationJson_(row.ResponseJSON, {}), 0);
+      }, this);
+    }
+
+    if (project && typeof ProjectInformationRepository !== 'undefined' &&
+        typeof ProjectInformationRepository.findByProject === 'function') {
+      (ProjectInformationRepository.findByProject(project.ID) || []).forEach(function(row) {
+        if (String(row.TenantID) !== String(tenantId) ||
+            String(row.SourceEventID || '') !== String(event.ID) ||
+            String(row.Status || 'ACTIVE').toUpperCase() !== 'ACTIVE') return;
+        collect(this._parseNotificationJson_(row.ValueJSON, null), 0);
+      }, this);
+    }
+
+    if (typeof AttachmentRepository === 'undefined' ||
+        typeof AttachmentRepository.findById !== 'function') return [];
+    if (typeof AttachmentRepository.findByEntity === 'function') {
+      (AttachmentRepository.findByEntity('EVENT', event.ID) || []).forEach(function(item) {
+        if (item && String(item.TenantID) === String(tenantId)) ids[String(item.ID)] = true;
+      });
+    }
+
+    const maxBytes = typeof AppConfig !== 'undefined' && AppConfig.FILES
+      ? Number(AppConfig.FILES.MAX_SIZE_MB || 10) * 1024 * 1024
+      : 10 * 1024 * 1024;
+    return Object.keys(ids).map(function(id) {
+      return AttachmentRepository.findById(id);
+    }).filter(function(attachment) {
+      if (!attachment || String(attachment.TenantID) !== String(tenantId) ||
+          ['DELETED', 'VOID'].indexOf(String(attachment.Status || 'ACTIVE').toUpperCase()) !== -1 ||
+          !String(attachment.StorageKey || '').trim() ||
+          Number(attachment.FileSize || 0) > maxBytes) return false;
+      const entityType = String(attachment.EntityType || '').toUpperCase();
+      const entityId = String(attachment.EntityID || '');
+      return (entityType === 'EVENT' && entityId === String(event.ID)) ||
+        (entityType === 'PROJECT' && project &&
+          entityId === String(project.ID) && String(event.ProjectID || '') === String(project.ID));
+    });
+  },
+
+  _sendNotificationAttachment_: function(chatId, attachment) {
+    const token = this._getToken_();
+    if (!token || !chatId || !attachment || !attachment.StorageKey ||
+        typeof StorageRepository === 'undefined' ||
+        typeof StorageRepository.getFile !== 'function') {
+      return { ok: false, reason: 'NOT_CONFIGURED' };
+    }
+    try {
+      const file = StorageRepository.getFile(attachment.StorageKey);
+      let blob = file.getBlob();
+      if (blob && typeof blob.setName === 'function') {
+        blob = blob.setName(String(attachment.FileName || file.getName() || 'attachment'));
+      }
+      const isImage = String(attachment.MimeType || '').toLowerCase().indexOf('image/') === 0;
+      const method = isImage ? 'sendPhoto' : 'sendDocument';
+      const payload = { chat_id: String(chatId) };
+      payload[isImage ? 'photo' : 'document'] = blob;
+      payload.caption = String(attachment.FileName || 'پیوست رویداد').slice(0, 900);
+      const response = UrlFetchApp.fetch(
+        'https://api.telegram.org/bot' + token + '/' + method,
+        { method: 'post', payload: payload, muteHttpExceptions: true }
+      );
+      const code = response.getResponseCode();
+      let result = null;
+      try { result = JSON.parse(response.getContentText() || '{}'); } catch (parseError) {}
+      return code >= 200 && code < 300 && result && result.ok
+        ? { ok: true, method: method }
+        : { ok: false, reason: 'HTTP_' + code };
+    } catch (error) {
+      console.warn('Telegram attachment delivery failed: ' +
+        String(error && error.message || error));
+      return { ok: false, reason: 'ATTACHMENT_SEND_FAILED' };
+    }
+  },
+
+  notifyProject: function(project, createdByUser, tenantId) {
+    if (!project || !tenantId || String(project.TenantID) !== String(tenantId)) {
+      return { sent: 0, status: 'NOT_APPLICABLE' };
+    }
+    if (String(project.NotifyEnabled).toLowerCase() === 'false' ||
+        String(project.NotifyEnabled) === '0') {
+      return { sent: 0, status: 'PROJECT_NOTIFICATIONS_DISABLED' };
+    }
+    const props = this._properties_();
+    let mapping;
+    try { mapping = JSON.parse(props.getProperty('TELEGRAM_TENANT_CHAT_IDS') || '{}'); }
+    catch (error) { return { sent: 0, status: 'INVALID_CHAT_MAPPING' }; }
+    if (!mapping || typeof mapping !== 'object' || Array.isArray(mapping)) {
+      return { sent: 0, status: 'INVALID_CHAT_MAPPING' };
+    }
+    const recipients = Array.isArray(mapping[String(tenantId)])
+      ? mapping[String(tenantId)].map(String).filter(Boolean)
+      : [];
+    if (!recipients.length || !this._getToken_()) {
+      return { sent: 0, status: 'NOT_CONFIGURED' };
+    }
+    let workflowName = '';
+    let stepName = '';
+    try {
+      const workflow = project.WorkflowID && typeof WorkflowRepository !== 'undefined'
+        ? WorkflowRepository.findById(project.WorkflowID) : null;
+      const step = project.CurrentStepID && typeof WorkflowStepRepository !== 'undefined'
+        ? WorkflowStepRepository.findById(project.CurrentStepID) : null;
+      workflowName = String(workflow && (workflow.Name || workflow.Code) || '');
+      stepName = String(step && (step.Name || step.Code) || '');
+    } catch (lookupError) {}
+    const lines = [
+      '🆕 پروژه جدید در سامانه مدیریت تولید ثبت شد',
+      'نام پروژه: ' + String(project.Title || project.Name || '-'),
+      'کد پروژه: ' + String(project.ProjectCode || (String(project.RecordState).toUpperCase() === 'DRAFT' ? 'هنوز تعیین نشده' : project.ID) || '-'),
+      project.Quantity !== undefined && project.Quantity !== null && String(project.Quantity) !== ''
+        ? 'تعداد: ' + project.Quantity : '',
+      'وضعیت ثبت: ' + (String(project.RecordState || 'ACTIVE').toUpperCase() === 'DRAFT' ? 'پیش‌نویس' : 'فعال'),
+      project.Status ? 'وضعیت پروژه: ' + project.Status : '',
+      workflowName ? 'گردش‌کار: ' + workflowName : '',
+      stepName ? 'مرحله فعلی: ' + stepName : '',
+      createdByUser && (createdByUser.Name || createdByUser.Username)
+        ? 'ثبت‌کننده: ' + (createdByUser.Name || createdByUser.Username) : '',
+      project.CreatedAt ? 'زمان ثبت: ' + project.CreatedAt : '',
+      String(project.Description || '').trim()
+        ? 'توضیحات: ' + String(project.Description).trim() : '',
+      'شناسه پروژه: ' + String(project.ID || '-')
+    ].filter(Boolean);
+    const chunks = this._splitNotificationMessage_(lines.join('\n'), 3800);
+    let sent = 0;
+    let failed = 0;
+    recipients.forEach(function(chatId) {
+      chunks.forEach(function(chunk, index) {
+        const result = TelegramBotService.sendMessage(
+          chatId, (chunks.length > 1 ? '[' + (index + 1) + '/' + chunks.length + ']\n' : '') + chunk
+        );
+        if (result && result.ok) sent += 1;
+        else failed += 1;
+      });
+    });
+    return { sent: sent, failed: failed, chunks: chunks.length,
+      status: sent && !failed ? 'SENT' : (sent ? 'PARTIAL' : 'FAILED') };
+  },
+
   notifyEvent: function(event, project, eventType, department, performedUser, tenantId) {
     if (!event || !tenantId) return { sent: 0, status: 'NOT_APPLICABLE' };
     if (event.ProjectID && !project) return { sent: 0, status: 'PROJECT_NOT_AVAILABLE' };
@@ -352,15 +615,28 @@ const TelegramBotService = {
           String(event.VariantQuantity) !== '') lines.push('تعداد: ' + event.VariantQuantity);
     }
 
+    const dynamicLines = this._formatLegacyEventData_(event, tenantId, project ? project.ID : '');
+    if (dynamicLines.length) lines.push('اطلاعات اختصاصی رویداد:\n' + dynamicLines.join('\n'));
+
     const forms = this._formatNotificationForms_(event, tenantId);
     forms.forEach(function(form) {
       lines.push('فرم: ' + form.name + '\n' + form.lines.join('\n'));
     });
+    const centralLines = this._formatNotificationCentralInformation_(event, project, tenantId);
+    if (centralLines.length) lines.push('اطلاعات مرکزی ثبت‌شده توسط این رویداد:\n' + centralLines.join('\n'));
+    const attachments = this._collectNotificationAttachments_(event, project, tenantId);
+    if (attachments.length) {
+      lines.push('پیوست‌های ثبت‌شده: ' + attachments.map(function(item) {
+        return String(item.FileName || 'فایل');
+      }).join('، '));
+    }
     const message = lines.join('\n');
     const chunks = this._splitNotificationMessage_(message, 3800);
 
     let sent = 0;
     let failed = 0;
+    let mediaSent = 0;
+    let mediaFailed = 0;
     recipients.forEach(function(chatId) {
       chunks.forEach(function(chunk, index) {
         try {
@@ -375,8 +651,17 @@ const TelegramBotService = {
           console.warn('Telegram notification failed: ' + String(error && error.message || error));
         }
       });
+      attachments.forEach(function(attachment) {
+        const result = TelegramBotService._sendNotificationAttachment_(chatId, attachment);
+        if (result && result.ok) mediaSent += 1;
+        else mediaFailed += 1;
+      });
     });
-    return { sent: sent, failed: failed, chunks: chunks.length, status: sent && !failed ? 'SENT' : (sent ? 'PARTIAL' : 'FAILED') };
+    const hasFailure = failed > 0 || mediaFailed > 0;
+    const hasSuccess = sent > 0 || mediaSent > 0;
+    return { sent: sent, failed: failed, mediaSent: mediaSent, mediaFailed: mediaFailed,
+      attachments: attachments.length, chunks: chunks.length,
+      status: hasSuccess && !hasFailure ? 'SENT' : (hasSuccess ? 'PARTIAL' : 'FAILED') };
   },
 
   setWebhook: function() {
