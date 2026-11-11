@@ -158,7 +158,7 @@ test('sends project details and canonical image names while excluding other-tena
   assert.doesNotMatch(harness.sent[0].payload.text, /اطلاعات محرمانه/);
   assert.match(harness.sent[0].payload.text, /🧾اطلاعات مرکزی ثبت‌شده توسط این رویداد:/);
   assert.doesNotMatch(harness.sent[0].payload.text, /📋 فرم:/);
-  assert.equal((harness.sent[0].payload.text.match(/sample-approved\\.png/g) || []).length, 1);
+  assert.equal((harness.sent[0].payload.text.match(/sample-approved\.png/g) || []).length, 1);
 });
 
 test('respects project NotifyEnabled=false but does not require a project for independent events', () => {
@@ -247,6 +247,9 @@ test('sends project creation notices to the matching tenant and includes its Jal
   assert.equal(harness.sent.length, 1);
   assert.match(harness.sent[0].payload.text, /پروژه جدید/);
   assert.match(harness.sent[0].payload.text, /1405\/08\/20 18:33/);
+  assert.doesNotMatch(harness.sent[0].payload.text, /\\n/);
+  assert.doesNotMatch(harness.sent[0].payload.text, /شناسه پروژه/);
+  assert.doesNotMatch(harness.sent[0].payload.text, /ACTIVE/);
 });
 
 test('project creation service invokes the existing notification hook for drafts and active projects', () => {
