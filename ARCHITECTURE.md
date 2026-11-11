@@ -1066,3 +1066,25 @@
 - انتشار Web App در همان run موفق شد؛ خروجی clasp نسخه deployment را `@17` گزارش کرد.
 - تست نهایی Product Owner در محیط عملیاتی موفق تأیید شد.
 - هیچ تغییر ساختاری در Google Sheets، API یا migration انجام نشد.
+
+
+## 2026-11-11 — ممیزی نسخه عملیاتی در دسکتاپ و موبایل
+
+### محدوده و نتیجه پذیرش
+- شاخه کاری ممیزی: `qa/desktop-mobile-audit-20261111` در هر دو مخزن؛ مبنای اولیه از `main` عملیاتی گرفته شد.
+- هدف: ارزیابی ساختار Frontend، پوشش تست‌های مرورگر، واکنش‌گرایی، نقاط حساس UI/UX و نشانه‌های عملکردی بدون تغییر داده عملیاتی.
+- Product Owner اعلام کرد صفحات را شخصاً در دسکتاپ و موبایل بررسی کرده و مشکلی مشاهده نکرده است؛ این تأیید دستی به‌عنوان نتیجه پذیرش بصری فاز ثبت می‌شود.
+- در ممیزی کد/اتوماسیون، باگ قطعی که اصلاح آن در این فاز لازم باشد تأیید نشد؛ بنابراین هیچ تغییر اجرایی حدسی اعمال نشد.
+
+### نقشه فنی و یافته‌های نگهداری
+- Shell و بارگذاری سراسری: `index.html`؛ PDF.js نسخه 3.11.174 به‌صورت سراسری بارگذاری می‌شود، درحالی‌که مصرف مستقیم `window.pdfjsLib` در ماژول `js/modules/print-designer.js` مشاهده شد. بارگذاری تنبل می‌تواند در فاز مستقل performance بررسی شود، مشروط به regression کامل چاپ و preview.
+- CSSهای مهم بررسی‌شده: `css/layout.css`، `css/responsive.css`، `css/events.css`، `css/procurement.css`، `css/print-template-library.css` و `css/jalali-calendar.css`. breakpointهای تکراری در layout و overrideهای جداگانه responsive، و تفاوت استفاده از `94vh` و `100dvh` در modalها به‌عنوان ریسک نگهداری/نیازمند آزمون ثبت شدند؛ باگ بصری تأییدشده نیستند.
+- ماژول‌های اصلی بررسی‌شده: `js/modules/projects.js`، `js/modules/events.js`، `js/modules/procurement.js` و `js/modules/print-designer.js`. مسیرها و APIهای موجود حفظ شدند؛ هیچ route، API، Sheet یا فرم موازی ساخته نشد.
+- گزارش پایه `test-results/latest-performance-report.md/json` شامل 20 route، 340 درخواست شبکه، بدون خطای کنسول/صفحه یا درخواست ناموفق و بدون overflow در viewport 390px بود. زمان settled مسیر procurement برابر 33,360ms و endpoint گزارش procurement در baseline مرورگر/Backend حدود 6,378/4,959ms ثبت شده بود؛ این اعداد تشخیصی‌اند و علت ریشه‌ای قطعی در این فاز تعیین نشد.
+- محدودیت پوشش خودکار: اسکریپت اصلی audit با viewport ثابت 1365×900 اجرا می‌شود؛ تست تقویم 390×844 را پوشش می‌دهد و تست modal روی DOM ایزوله اجرا می‌شود. اجرای خودکار کامل ماتریس 8 اندازه انجام نشد و این محدودیت در TODO5 ثبت شد.
+
+### تصمیم‌ها و تغییرات
+- Task 1 تا Task 4 در TODO5 تکمیل و Log شدند.
+- هیچ کد اجرایی Frontend/Backend، API، ساختار Google Sheets، داده، workflow عملیاتی یا deployment تغییر نکرد.
+- مستندات فاز در شاخه ممیزی ثبت شد؛ شاخه main عمداً تغییر داده نشد و merge/deployment انجام نشد.
+- Commits نهایی مستندات پیش از آرشیو: Backend `ea0dd23c0ad48a96d6a255c9560daa49a9e55fad` و Frontend `edfcf4ea965c79f3e228d88cc9315bd9a697e07c`؛ مقایسه نهایی نشان داد اختلاف شاخه با main فقط شامل `TODO5.md` بوده است.
