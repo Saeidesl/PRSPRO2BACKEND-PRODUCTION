@@ -230,7 +230,7 @@ const TelegramBotService = {
     } catch (error) {
       return String(value);
     }
-    const match = /^(\\d{4})-(\\d{2})-(\\d{2}) (\\d{2}):(\\d{2})(?::\\d{2})?$/.exec(local);
+    const match = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})(?::\d{2})?$/.exec(local);
     if (!match) return String(value);
     const gy = Number(match[1]), gm = Number(match[2]), gd = Number(match[3]);
     const gdm = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
