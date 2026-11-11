@@ -93,7 +93,7 @@ const TelegramBotService = {
     const chatId = String(message.chat.id);
     const text = String(message.text || '').trim();
     const firstName = String(message.from && message.from.first_name || 'دوست');
-    if (/^\\/(start|help)(@\\w+)?$/i.test(text)) {
+    if (/^\/(start|help)(@\w+)?$/i.test(text)) {
       const props = this._properties_();
       const pendingTenantId = String(props.getProperty('TELEGRAM_PENDING_TENANT_ID') || '').trim();
       const expiresAt = Number(props.getProperty('TELEGRAM_PENDING_REGISTRATION_EXPIRES_AT') || 0);
@@ -120,9 +120,9 @@ const TelegramBotService = {
         return { ok: false, reason: 'PRIVATE_CHAT_REQUIRED' };
       }
       this.sendMessage(chatId,
-        'سلام ' + firstName + '، ربات اطلاع‌رسانی سامانه مدیریت تولید آماده است.\\n' +
-        'شناسه گفت‌وگوی شما: ' + chatId + '\\n\\n' +
-        'برای اتصال این گفت‌وگو، مدیر سامانه باید ابتدا تابع runTelegramTenantRegistration را اجرا کند.\\n' +
+        'سلام ' + firstName + '، ربات اطلاع‌رسانی سامانه مدیریت تولید آماده است.\n' +
+        'شناسه گفت‌وگوی شما: ' + chatId + '\n\n' +
+        'برای اتصال این گفت‌وگو، مدیر سامانه باید ابتدا تابع runTelegramTenantRegistration را اجرا کند.\n' +
         'فرمان‌ها: /chatid ، /help');
     } else if (/^\/chatid(@\w+)?$/i.test(text)) {
       this.sendMessage(chatId, 'شناسه گفت‌وگوی شما: ' + chatId);
