@@ -93,11 +93,36 @@ const TelegramBotService = {
     const chatId = String(message.chat.id);
     const text = String(message.text || '').trim();
     const firstName = String(message.from && message.from.first_name || 'دوست');
-    if (/^\/(start|help)(@\w+)?$/i.test(text)) {
+    if (/^\\/(start|help)(@\\w+)?$/i.test(text)) {
+      const props = this._properties_();
+      const pendingTenantId = String(props.getProperty('TELEGRAM_PENDING_TENANT_ID') || '').trim();
+      const expiresAt = Number(props.getProperty('TELEGRAM_PENDING_REGISTRATION_EXPIRES_AT') || 0);
+      if (pendingTenantId && expiresAt > Date.now() && String(message.chat.type || '') === 'private') {
+        this.registerTenantChat(pendingTenantId, chatId);
+        props.deleteProperty('TELEGRAM_PENDING_TENANT_ID');
+        props.deleteProperty('TELEGRAM_PENDING_REGISTRATION_EXPIRES_AT');
+        const tenantRows = GoogleSheetsRepository.getAll('01_Tenants') || [];
+        const matchedTenant = tenantRows.find(function(row) {
+          return String(row.ID) === pendingTenantId;
+        });
+        this.sendMessage(chatId,
+          'سلام ' + firstName + '، اتصال این گفت‌وگو به شرکت «' +
+          String(matchedTenant && (matchedTenant.Name || matchedTenant.Code) || 'شرکت عملیاتی') +
+          '» با موفقیت انجام شد. از این پس اعلان‌های مجاز سامانه در همین گفت‌وگو ارسال می‌شوند.');
+        return { ok: true, registered: true };
+      }
+      if (pendingTenantId && expiresAt <= Date.now()) {
+        props.deleteProperty('TELEGRAM_PENDING_TENANT_ID');
+        props.deleteProperty('TELEGRAM_PENDING_REGISTRATION_EXPIRES_AT');
+      }
+      if (pendingTenantId && String(message.chat.type || '') !== 'private') {
+        this.sendMessage(chatId, 'برای اتصال امن، ربات را در گفت‌وگوی خصوصی باز کنید و /start بفرستید.');
+        return { ok: false, reason: 'PRIVATE_CHAT_REQUIRED' };
+      }
       this.sendMessage(chatId,
-        'سلام ' + firstName + '، ربات اطلاع‌رسانی سامانه مدیریت تولید آماده است.\n' +
-        'شناسه گفت‌وگوی شما: ' + chatId + '\n\n' +
-        'برای دریافت اعلان‌ها، مدیر سامانه باید این شناسه را در تنظیمات امن بک‌اند و زیر Tenant مربوط ثبت کند.\n' +
+        'سلام ' + firstName + '، ربات اطلاع‌رسانی سامانه مدیریت تولید آماده است.\\n' +
+        'شناسه گفت‌وگوی شما: ' + chatId + '\\n\\n' +
+        'برای اتصال این گفت‌وگو، مدیر سامانه باید ابتدا تابع runTelegramTenantRegistration را اجرا کند.\\n' +
         'فرمان‌ها: /chatid ، /help');
     } else if (/^\/chatid(@\w+)?$/i.test(text)) {
       this.sendMessage(chatId, 'شناسه گفت‌وگوی شما: ' + chatId);
@@ -181,6 +206,36 @@ const TelegramBotService = {
     let result;
     try { result = JSON.parse(response.getContentText()); } catch (error) { result = null; }
     return result && result.ok ? { ok: true } : { ok: false, reason: 'TELEGRAM_REJECTED' };
+  },
+
+  /**
+   * Arm a short-lived, one-time pairing window for the sole active Production tenant.
+   * The first private /start received during this window is registered automatically.
+   */
+  armTenantRegistration: function() {
+    if (!this._getToken_()) throw new Error('ابتدا اتصال ربات تلگرام را تنظیم کنید.');
+    if (typeof GoogleSheetsRepository === 'undefined' ||
+        typeof GoogleSheetsRepository.getAll !== 'function') {
+      throw new Error('دسترسی به مخزن دیتابیس فراهم نیست.');
+    }
+    const tenants = (GoogleSheetsRepository.getAll('01_Tenants') || []).filter(function(row) {
+      return String(row.Status || '').trim().toUpperCase() === 'ACTIVE' &&
+        String(row.ID || '').trim();
+    });
+    if (tenants.length !== 1) {
+      throw new Error(tenants.length
+        ? 'برای اتصال خودکار باید فقط یک Tenant فعال وجود داشته باشد؛ برای جلوگیری از اتصال اشتباه، هیچ تغییری انجام نشد.'
+        : 'هیچ Tenant فعالی در شیت 01_Tenants پیدا نشد.');
+    }
+    const props = this._properties_();
+    const tenant = tenants[0];
+    props.setProperty('TELEGRAM_PENDING_TENANT_ID', String(tenant.ID));
+    props.setProperty('TELEGRAM_PENDING_REGISTRATION_EXPIRES_AT', String(Date.now() + 10 * 60 * 1000));
+    return {
+      ok: true,
+      tenantName: String(tenant.Name || tenant.Code || 'شرکت فعال'),
+      expiresInMinutes: 10
+    };
   },
 
   registerTenantChat: function(tenantId, chatId) {
