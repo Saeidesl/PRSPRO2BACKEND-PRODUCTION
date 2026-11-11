@@ -62,6 +62,6 @@ function runTelegramWebhookInfo() {
 }
 
 /**
- * Telegram tenant/chat registration is intentionally not preconfigured in Production.
- * Configure a production-specific tenant and chat only after Telegram credentials are added.
+ * Production tenant/chat mapping is created through the one-time
+ * runTelegramTenantRegistration pairing flow; no TenantID or chat ID is hardcoded.
  */
