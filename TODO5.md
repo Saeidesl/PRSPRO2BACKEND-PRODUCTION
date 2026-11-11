@@ -55,7 +55,7 @@
   - بررسی دقیق کامپوننت تقویم مشترک، نحوه استفاده در فرم رویداد، فرم پروژه، payloadهای API و ذخیره CreatedAt در Backend.
   - تصمیم: استفاده مجدد از کامپوننت و APIهای فعلی؛ بدون مسیر یا ساختار داده موازی.
 
-- [ ] **Task 2 — Reuse shared datetime picker & preserve project timestamp (IN PROGRESS)**
+- [x] **Task 2 — Reuse shared datetime picker & preserve project timestamp**
   - Frontend: تبدیل فیلد موجود `#new-project-created-at` فقط در حالت ایجاد به `datetime-local`؛ حفظ UI جلالی و انتخاب ساعت/دقیقه دقیقاً مانند ثبت رویداد. حالت ویرایش date-only باقی بماند.
   - Frontend: ارسال مقدار حالت ایجاد به‌صورت ISO UTC با همان الگوی `Events.submitEvent()`؛ عدم تغییر رفتار فیلد تاریخ در حالت ویرایش.
   - Backend: اصلاح `ProjectService._normalizeCreatedAt_()` برای حفظ timestamp کامل و اعتبارسنجی زمان؛ حفظ رفتار date-only و fallback فعلی.
@@ -63,9 +63,10 @@
 
   - *Log:* پیاده‌سازی روی شاخه feature انجام شد. Frontend: در `js/modules/projects.js` داخل `Projects.openCreateForm(editProject, options)` فیلد موجود `#new-project-created-at` فقط در حالت ایجاد `datetime-local` می‌شود؛ حالت ویرایش برای سازگاری با قرارداد فعلی `PUT /projects/:id` همچنان `date` باقی می‌ماند. در `Projects.createProject(modal)` مقدار محلی فقط برای فرم ایجاد با `new Date(value).toISOString()` به UTC تبدیل و از همان payload فعلی `POST /projects` ارسال می‌شود. `index.html` cache key ماژول پروژه را به `20261111-project-created-at-datetime-3` تغییر داد. آزمون‌های `tests/project-created-at-datetime.test.js` و `tests/project-draft-information-flow.test.js` توسعه یافتند. Backend: در `ProjectService.js:_normalizeCreatedAt_(value, fallback)` timestamp کامل ISO دارای Z/offset اعتبارسنجی و حفظ می‌شود؛ ورودی date-only با نمایش قدیمی ظهر UTC و ورودی خالی با fallback قبلی سازگار است. regex تاریخ نیز از escape اشتباه اصلاح شد. هر دو مسیر ایجاد عادی و پیش‌نویس در `ProjectService.create()` از همین تابع استفاده می‌کنند. تست جدید `tests/project-created-at-datetime.test.js` timestamp دقیق، offset، date-only، fallback و ورودی نامعتبر را پوشش می‌دهد. APIها و شیت `08_Projects.CreatedAt` بدون تغییر قرارداد/ساختار باقی مانده‌اند. Backend source checks و PMS agent suite موفق شده‌اند؛ Frontend checks، PMS frontend agent suite و Cross-repository QA نیز موفق‌اند. آزمون واقعی مرورگر برای تقویم جلالی/انتخاب ساعت و دقیقه و آزمون مودال پروژه موفق شده‌اند؛ ممیزی کلی UI/Performance هنوز در جریان است.
 
-- [ ] **Task 3 — Integration, regression & delivery**
+- [ ] **Task 3 — Integration, regression & delivery (IN PROGRESS)**
   - اجرای تست‌های تقویم، فرم پروژه و تست‌های Backend؛ بررسی syntax و قرارداد POST/PUT.
   - بررسی سازگاری تاریخ‌های قبلی، ویرایش پروژه، پیش‌نویس و ایجاد پروژه عادی؛ اطمینان از عدم تغییر داده‌های عملیاتی.
   - بازبینی diff و CI؛ ادغام از طریق PR به main فقط پس از تست و تأیید لازم.
   - اگر تغییر Backend به استقرار GAS نیاز داشته باشد، workflow رسمی sync/deploy و نسخه Web App جداگانه بررسی شود؛ Push به‌تنهایی استقرار محسوب نمی‌شود.
   - تحویل برای تست Product Owner؛ تا تأیید عملی، تسک بسته نمی‌شود.
+  - *Log:* پس از تأیید تست Product Owner، Task 2 تکمیل شد. انتشار عملیاتی Backend در مخزن `PRSPRO2BACKEND-PRODUCTION` از commit `0ec2b711da6438ddbfe8bbcdeb1df0ff08327923` با GitHub Actions run `43014220825` انجام شد؛ اعتبارسنجی ۸۵ فایل منبع، همگام‌سازی ۸۶ فایل با Apps Script و انتشار Web App با نتیجه موفق ثبت شد (نسخه deployment برابر `@17`). انتشار Frontend در مخزن `PRSPRO2-PRODUCTION` از commit شامل تغییرات ادغام‌شده `1111665d490f4b533eadc53fdcdb60f3a049a85a` و انتشار Pages روی HEAD جاری `7bdad3e6ca8310ebb3b32fd72cca7381ed99ca4a` با run `43013102190` موفق شد؛ URL محیط: `https://saeidesl.github.io/PRSPRO2-PRODUCTION/`. تست دستی کاربر برای انتخاب روز، ساعت و دقیقه، ذخیره پروژه و نتیجه عملکرد قابلیت با تأیید صریح کاربر موفق اعلام شد. هیچ API، Sheet یا ستون جدیدی ایجاد نشد؛ داده‌های قبلی و رفتار ویرایش date-only حفظ شدند.
