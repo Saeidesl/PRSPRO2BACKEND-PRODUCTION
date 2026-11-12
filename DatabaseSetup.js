@@ -703,6 +703,44 @@ function removeUnusedProjectColumns_(ss) {
 
 
 /**
+ * اجرای مستقل مهاجرت حذف ستون‌های منسوخ پروژه روی دیتابیس عملیاتی.
+ * این گزینه فقط همین migration را اجرا می‌کند و کل setupDatabase را اجرا نمی‌کند.
+ */
+function removeUnusedProjectColumnsFromProduction() {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+
+  try {
+    const spreadsheetId = getConfiguredDatabaseSpreadsheetId_();
+    const ss = SpreadsheetApp.openById(spreadsheetId);
+    if (!ss) throw new Error('فایل دیتابیس عملیاتی پیدا نشد.');
+
+    const removed = removeUnusedProjectColumns_(ss);
+    const message = removed.length
+      ? 'ستون‌های ' + removed.join(' و ') +
+        ' از شیت 08_Projects حذف شدند. نسخه پشتیبان کامل شیت پیش از حذف ساخته شد. نام نسخه پشتیبان در Execution log ثبت شده است.'
+      : 'ستون‌های منسوخ از قبل در شیت 08_Projects وجود نداشتند؛ تغییری لازم نبود.';
+
+    Logger.log(message);
+    SpreadsheetApp.getUi().alert('نتیجه حذف ستون‌های منسوخ', message, SpreadsheetApp.getUi().ButtonSet.OK);
+    return removed;
+  } catch (error) {
+    Logger.log(error.stack || error);
+    try {
+      SpreadsheetApp.getUi().alert(
+        'حذف ستون‌ها انجام نشد',
+        error.message || String(error),
+        SpreadsheetApp.getUi().ButtonSet.OK
+      );
+    } catch (uiError) {}
+    throw error;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+
+/**
  * ایجاد شیت‌ها و بررسی سرستون‌ها
  */
 function createAllSheets_(ss) {
@@ -1251,6 +1289,7 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('سیستم تولید')
     .addItem('راه‌اندازی / بررسی دیتابیس', 'setupDatabase')
+    .addItem('حذف ستون‌های بلااستفاده پروژه', 'removeUnusedProjectColumnsFromProduction')
     .addItem('حذف و بازسازی کامل شیت‌ها', 'resetDatabaseSheets')
     .addItem('بررسی سلامت دیتابیس', 'checkDatabaseHealth')
     .addToUi();
