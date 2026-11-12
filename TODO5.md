@@ -15,9 +15,9 @@
   - TODO5 و ARCHITECTURE عملیاتی بررسی شد؛ دسترسی مخزن، شاخه main و آخرین commit تأیید شد.
   - نتیجه بررسی Frontend: نیازمندی فعلی صرفاً تغییر نمایش است و Backend runtime نیاز به تغییر ندارد.
   - *Log:* قراردادهای `GET /projects?view=event-picker`, `GET /events`, `GET /event-types` و مسیر موجود پیوست پروژه/مجوز `ATTACHMENT_VIEW` حفظ می‌شوند؛ `Router.js`, `ProjectService.js`, `EventService.js`, شیت‌های پروژه/رویداد/پیوست بدون تغییر می‌مانند.
-- [ ] Task 2 — پشتیبانی و بازبینی سازگاری Backend (IN PROGRESS)
-  - در طول تغییر Frontend، عدم تغییر قرارداد API، مجوزها، tenant isolation و ساختار داده بررسی شود.
-  - در صورت عدم نیاز، هیچ کد runtime یا migration تغییر نکند.
-- [ ] Task 3 — تأیید سازگاری بین‌مخزنی
+- [x] Task 2 — پشتیبانی و بازبینی سازگاری Backend
+  - تغییر Frontend از همان APIها، payloadها، permissionها و مسیر پیوست موجود استفاده می‌کند؛ هیچ تغییر Backend runtime یا DB لازم نیست.
+  - *Log:* هیچ فایل اجرایی Backend، route، payload، permission، tenant isolation، schema، migration یا داده عملیاتی تغییر نکرد؛ تصمیم عدم نیاز به تغییر Backend بر اساس ردیابی قراردادهای موجود ثبت شد.
+- [ ] Task 3 — تأیید سازگاری بین‌مخزنی (IN PROGRESS)
   - QA بین‌مخزنی پس از آماده‌شدن PR فرانت‌اند اجرا و نتیجه ثبت شود.
   - هیچ استقرار Backend انجام نشود مگر تغییر runtime ضروری و جداگانه تأیید شده باشد.
