@@ -67,7 +67,7 @@
   - اطلاعات فایل و URL دانلود نباید به‌صورت ناامن یا بدون کنترل مجوز cache شوند.
 - نتیجه Task 1: مسیر اصلی مسئله در چرخه عمر Router و رفتار refresh در `getCached`، به‌علاوه مصرف مستقیم GET در ماژول رویدادها و فایل‌هاست؛ در حال حاضر شواهدی از نیاز به تغییر Backend یا Database وجود ندارد.
 
-### Task 2 — Shared Cache، سیاست freshness و حفظ وضعیت صفحه (IN PROGRESS)
+### Task 2 — Shared Cache، سیاست freshness و حفظ وضعیت صفحه [x]
 - پیاده‌سازی مشترک با تکیه بر `PMS.Api` و `PMS.Cache` موجود؛ بدون ساخت مسیر موازی.
 - پیشرفت پیاده‌سازی در Frontend: گزینه `refreshCached: false` به `Api.getCached` افزوده شد تا cache معتبر بدون GET پس‌زمینه برگردد؛ cache منقضی/ناموجود همچنان از API خوانده می‌شود.
 - بررسی فعلی نشان می‌دهد تغییر Backend، API، مجوزها یا schema شیت برای این مرحله لازم نیست؛ هیچ فایل runtime بک‌اند تغییر نکرده است. Task 2 تا تکمیل invalidation و آزمون همچنان باز است.
@@ -81,7 +81,9 @@
 - Frontend Regression Tests، syntax، asset QA و cross-repository QA موفق شده‌اند؛ ممیزی نهایی UI/performance هنوز در حال اجراست. هیچ merge یا deployment انجام نشده است.
 - Backend/API/DB فقط در صورت نیاز اثبات‌شده؛ هیچ تغییر عملیاتی داده یا migration بدون مجوز.
 
-### Task 3 — اتصال invalidation، آزمون یکپارچگی و تحویل
+- *Log:* پس از تأیید تست زنده Product Owner، Task 2 تکمیل شد. در Frontend فایل‌های `js/core/api.js` (گزینه `refreshCached:false` در `Api.getCached` برای cache hit بدون GET پس‌زمینه)، `js/modules/projects.js` (cache-first فهرست پروژه و lookup وضعیت‌ها)، `js/modules/events.js` (cache-first رویدادها، انواع رویداد و `/projects?view=event-picker`)، `js/modules/attachments.js` (cache-first فهرست پیوست‌ها)، `js/core/router.js` (ذخیره و بازیابی جستجو، فیلتر، مرتب‌سازی، تب، وضعیت پنل و موقعیت اسکرول؛ پاک‌سازی snapshot در reset نشست) و `index.html` (cache-busting assetها) تغییر کردند. تست‌های `tests/shared-page-cache.test.js` و `tests/event-project-picker-performance.test.js` و تست‌های رگرسیون وابسته به asset/API به‌روزرسانی شدند. Frontend PR #104 با روش squash در `main` ادغام شد؛ merge commit: `833e3a1ebb1e7e9965fa784d390dbb01763c67dc`. Frontend GitHub Pages deployment run `43183779308` با نتیجه success منتشر شد؛ URL: `https://saeidesl.github.io/PRSPRO2-PRODUCTION/`. تست‌های خودکار Frontend، Cross-Repository QA، Browser Regression و UI/Performance Audit موفق شدند. Product Owner جابه‌جایی بین صفحات پروژه‌ها/رویدادها/فایل‌ها و حفظ state را در نسخه زنده تست و موفق تأیید کرد. Backend runtime، API contract، permissions، Google Sheets schema و داده‌های عملیاتی تغییر نکردند.
+
+### Task 3 — اتصال invalidation، آزمون یکپارچگی و تحویل (IN PROGRESS)
 - اتصال ایجاد/ویرایش پروژه، ثبت رویداد، upload/delete فایل به invalidation دقیق cacheهای وابسته.
 - بررسی consistency بین صفحه پروژه‌ها، رویدادها، فایل‌ها و جزئیات پروژه.
 - تست درخواست شبکه در رفت‌وبرگشت بین صفحات، TTL، force refresh، نشست متفاوت، خطا/آفلاین، ثبت هم‌زمان و موبایل.
