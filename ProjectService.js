@@ -756,7 +756,6 @@ const ProjectService = {
         'ACTIVE',
       SourceProjectID: sourceProject ? sourceProject.ID : '',
       ReferencePolicyJSON: sourceProject ? JSON.stringify(referencePolicy) : '{}',
-      ReferenceSourceRevision: sourceProject ? new Date().toISOString() : '',
       ReferenceCopyOperationID: sourceProject ? operationId : ''
 
     };
