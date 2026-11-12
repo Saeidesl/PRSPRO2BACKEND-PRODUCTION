@@ -41,19 +41,11 @@ const ProjectService = {
   projectFormLookups: function(params) {
     const user = AccessControlService.getCurrentUser(params || {});
     const tenantId = String(user.TenantID || '');
-    const informationTypes = InformationTypeRepository.findByTenant(user.TenantID).filter(function(item) { return String(item.Status || 'ACTIVE').toUpperCase() === 'ACTIVE'; }).map(function(item) { return { ID: item.ID, Code: item.Code, Name: item.Name, DataType: item.DataType || 'text' }; });
     const departments = (DepartmentRepository.getAll() || []).filter(function(item) {
       return String(item.TenantID) === tenantId &&
         String(item.Status || 'ACTIVE').toUpperCase() === 'ACTIVE';
     }).map(function(item) {
       return { ID: item.ID, Name: item.Name || item.Title || item.Code || String(item.ID), Code: item.Code || '' };
-    });
-    const users = (UserRepository.getAll() || []).filter(function(item) {
-      return String(item.TenantID) === tenantId &&
-        String(item.Status || 'ACTIVE').toUpperCase() === 'ACTIVE';
-    }).map(function(item) {
-      const fullName = [item.FirstName || '', item.LastName || ''].join(' ').trim();
-      return { ID: item.ID, Name: item.Name || item.FullName || item.DisplayName || fullName || item.Username || String(item.ID), DepartmentID: item.DepartmentID || '' };
     });
     // One request now supplies all three form lookup lists, avoiding a second
     // round-trip just to load workflows. Keep filtering tenant-scoped here.
@@ -135,9 +127,7 @@ const ProjectService = {
 
     return Response.success({
       departments: departments,
-      users: users,
       workflows: workflows,
-      informationTypes: informationTypes,
       referenceProjects: (ProjectRepository.getAll() || []).filter(function(item) { return String(item.TenantID) === tenantId && String(item.RecordState || 'ACTIVE').toUpperCase() === 'ACTIVE' && this._isProjectAvailableToUser_(item, user); }, this).map(function(item) { return { ID: item.ID, ProjectCode: item.ProjectCode || '', Title: item.Title || '' }; }),
       projectStatuses: projectStatuses
     });
