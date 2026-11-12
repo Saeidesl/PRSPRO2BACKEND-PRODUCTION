@@ -1,9 +1,9 @@
 ## 🎯 Current Objective
-پاک‌سازی تعریف شیت پروژه‌ها در Database Setup؛ جلوگیری از تولید ستون‌های بلااستفاده `RunNumber` و `ReferenceSourceRevision` و برنامه‌ریزی امن برای حذف فیزیکی آن‌ها از دیتابیس عملیاتی پس از کنترل وابستگی‌ها و تهیه پشتیبان.
+حذف کامل فیلدهای پروژه `Description` (توضیحات) و `Quantity` (تعداد پیشنهادی) از تعریف دیتابیس، مسیرهای ثبت/ویرایش و رابط کاربری؛ حذف فیزیکی ستون‌های خالی از شیت `08_Projects` با نسخه پشتیبان و جلوگیری از ایجاد مجدد آن‌ها. تغییر قبلی `RunNumber` و `ReferenceSourceRevision` در schema نیز حفظ می‌شود.
 
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
 ### مخازن و شاخه
-- Frontend عملیاتی: `Saeidesl/PRSPRO2-PRODUCTION`؛ شاخه فاز: `feature/simplify-project-create-form-20261112`؛ مبنا: `main` با آخرین commit بررسی‌شده `632799ed71792b4db7bcf2a56676a19ed974091b`.
+- Frontend عملیاتی: `Saeidesl/PRSPRO2-PRODUCTION`؛ شاخه فاز: `feature/remove-project-description-quantity-20261112`؛ مبنا: `main` با آخرین commit بررسی‌شده `632799ed71792b4db7bcf2a56676a19ed974091b`.
 - Backend عملیاتی: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`؛ شاخه فاز: `feature/simplify-project-create-form-20261112`؛ مبنا: `main` با آخرین commit بررسی‌شده `6c7b8b35eb47be2c0095a0409b6179840597d1e0`.
 - هر دو مخزن مجاز و قابل دسترسی‌اند؛ شاخه پیش‌فرض هر دو `main` است. پیاده‌سازی این فاز روی شاخه feature انجام می‌شود و تا تأیید Product Owner به main ادغام نمی‌شود.
 - Backend: Google Apps Script V8 + Google Sheets؛ Frontend: HTML/CSS/JavaScript؛ API از `PMS.Api` و `Router.js`.
@@ -58,10 +58,11 @@
 - [x] **Task 4 — Regression, Integration & Handoff:** بررسی syntax و کنترل‌های ایستا موفق بود؛ Product Owner تست زنده فرم ایجاد پروژه را تأیید کرد.
   - *Log:* Frontend `js/modules/projects.js` و Backend `ProjectService.js` پس از ادغام در main استفاده شدند؛ تست زنده سناریوی ایجاد پروژه توسط Product Owner موفق اعلام شد. کد پروژه، نام، تاریخ/ساعت، گردش‌کار و شرط پروژه مرجع REPEAT تأیید شدند. این تأیید جایگزین گزارش CI مستقل نیست.
 
-### فاز بعدی — پاک‌سازی ستون‌های دیتابیس پروژه
+### فاز جاری — حذف فیلدهای توضیحات و تعداد پیشنهادی پروژه
 - [x] **Task 5 — Discovery & Planning:** بررسی تعریف `08_Projects`، مصرف ستون‌ها در Backend و Frontend و سازوکار ارتقای schema.
   - *Log:* `DatabaseSetup.js`، `ProjectService.js`، `ProjectRepository.js` و جست‌وجوی مصرف در مخزن Frontend بررسی شدند. `RunNumber` و `ReferenceSourceRevision` در مسیرهای فعلی مصرف نمی‌شوند؛ `ReferenceSourceRevision` فقط هنگام ساخت پروژه نوشته می‌شد. `ensureHeaders_()` افزایشی است و ستون‌های موجود را حذف نمی‌کند.
 - [x] **Task 6 — Schema Definition Cleanup:** حذف دو ستون بلااستفاده از تعریف دیتابیس و توقف تولید مقدار `ReferenceSourceRevision`.
   - *Log:* Backend `DatabaseSetup.js` — تعریف `APP_CONFIG.SHEETS.PROJECTS.headers` از `RunNumber` و `ReferenceSourceRevision` پاک شد. Backend `ProjectService.js` — مقداردهی `ReferenceSourceRevision` در `ProjectService.create()` حذف شد. PR #73 در `main` ادغام شد؛ commit `3cc3ce6481e8836862ea9fcdb4e273acb3659741`. Syntax check هر دو فایل موفق؛ بررسی main تأیید کرد هیچ‌یک از دو ستون در تعریف/تولید schema باقی نمانده‌اند. داده‌های شیت عملیاتی هنوز تغییر نکرده‌اند.
-- [ ] **Task 7 — Production Sync, Deployment & Safe Column Removal (IN PROGRESS):** انتشار کد Backend از workflow رسمی؛ تهیه پشتیبان و بررسی آخرین وابستگی‌ها/مقادیر دو ستون در شیت عملیاتی؛ سپس حذف فیزیکی فقط همین دو ستون و راستی‌آزمایی سلامت داده و برنامه.
-  - *Log:* workflow رسمی `.github/workflows/sync-apps-script.yml` فقط با اجرای دستی `workflow_dispatch` اجرا می‌شود؛ ابزار متصل امکان dispatch ندارد. هیچ deployment یا حذف فیزیکی هنوز انجام نشده است.
+- [ ] **Task 7 — Remove Obsolete Project Fields & Production Sync (IN PROGRESS):** حذف `Description` و `Quantity` از schema، ایجاد/ویرایش Backend، فرم‌ها و نمایش‌های پروژه؛ سپس انتشار نسخه سازگار و اجرای migration امن برای حذف ستون‌های خالی از `08_Projects`. ستون‌های `RunNumber` و `ReferenceSourceRevision` که در Task 6 از schema حذف شدند نیز در انتشار قبلی باقی می‌مانند.
+  - *Log:* پس از روشن‌شدن منظور Product Owner، محدوده اصلاح شد: ستون‌های موردنظر `Description` و `Quantity` هستند. در Backend، `DatabaseSetup.js` تعریف این دو header را حذف کرد و `setupDatabase()` را به migration `removeProjectDescriptionAndQuantityColumns_(ss)` متصل کرد؛ migration پیش از حذف، وجود داده/فرمول را کنترل می‌کند، از شیت نسخه پشتیبان می‌سازد و فقط ستون‌های خالی را از راست به چپ حذف می‌کند. `ProjectService.js` نوشتن این دو مقدار را در ایجاد پیش‌نویس، ایجاد عادی و ویرایش متوقف کرد؛ `ProjectValidator.js` اعتبارسنجی فیلدهای حذف‌شده را کنار گذاشت. تغییرات روی شاخه feature انجام شده‌اند؛ هنوز ادغام، انتشار و اجرای migration روی دیتابیس عملیاتی تأیید نشده‌اند.
+- [ ] **Task 8 — Regression, Deployment Verification & Handoff:** بررسی تست‌های Backend/Frontend و سازگاری API، ادغام پس از تأیید، راستی‌آزمایی اجرای workflow انتشار و اجرای `setupDatabase()` برای migration؛ بررسی باقی‌ماندن فقط ستون‌های اصلی پروژه و عدم بازتولید فیلدهای حذف‌شده.
