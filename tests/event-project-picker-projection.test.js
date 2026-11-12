@@ -16,6 +16,14 @@ function loadProjectService(projects) {
     },
     PermissionService: { hasPermission: () => true },
     ProjectRepository: { getAll: () => projects },
+    WorkflowStepRepository: {
+      getAll: () => [{ ID: 'STEP-1', TenantID: 'TENANT-1', Name: 'برش' },
+        { ID: 'STEP-X', TenantID: 'OTHER', Name: 'مرحله غیرمجاز' }]
+    },
+    ProjectStatusService: {
+      _getRows_: () => [{ ID: 'STATUS-1', Code: 'ACTIVE', Name: 'فعال', TenantID: 'TENANT-1', Status: 'ACTIVE' },
+        { ID: 'STATUS-X', Code: 'CANCELLED', Name: 'لغوشده', TenantID: 'OTHER', Status: 'ACTIVE' }]
+    },
     Response: { success: data => ({ success: true, data }) },
     InformationTypeRepository: {
       findByTenant: () => []
@@ -46,10 +54,12 @@ test('event picker returns a minimal tenant-scoped project projection without ca
   assert.deepEqual(Object.keys(response.data[0]).sort(), [
     'CurrentStepID', 'CurrentStepName', 'CurrentStepStatus', 'ID', 'Name',
     'ProjectCode', 'ProjectName', 'RecordState', 'Status', 'Title',
-    'WorkflowID', 'WorkflowStepName'
+    'WorkflowID', 'WorkflowStepName', 'OverallStatusName'
   ].sort());
   assert.equal(response.data[0].WorkflowID, 'WF-1');
   assert.equal(response.data[0].CurrentStepID, 'STEP-1');
+  assert.equal(response.data[0].OverallStatusName, 'فعال');
+  assert.equal(response.data[0].CurrentStepName, 'برش');
 });
 
 test('ordinary project list keeps the full existing project-card path', () => {
