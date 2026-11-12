@@ -1,11 +1,11 @@
 ## 🎯 Current Objective
-پاک‌سازی تعریف شیت پروژه‌ها در Database Setup؛ جلوگیری از تولید ستون‌های بلااستفاده `RunNumber` و `ReferenceSourceRevision` و برنامه‌ریزی امن برای حذف فیزیکی آن‌ها از دیتابیس عملیاتی پس از کنترل وابستگی‌ها و تهیه پشتیبان.
+پاک‌سازی تعریف شیت پروژه‌ها و حذف امن ستون‌های بلااستفاده `RunNumber` و `ReferenceSourceRevision` از دیتابیس عملیاتی؛ این هدف با انتشار Backend، تهیه نسخه پشتیبان و اجرای موفق مهاجرت تکمیل شد.
 
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
 ### مخازن و شاخه
 - Frontend عملیاتی: `Saeidesl/PRSPRO2-PRODUCTION`؛ شاخه فاز: `feature/simplify-project-create-form-20261112`؛ مبنا: `main` با آخرین commit بررسی‌شده `632799ed71792b4db7bcf2a56676a19ed974091b`.
-- Backend عملیاتی: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`؛ شاخه فاز جاری حذف فیزیکی ستون‌ها: `feature/remove-project-unused-db-columns-20261112`؛ مبنا: `main` با آخرین commit بررسی‌شده `8ebf8cedebb04c81bff51c11f7e193689de3af04`.
-- هر دو مخزن مجاز و قابل دسترسی‌اند؛ شاخه پیش‌فرض هر دو `main` است. پیاده‌سازی این فاز روی شاخه feature انجام می‌شود و تا تأیید Product Owner به main ادغام نمی‌شود.
+- Backend عملیاتی: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`؛ تغییرات فاز حذف فیزیکی ستون‌ها از شاخه `feature/remove-project-unused-db-columns-20261112` به `main` ادغام شد؛ commit ادغام `93c263919f6e2acb0afcd1f3aa757d0be7b41a87`.
+- هر دو مخزن مجاز و قابل دسترسی‌اند؛ شاخه پیش‌فرض هر دو `main` است. PR شماره 74 پس از موفقیت کنترل‌های CI و تأیید Product Owner در `main` ادغام شد.
 - Backend: Google Apps Script V8 + Google Sheets؛ Frontend: HTML/CSS/JavaScript؛ API از `PMS.Api` و `Router.js`.
 
 ### Frontend — مسیرهای واقعی کشف‌شده
@@ -63,7 +63,9 @@
   - *Log:* `DatabaseSetup.js`، `ProjectService.js`، `ProjectRepository.js` و جست‌وجوی مصرف در مخزن Frontend بررسی شدند. `RunNumber` و `ReferenceSourceRevision` در مسیرهای فعلی مصرف نمی‌شوند؛ `ReferenceSourceRevision` فقط هنگام ساخت پروژه نوشته می‌شد. `ensureHeaders_()` افزایشی است و ستون‌های موجود را حذف نمی‌کند.
 - [x] **Task 6 — Schema Definition Cleanup:** حذف دو ستون بلااستفاده از تعریف دیتابیس و توقف تولید مقدار `ReferenceSourceRevision`.
   - *Log:* Backend `DatabaseSetup.js` — تعریف `APP_CONFIG.SHEETS.PROJECTS.headers` از `RunNumber` و `ReferenceSourceRevision` پاک شد. Backend `ProjectService.js` — مقداردهی `ReferenceSourceRevision` در `ProjectService.create()` حذف شد. PR #73 در `main` ادغام شد؛ commit `3cc3ce6481e8836862ea9fcdb4e273acb3659741`. Syntax check هر دو فایل موفق؛ بررسی main تأیید کرد هیچ‌یک از دو ستون در تعریف/تولید schema باقی نمانده‌اند. داده‌های شیت عملیاتی هنوز تغییر نکرده‌اند.
-- [ ] **Task 7 — Production Sync, Deployment & Safe Column Removal (IN PROGRESS):** انتشار کد Backend از workflow رسمی؛ تهیه پشتیبان و بررسی آخرین وابستگی‌ها/مقادیر دو ستون در شیت عملیاتی؛ سپس حذف فیزیکی فقط همین دو ستون و راستی‌آزمایی سلامت داده و برنامه.
-  - *Log:* workflow رسمی `.github/workflows/sync-apps-script.yml` فقط با اجرای دستی `workflow_dispatch` اجرا می‌شود؛ ابزار متصل امکان dispatch ندارد. هیچ deployment یا حذف فیزیکی هنوز انجام نشده است.
+- [x] **Task 7 — Production Sync, Deployment & Safe Column Removal:** انتشار کد Backend از workflow رسمی؛ تهیه پشتیبان و بررسی آخرین وابستگی‌ها/مقادیر دو ستون در شیت عملیاتی؛ حذف فیزیکی فقط همین دو ستون و راستی‌آزمایی سلامت داده و برنامه.
+  - *Log:* workflow رسمی `.github/workflows/sync-apps-script.yml` با انتخاب `push_and_deploy` و تأیید هدف عملیاتی توسط Product Owner اجرا شد؛ کاربر موفقیت انتشار Backend را تأیید کرد.
   - *Log:* Backend `DatabaseSetup.js` — تابع `removeUnusedProjectColumns_(ss)` اضافه شد و در `setupDatabase()` پیش از `createAllSheets_(ss)` اجرا می‌شود. تابع فقط `RunNumber` و `ReferenceSourceRevision` را در شیت `08_Projects` شناسایی می‌کند؛ در صورت وجود داده یا فرمول در هرکدام، بدون حذف هیچ ستونی خطا می‌دهد؛ در حالت خالی ابتدا یک کپی کامل از شیت با نام یکتای `08_Projects_Backup_UnusedColumns_...` می‌سازد و سپس ستون‌ها را از راست به چپ حذف می‌کند. چون این دو نام در `APP_CONFIG.SHEETS.PROJECTS.headers` وجود ندارند، اجرای بعدی setup آن‌ها را دوباره ایجاد نمی‌کند.
   - *Log:* در `DatabaseSetup.js` تابع مستقل `removeUnusedProjectColumnsFromProduction()` و گزینه منوی «حذف ستون‌های بلااستفاده پروژه» اضافه شد تا پس از انتشار، فقط migration موردنظر روی Spreadsheet ID عملیاتی پیکربندی‌شده اجرا شود و نیازی به اجرای تمام مراحل `setupDatabase()` نباشد. در صورت وجود داده/فرمول، عملیات متوقف و پیام خطا نمایش داده می‌شود؛ در حالت موفق، نسخه پشتیبان کامل پیش از حذف ایجاد می‌شود. این migration هنوز در Google Sheets عملیاتی اجرا نشده است.
+
+  - *Log:* Backend `DatabaseSetup.js` — تابع `removeUnusedProjectColumns_(ss)` و wrapper اجرایی `removeUnusedProjectColumnsFromProduction()` پس از ادغام PR #74 در Backend عملیاتی منتشر شدند. Product Owner اجرای گزینه منوی «حذف ستون‌های بلااستفاده پروژه» را موفق اعلام کرد؛ بر اساس تأیید کاربر، مهاجرت با تهیه نسخه پشتیبان شیت `08_Projects` و حذف فقط ستون‌های `RunNumber` و `ReferenceSourceRevision` با موفقیت انجام شد. این دو ستون در `APP_CONFIG.SHEETS.PROJECTS.headers` نیز وجود ندارند و در setupهای بعدی بازتولید نمی‌شوند. ستون‌های `Description` و `Quantity` حفظ شدند. PR #74 merged؛ commit ادغام `93c263919f6e2acb0afcd1f3aa757d0be7b41a87`. Task 7 تکمیل شد.
