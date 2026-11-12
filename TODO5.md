@@ -83,12 +83,8 @@
 
 - *Log:* پس از تأیید تست زنده Product Owner، Task 2 تکمیل شد. در Frontend فایل‌های `js/core/api.js` (گزینه `refreshCached:false` در `Api.getCached` برای cache hit بدون GET پس‌زمینه)، `js/modules/projects.js` (cache-first فهرست پروژه و lookup وضعیت‌ها)، `js/modules/events.js` (cache-first رویدادها، انواع رویداد و `/projects?view=event-picker`)، `js/modules/attachments.js` (cache-first فهرست پیوست‌ها)، `js/core/router.js` (ذخیره و بازیابی جستجو، فیلتر، مرتب‌سازی، تب، وضعیت پنل و موقعیت اسکرول؛ پاک‌سازی snapshot در reset نشست) و `index.html` (cache-busting assetها) تغییر کردند. تست‌های `tests/shared-page-cache.test.js` و `tests/event-project-picker-performance.test.js` و تست‌های رگرسیون وابسته به asset/API به‌روزرسانی شدند. Frontend PR #104 با روش squash در `main` ادغام شد؛ merge commit: `833e3a1ebb1e7e9965fa784d390dbb01763c67dc`. Frontend GitHub Pages deployment run `43183779308` با نتیجه success منتشر شد؛ URL: `https://saeidesl.github.io/PRSPRO2-PRODUCTION/`. تست‌های خودکار Frontend، Cross-Repository QA، Browser Regression و UI/Performance Audit موفق شدند. Product Owner جابه‌جایی بین صفحات پروژه‌ها/رویدادها/فایل‌ها و حفظ state را در نسخه زنده تست و موفق تأیید کرد. Backend runtime، API contract، permissions، Google Sheets schema و داده‌های عملیاتی تغییر نکردند.
 
-### Task 3 — اتصال invalidation، آزمون یکپارچگی و تحویل (IN PROGRESS)
-- وضعیت جاری: هیچ تغییر runtime در Backend لازم/اعمال نشده است. منطق invalidation در Frontend و با استفاده از API/Cache موجود اجرا می‌شود؛ قراردادهای Backend و ساختار Google Sheets بدون تغییر می‌مانند.
-- Frontend PR #104 ادغام و انتشار GitHub Pages آن موفق شده است؛ تست زنده Task 2 توسط Product Owner تأیید شده است. ممیزی‌های CI مربوط به build نهایی Task 2 موفق بوده‌اند.
-- اتصال ایجاد/ویرایش پروژه، ثبت رویداد، upload/delete فایل به invalidation دقیق cacheهای وابسته.
-- بررسی consistency بین صفحه پروژه‌ها، رویدادها، فایل‌ها و جزئیات پروژه.
-- تست درخواست شبکه در رفت‌وبرگشت بین صفحات، TTL، force refresh، نشست متفاوت، خطا/آفلاین، ثبت هم‌زمان و موبایل.
-- اجرای تست‌های Frontend/Backend و QA بین‌مخزنی؛ بررسی عدم تغییر قرارداد API و عدم رگرسیون مجوزها.
-- ادغام فقط در شاخه‌های عملیاتی مجاز؛ deployment و تأیید زنده جداگانه گزارش می‌شوند.
+### Task 3 — اتصال invalidation، آزمون یکپارچگی و تحویل [x]
+- نتیجه بررسی و اجرا: هیچ تغییر runtime در Backend لازم یا اعمال نشد؛ منطق invalidation به‌طور کامل در Frontend و با API/Cache موجود اجرا شد. قراردادهای Backend، مجوزها، tenant isolation، Google Sheets schema و داده‌های عملیاتی بدون تغییر باقی ماندند.
+- *Log:* در مخزن Frontend، تغییرات `js/modules/projects.js`، `js/modules/attachments.js`، `js/modules/project-detail.js` و `index.html` برای invalidation هدفمند cache پروژه، رویداد و پیوست تکمیل شد؛ تست‌های `tests/shared-page-cache.test.js` و assertionهای asset در تست‌های رگرسیون وابسته به‌روزرسانی شدند. PR #105 با Squash در Frontend `main` ادغام شد؛ merge commit: `c441965b92364733ac98d1c64aca3eebbbc5a41e`. تست‌های Frontend، cross-repository QA، print designer regression و frontend agent suite پس از ادغام موفق شدند؛ GitHub Pages publish run `43188981314` و Pages build/deployment run `43188980054` نیز success شدند. Product Owner تست زنده upload فایل پروژه، اتصال فایل به رویداد، ویرایش پروژه و حذف پیوست را موفق تأیید کرد. در Backend هیچ فایل runtime/API/DB تغییر نکرد؛ این TODO5 صرفاً ثبت نتیجه سازگاری و عدم نیاز به تغییر Backend است.
+
 
