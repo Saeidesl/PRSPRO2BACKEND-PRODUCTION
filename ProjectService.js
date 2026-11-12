@@ -125,10 +125,25 @@ const ProjectService = {
       return String(a.Name).localeCompare(String(b.Name), 'fa');
     });
 
+    // Load reference projects only when at least one published repeat workflow
+    // is selectable. Normal project creation avoids an unnecessary full project read.
+    const hasRepeatWorkflow = workflows.some(function(item) {
+      return String(item.WorkflowType || 'INITIAL').toUpperCase() === 'REPEAT';
+    });
+    const referenceProjects = hasRepeatWorkflow
+      ? (ProjectRepository.getAll() || []).filter(function(item) {
+          return String(item.TenantID) === tenantId &&
+            String(item.RecordState || 'ACTIVE').toUpperCase() === 'ACTIVE' &&
+            this._isProjectAvailableToUser_(item, user);
+        }, this).map(function(item) {
+          return { ID: item.ID, ProjectCode: item.ProjectCode || '', Title: item.Title || '' };
+        })
+      : [];
+
     return Response.success({
       departments: departments,
       workflows: workflows,
-      referenceProjects: (ProjectRepository.getAll() || []).filter(function(item) { return String(item.TenantID) === tenantId && String(item.RecordState || 'ACTIVE').toUpperCase() === 'ACTIVE' && this._isProjectAvailableToUser_(item, user); }, this).map(function(item) { return { ID: item.ID, ProjectCode: item.ProjectCode || '', Title: item.Title || '' }; }),
+      referenceProjects: referenceProjects,
       projectStatuses: projectStatuses
     });
   },
