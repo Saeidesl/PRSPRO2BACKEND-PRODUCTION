@@ -47,8 +47,8 @@ const ProjectService = {
     }).map(function(item) {
       return { ID: item.ID, Name: item.Name || item.Title || item.Code || String(item.ID), Code: item.Code || '' };
     });
-    // One request now supplies all three form lookup lists, avoiding a second
-    // round-trip just to load workflows. Keep filtering tenant-scoped here.
+    // The create form needs only tenant-scoped departments, workflows, repeat references,
+    // and the server-defined default status. User and information-type lists are not part of this form.
     const workflows = (WorkflowRepository.getAll() || []).filter(function(item) {
       return String(item.TenantID) === tenantId &&
         String(item.Status || 'ACTIVE').toUpperCase() === 'ACTIVE' &&
