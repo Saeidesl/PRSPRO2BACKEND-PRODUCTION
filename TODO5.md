@@ -19,5 +19,6 @@
   - تغییر Frontend از همان APIها، payloadها، permissionها و مسیر پیوست موجود استفاده می‌کند؛ هیچ تغییر Backend runtime یا DB لازم نیست.
   - *Log:* هیچ فایل اجرایی Backend، route، payload، permission، tenant isolation، schema، migration یا داده عملیاتی تغییر نکرد؛ تصمیم عدم نیاز به تغییر Backend بر اساس ردیابی قراردادهای موجود ثبت شد.
 - [ ] Task 3 — تأیید سازگاری بین‌مخزنی (IN PROGRESS)
+  - اصلاح برچسب وضعیت صرفاً در Frontend است؛ قراردادهای API و داده‌های Backend تغییری نمی‌کنند.
   - QA بین‌مخزنی پس از آماده‌شدن PR فرانت‌اند اجرا و نتیجه ثبت شود.
-  - هیچ استقرار Backend انجام نشود مگر تغییر runtime ضروری و جداگانه تأیید شده باشد.
+  - هیچ استقرار Backend انجام نشود؛ تغییر runtime لازم نیست.
