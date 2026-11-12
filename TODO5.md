@@ -1,5 +1,5 @@
 ## 🎯 Current Objective
-ساده‌سازی فرم «ایجاد پروژه جدید» در نسخه عملیاتی؛ فرم ایجاد فقط چهار ورودی قابل مشاهده داشته باشد: کد موقت پروژه، نام پروژه، تاریخ و ساعت ایجاد پروژه، گردش کار پروژه. قوانین ایجاد، مجوزها، یکپارچگی گردش‌کار، ثبت تاریخ، یکتایی کد و سازگاری رکوردهای موجود باید حفظ شوند. مسیرهای فرم ویرایش و تنظیمات پروژه‌های موجود بدون نیازسنجی حذف نشوند.
+پاک‌سازی تعریف شیت پروژه‌ها در Database Setup؛ جلوگیری از تولید ستون‌های بلااستفاده `RunNumber` و `ReferenceSourceRevision` و برنامه‌ریزی امن برای حذف فیزیکی آن‌ها از دیتابیس عملیاتی پس از کنترل وابستگی‌ها و تهیه پشتیبان.
 
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
 ### مخازن و شاخه
@@ -55,4 +55,13 @@
   - *Log:* Frontend: `js/modules/projects.js` — `openCreateForm()` markup فرم را برای ایجاد به چهار فیلد محدود کرد؛ `renderProjectLookups()` workflow پیش‌فرض و مرجع شرطی REPEAT را حفظ کرد؛ `createProject()` مقدارهای داخلی واحد مجاز، وضعیت پیش‌فرض و اعلان را بدون نمایش فیلدها تأمین کرد و مسیر بارگذاری پیوست را از ایجاد حذف کرد؛ فرم ویرایش/تکمیل پیش‌نویس و بارگذاری فایل آن بدون تغییر رفتار حفظ شد. `index.html` نسخه asset ماژول را برای جلوگیری از cache قدیمی به‌روزرسانی کرد. بررسی syntax هر دو فایل JavaScript مرتبط موفق بود.
 - [x] **Task 3 — Backend Contract & Business-Rule Compatibility:** قرارداد ایجاد `POST /projects` و اعتبارسنجی‌های موجود حفظ شد؛ فقط داده‌های lookup غیرلازم حذف و بارگذاری پروژه‌های مرجع به وجود گردش‌کار `REPEAT` محدود شد. هیچ تغییری در schema یا داده‌های شیت ایجاد نشد.
   - *Log:* Backend: `ProjectService.js` — `projectFormLookups(params)` دیگر فهرست کاربران و انواع اطلاعات را نمی‌خواند/برنمی‌گرداند؛ `referenceProjects` فقط وقتی محاسبه می‌شود که حداقل یک گردش‌کار منتشرشده از نوع `REPEAT` وجود داشته باشد؛ فیلتر Tenant و دسترسی کاربر برای پروژه‌های مرجع حفظ شد. `Router.js`، `ProjectValidator.js`، `ProjectService.create()` و قرارداد `POST /projects` دست‌نخورده ماندند؛ بنابراین مجوز `PROJECT_CREATE`، اعتبارسنجی کد و یکتایی اتمیک، workflow فعال/منتشرشده و مرحله اول، اعتبارسنجی واحدهای مجاز، تاریخ، Audit و اعلان حفظ شدند. بررسی syntax فایل‌های JavaScript موفق بود.
-- [ ] **Task 4 — Regression, Integration & Handoff (IN PROGRESS):** اجرای تست‌های خودکار، syntax، قرارداد API، سناریوهای create/edit/draft/repeat، مجوزها، تاریخ و ساعت، و responsive؛ ثبت نتیجه CI و تحویل برای تست زنده Product Owner.
+- [x] **Task 4 — Regression, Integration & Handoff:** بررسی syntax و کنترل‌های ایستا موفق بود؛ Product Owner تست زنده فرم ایجاد پروژه را تأیید کرد.
+  - *Log:* Frontend `js/modules/projects.js` و Backend `ProjectService.js` پس از ادغام در main استفاده شدند؛ تست زنده سناریوی ایجاد پروژه توسط Product Owner موفق اعلام شد. کد پروژه، نام، تاریخ/ساعت، گردش‌کار و شرط پروژه مرجع REPEAT تأیید شدند. این تأیید جایگزین گزارش CI مستقل نیست.
+
+### فاز بعدی — پاک‌سازی ستون‌های دیتابیس پروژه
+- [x] **Task 5 — Discovery & Planning:** بررسی تعریف `08_Projects`، مصرف ستون‌ها در Backend و Frontend و سازوکار ارتقای schema.
+  - *Log:* `DatabaseSetup.js`، `ProjectService.js`، `ProjectRepository.js` و جست‌وجوی مصرف در مخزن Frontend بررسی شدند. `RunNumber` و `ReferenceSourceRevision` در مسیرهای فعلی مصرف نمی‌شوند؛ `ReferenceSourceRevision` فقط هنگام ساخت پروژه نوشته می‌شد. `ensureHeaders_()` افزایشی است و ستون‌های موجود را حذف نمی‌کند.
+- [x] **Task 6 — Schema Definition Cleanup:** حذف دو ستون بلااستفاده از تعریف دیتابیس و توقف تولید مقدار `ReferenceSourceRevision`.
+  - *Log:* Backend `DatabaseSetup.js` — تعریف `APP_CONFIG.SHEETS.PROJECTS.headers` از `RunNumber` و `ReferenceSourceRevision` پاک شد. Backend `ProjectService.js` — مقداردهی `ReferenceSourceRevision` در `ProjectService.create()` حذف شد. PR #73 در `main` ادغام شد؛ commit `3cc3ce6481e8836862ea9fcdb4e273acb3659741`. Syntax check هر دو فایل موفق؛ بررسی main تأیید کرد هیچ‌یک از دو ستون در تعریف/تولید schema باقی نمانده‌اند. داده‌های شیت عملیاتی هنوز تغییر نکرده‌اند.
+- [ ] **Task 7 — Production Sync, Deployment & Safe Column Removal (IN PROGRESS):** انتشار کد Backend از workflow رسمی؛ تهیه پشتیبان و بررسی آخرین وابستگی‌ها/مقادیر دو ستون در شیت عملیاتی؛ سپس حذف فیزیکی فقط همین دو ستون و راستی‌آزمایی سلامت داده و برنامه.
+  - *Log:* workflow رسمی `.github/workflows/sync-apps-script.yml` فقط با اجرای دستی `workflow_dispatch` اجرا می‌شود؛ ابزار متصل امکان dispatch ندارد. هیچ deployment یا حذف فیزیکی هنوز انجام نشده است.
