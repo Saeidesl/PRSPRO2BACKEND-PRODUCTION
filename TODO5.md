@@ -1,1 +1,23 @@
-Ready for the next feature
+## 🎯 Current Objective
+ثبت سازگاری Backend برای فاز بازطراحی کارت‌های پروژه در صفحه رویدادها. در بررسی اولیه هیچ تغییر Backend/API/DB لازم نیست؛ منبع داده، مجوزها و قراردادهای موجود بدون تغییر باقی می‌مانند.
+
+## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
+- مخزن عملیاتی Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه کاری `feat/events-unified-project-cards-20261113`، مبنا `main`.
+- آخرین commit مبنا: `913148044a31b0a76ee0a010e36602e5748bb8b5`.
+- پشته: Google Apps Script V8 و Google Sheets؛ `Router.js` مرجع route و permission، `ProjectService.js` منطق پروژه، `EventService.js` منطق ثبت رویداد.
+- Frontend داده‌ها را از APIهای موجود `GET /projects?view=event-picker`, `GET /events`, `GET /event-types` دریافت می‌کند.
+- پیوست تصویر پروفایل از مسیر موجود پروژه و مجوز `ATTACHMENT_VIEW` استفاده می‌کند؛ metadata در `15_Attachments` و فایل در Google Drive نگهداری می‌شود.
+- دسته‌بندی نمایشی پروژه‌ها بر اساس رویدادهای معتبر، کاربر/واحد و flag تکمیل کار در Frontend انجام می‌شود؛ منبع وضعیت و داده تغییری نمی‌کند.
+- هیچ route، payload، permission، sheet/schema، migration یا داده عملیاتی برای این فاز تغییر نمی‌کند مگر بررسی بعدی ضرورت قطعی را ثابت کند.
+
+## 📋 Macro-Task Queue & Implementation Log
+- [x] Task 1 — Discovery & Planning
+  - TODO5 و ARCHITECTURE عملیاتی بررسی شد؛ دسترسی مخزن، شاخه main و آخرین commit تأیید شد.
+  - نتیجه بررسی Frontend: نیازمندی فعلی صرفاً تغییر نمایش است و Backend runtime نیاز به تغییر ندارد.
+  - *Log:* قراردادهای `GET /projects?view=event-picker`, `GET /events`, `GET /event-types` و مسیر موجود پیوست پروژه/مجوز `ATTACHMENT_VIEW` حفظ می‌شوند؛ `Router.js`, `ProjectService.js`, `EventService.js`, شیت‌های پروژه/رویداد/پیوست بدون تغییر می‌مانند.
+- [ ] Task 2 — پشتیبانی و بازبینی سازگاری Backend (IN PROGRESS)
+  - در طول تغییر Frontend، عدم تغییر قرارداد API، مجوزها، tenant isolation و ساختار داده بررسی شود.
+  - در صورت عدم نیاز، هیچ کد runtime یا migration تغییر نکند.
+- [ ] Task 3 — تأیید سازگاری بین‌مخزنی
+  - QA بین‌مخزنی پس از آماده‌شدن PR فرانت‌اند اجرا و نتیجه ثبت شود.
+  - هیچ استقرار Backend انجام نشود مگر تغییر runtime ضروری و جداگانه تأیید شده باشد.
