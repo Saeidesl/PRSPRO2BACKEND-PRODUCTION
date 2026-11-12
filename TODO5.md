@@ -45,10 +45,10 @@
   - نتیجه: قابلیت باید بر پایه APIها و کش موجود توسعه یابد؛ هیچ مسیر ذخیره‌سازی موازی ایجاد نمی‌شود.
   - *Log:* Frontend: `pages/attachments.html`, `js/modules/attachments.js`, `js/modules/projects.js`, `index.html`. Backend: `Router.js`, `AttachmentService.js`, `AttachmentRepository.js`. APIهای موجود: `GET /projects`, `GET /events`, `GET /attachments`, `GET /projects/:projectId/attachments`, `GET /events/:eventId/attachments`, `GET /attachments/:id/download`, `POST /attachments`. پایگاه داده: شیت `15_Attachments` و فایل‌های Google Drive. هر دو مخزن روی `main` و آخرین TODO5 قبل از شروع پاک/آماده بود.
 
-- [ ] **Task 2 — Project Cards & Project File Workspace (IN PROGRESS)**
-  - تبدیل نمای اصلی فایل‌ها به کارت‌های پروژه با نام/کد پروژه، تعداد فایل و تصویر مناسب در صورت وجود.
-  - کلیک روی کارت، بازکردن نمای اختصاصی همان پروژه و نمایش فایل‌های پروژه و فایل‌های رویدادهای متعلق به آن پروژه.
-  - حفظ جستجو، وضعیت خالی/خطا، دسترسی‌ها و cache مشترک؛ عدم نمایش فایل رویداد مستقل در کارت پروژه.
+- [ ] **Task 2 — Project Cards & Project File Workspace (IN PROGRESS; implementation submitted, awaiting Product Owner test)**
+  - Frontend: نمای اصلی صفحه فایل‌ها در `pages/attachments.html` به جستجوی پروژه و کانتینر کارت‌ها تبدیل شد؛ `js/modules/attachments.js` اکنون کارت پروژه، شمارش فایل‌ها، ورود به فضای اختصاصی و بازگشت را رندر می‌کند.
+  - `MODULE.projectFiles()` فایل‌های PROJECT را با ProjectID و فایل‌های EVENT را فقط با ProjectID معتبر رویداد به پروژه متصل می‌کند؛ داده پروژه از `GET /projects` و داده رویداد از `GET /events` با cache مشترک خوانده می‌شود.
+  - جستجو، وضعیت خالی/خطا، کنترل‌های upload و cache/invalidation موجود حفظ شده‌اند؛ رویداد مستقل به هیچ پروژه‌ای الصاق نمی‌شود. بررسی خودکار و تست زنده هنوز در انتظار است.
 
 - [ ] **Task 3 — Inline Preview & Regression Validation**
   - ساخت پیش‌نمایش درون‌صفحه‌ای برای تصویر و PDF با کنترل بازکردن بزرگ‌نمایی و دانلود فایل اصلی.
