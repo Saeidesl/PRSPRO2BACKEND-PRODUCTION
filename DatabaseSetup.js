@@ -55,7 +55,7 @@ const APP_CONFIG = {
 
     PROJECTS: {
       name: '08_Projects',
-      headers: ['ID','TenantID','ProjectCode','Title','Description','WorkflowID','WorkflowVersion','CurrentStepID','Status','CreatedBy','CreatedAt','UpdatedAt','Quantity','AvailableDepartmentIDs','AllowedUserIDs','NotifyEnabled','CurrentStepStatus','SourceProjectID','RecordState','ReferencePolicyJSON','ReferenceCopyStatusJSON','ReferenceCopyCompletedAt','ReferenceCopyOperationID']
+      headers: ['ID','TenantID','ProjectCode','Title','WorkflowID','WorkflowVersion','CurrentStepID','Status','CreatedBy','CreatedAt','UpdatedAt','AvailableDepartmentIDs','AllowedUserIDs','NotifyEnabled','CurrentStepStatus','SourceProjectID','RecordState','ReferencePolicyJSON','ReferenceCopyStatusJSON','ReferenceCopyCompletedAt','ReferenceCopyOperationID']
     },
 
     WORKFLOWS: {
@@ -573,6 +573,7 @@ function setupDatabase() {
       );
     }
 
+    removeProjectDescriptionAndQuantityColumns_(ss);
     createAllSheets_(ss);
     ensureProjectReferenceCopySchema_(ss);
     backfillPurchaseOrderSurplus_(ss);
@@ -597,6 +598,73 @@ function setupDatabase() {
   } finally {
     lock.releaseLock();
   }
+}
+
+
+/**
+ * حذف امن ستون‌های منسوخ پروژه پس از تهیه نسخه پشتیبان.
+ * فقط ستون‌های خالی حذف می‌شوند؛ در صورت وجود هر مقدار/فرمول، عملیات متوقف می‌شود.
+ * این تابع از ابتدای setupDatabase اجرا می‌شود تا ستون‌ها پس از حذف دوباره ساخته نشوند.
+ */
+function removeProjectDescriptionAndQuantityColumns_(ss) {
+  const sheet = ss && ss.getSheetByName('08_Projects');
+  if (!sheet) return [];
+
+  const lastColumn = sheet.getLastColumn();
+  if (lastColumn < 1) return [];
+
+  const headers = sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0]
+    .map(function(value) { return String(value || '').trim(); });
+  const targetNames = ['Description', 'Quantity'];
+  const targets = [];
+
+  targetNames.forEach(function(name) {
+    const matches = [];
+    headers.forEach(function(header, index) {
+      if (header === name) matches.push(index + 1);
+    });
+    if (matches.length > 1) {
+      throw new Error('ستون پروژه "' + name + '" بیش از یک بار وجود دارد؛ حذف خودکار متوقف شد.');
+    }
+    if (matches.length === 1) targets.push({ name: name, column: matches[0] });
+  });
+
+  if (!targets.length) return [];
+
+  const lastRow = sheet.getLastRow();
+  targets.forEach(function(target) {
+    if (lastRow < 2) return;
+    const range = sheet.getRange(2, target.column, lastRow - 1, 1);
+    const values = range.getValues();
+    const formulas = range.getFormulas();
+    const hasContent = values.some(function(row) {
+      return row[0] !== '' && row[0] !== null && row[0] !== undefined;
+    }) || formulas.some(function(row) { return Boolean(row[0]); });
+    if (hasContent) {
+      throw new Error(
+        'ستون "' + target.name + '" هنوز دارای داده یا فرمول است. ' +
+        'برای جلوگیری از حذف اطلاعات، هیچ ستونی حذف نشد.'
+      );
+    }
+  });
+
+  const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd_HHmmss');
+  const baseName = '08_Projects_Backup_' + timestamp;
+  let backupName = baseName;
+  let suffix = 1;
+  while (ss.getSheetByName(backupName)) {
+    backupName = baseName + '_' + suffix;
+    suffix += 1;
+  }
+  sheet.copyTo(ss).setName(backupName);
+
+  targets.sort(function(a, b) { return b.column - a.column; }).forEach(function(target) {
+    sheet.deleteColumn(target.column);
+  });
+
+  const removed = targets.map(function(target) { return target.name; });
+  Logger.log('ستون‌های خالی پروژه حذف شدند: ' + removed.join(', ') + '؛ نسخه پشتیبان: ' + backupName);
+  return removed;
 }
 
 
