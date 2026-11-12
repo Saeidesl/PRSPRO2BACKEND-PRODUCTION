@@ -1130,3 +1130,48 @@
 - Backend PR #67 با commit `69520aa5fec78d3d597be29bd7c1187e5491bb15` صرفاً برای ثبت TODO5 و نقشه فنی فاز بود؛ هیچ فایل runtime بک‌اند تغییر نکرد.
 - هیچ API، Sheet، ستون، migration یا داده عملیاتی جدید/حذف‌شده‌ای وجود ندارد.
 - تأیید کاربر به‌عنوان پذیرش عملیاتی ثبت شد؛ این Log ادعای مستقل درباره اجرای deployment جدید GitHub Pages یا تغییر deployment بک‌اند ندارد.
+
+
+## 2026-11-12 — ثبت معماری فاز بهینه‌سازی کش صفحات (بدون تغییر Backend Runtime)
+
+### محدوده و تصمیم معماری
+- مخزن عملیاتی Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه `main`.
+- مخزن مصرف‌کننده Frontend: `Saeidesl/PRSPRO2-PRODUCTION`، شاخه `main`.
+- هدف فاز، کاهش درخواست‌های تکراری هنگام جابه‌جایی صفحات پروژه‌ها، رویدادها و فایل‌ها، حفظ state و تازه‌سازی هدفمند cacheهای وابسته بود.
+- پس از Discovery و آزمون‌های یکپارچگی مشخص شد نیاز به تغییر Backend وجود ندارد؛ هیچ فایل runtime بک‌اند، API، مجوز، tenant isolation، ساختار Google Sheets، migration یا داده عملیاتی تغییر نکرد.
+- تصمیم معماری: cache در لایه Frontend و بر پایه `PMS.Api` و `PMS.Cache` موجود باقی می‌ماند. cache مرجع مجوز یا منبع حقیقت داده نیست؛ Backend و Sheets منبع اصلی داده هستند.
+
+### نقشه Backend و قراردادهای مصرف‌شده
+- مسیریابی و کنترل دسترسی همچنان از `Router.js` موجود انجام می‌شود؛ کنترل tenant-scoped و permissionهای موجود بدون تغییر باقی ماندند.
+- سرویس‌های موجود مرتبط: `ProjectService.js`, `EventService.js`, `AttachmentService.js`; مخازن و تنظیمات موجود DatabaseSetup دست‌نخورده ماندند.
+- APIهای موجود که Frontend مصرف می‌کند:
+  - خواندن: `GET /projects`, `GET /projects/:id`, `GET /events`, `GET /event-types`, `GET /attachments`, `GET /project-dashboard/lookups`, `GET /workflows/:workflowId/steps`, `GET /projects/:projectId/attachments`.
+  - عملیات تغییردهنده: `POST /projects`, `PUT /projects/:id`, `POST /events`, `POST /projects/:projectId/attachments`, `DELETE /attachments/:attachmentId`.
+  - query مهم `GET /projects?view=event-picker` همچنان همان قرارداد قبلی را دارد؛ query و هویت نشست باید در cache Frontend از هم تفکیک شوند.
+- منابع داده موجود: `08_Projects` برای پروژه‌ها؛ `15_Attachments` برای metadata پیوست و Google Drive برای باینری؛ `30_ProjectInformation` و `31_ProjectInformationHistory` برای اطلاعات پروژه؛ شیت‌های موجود Event/Form برای رویدادها و snapshot پاسخ فرم.
+- هیچ endpoint جدید، Sheet جدید، ستون جدید یا payload تغییرکرده‌ای برای این فاز تعریف نشد.
+
+### وابستگی‌های Frontend و نقاط invalidation
+- `js/core/api.js`: `Api.getCached` با گزینه `refreshCached:false` در cache hit معتبر بدون GET پس‌زمینه؛ مسیرهای موجود `getFresh`, `invalidate`, `invalidateMany`.
+- `js/core/cache.js`: cache موجود localStorage با پیشوند `PMS_CACHE_` و TTL/metadata موجود.
+- `js/core/router.js`: حفظ و بازیابی جستجو، فیلتر، مرتب‌سازی، تب، پنل فیلتر و scroll؛ پاک‌سازی snapshot در reset نشست.
+- `js/modules/projects.js`: cache-first پروژه‌ها و lookupها؛ invalidation بعد از create/edit/settings موفق و پاک‌سازی metadata کارت و cache پیوست همان پروژه.
+- `js/modules/events.js`: cache-first برای رویدادها، انواع رویداد و event-picker projects؛ invalidation پس از ثبت رویداد.
+- `js/modules/attachments.js`: cache-first فهرست پیوست‌ها؛ invalidation cache رویداد/داشبورد بعد از upload رویداد و metadata پروژه بعد از upload پروژه.
+- `js/modules/project-detail.js`: invalidation metadata کارت و پیوست‌های پروژه پس از upload از فرم جزئیات.
+- `index.html`: cache-busting assetهای Frontend برای انتشار نسخه جدید.
+- مالکیت invalidation و cache در Frontend است؛ Backend همان پاسخ‌ها و قواعد امنیتی موجود را ارائه می‌کند.
+
+### آزمون، سازگاری و پذیرش
+- تست‌های Frontend در `tests/shared-page-cache.test.js`, `tests/event-project-picker-performance.test.js` و تست‌های رگرسیون وابسته به asset به‌روزرسانی شدند.
+- PR Frontend #104 با commit `833e3a1ebb1e7e9965fa784d390dbb01763c67dc` ادغام شد.
+- PR Frontend #105 با commit `c441965b92364733ac98d1c64aca3eebbbc5a41e` ادغام شد.
+- تست‌های Frontend checks، cross-repository QA، print designer regression و frontend agent suite پس از ادغام #105 موفق شدند؛ GitHub Pages publish run `43188981314` و Pages build/deployment run `43188980054` موفق شدند.
+- ممیزی جامع UI/performance پس از ادغام در run `43188981159` با وضعیت cancelled خاتمه یافت و success محسوب نمی‌شود.
+- Product Owner چهار سناریوی عملی upload پیوست پروژه، اتصال فایل به رویداد، ویرایش پروژه و حذف پیوست را در نسخه منتشرشده تست و تأیید کرد.
+- هیچ عملیات destructive، migration یا تغییر داده در Backend انجام نشد.
+
+### Implementation Logs
+- Task 1 — Discovery & Planning: مسیرهای موجود API، Router، cache Frontend و شیت‌های مرتبط بررسی شدند؛ نیاز به تغییر Backend تشخیص داده نشد.
+- Task 2 — Shared Cache و حفظ وضعیت: فقط Frontend تغییر کرد؛ Backend runtime/API/DB بدون تغییر باقی ماند و رفتار در نسخه منتشرشده توسط Product Owner تأیید شد.
+- Task 3 — Invalidation هدفمند: invalidation پروژه/رویداد/پیوست در Frontend تکمیل شد؛ QA بین‌مخزنی موفق بود و Product Owner چهار سناریوی عملیاتی را تأیید کرد. این بخش در Backend صرفاً به‌عنوان تصمیم معماری و ثبت عدم نیاز به تغییر Backend مستند شده است.
