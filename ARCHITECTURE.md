@@ -1175,3 +1175,27 @@
 - Task 1 — Discovery & Planning: مسیرهای موجود API، Router، cache Frontend و شیت‌های مرتبط بررسی شدند؛ نیاز به تغییر Backend تشخیص داده نشد.
 - Task 2 — Shared Cache و حفظ وضعیت: فقط Frontend تغییر کرد؛ Backend runtime/API/DB بدون تغییر باقی ماند و رفتار در نسخه منتشرشده توسط Product Owner تأیید شد.
 - Task 3 — Invalidation هدفمند: invalidation پروژه/رویداد/پیوست در Frontend تکمیل شد؛ QA بین‌مخزنی موفق بود و Product Owner چهار سناریوی عملیاتی را تأیید کرد. این بخش در Backend صرفاً به‌عنوان تصمیم معماری و ثبت عدم نیاز به تغییر Backend مستند شده است.
+
+
+## 2026-11-12 — بستن فاز فضای فایل پروژه و اصلاح دانلود تصاویر
+
+### محدوده و نتیجه نهایی
+- مخازن عملیاتی: `Saeidesl/PRSPRO2-PRODUCTION` و `Saeidesl/PRSPRO2BACKEND-PRODUCTION`؛ شاخه نهایی هر دو `main`.
+- فضای فایل‌ها با کارت پروژه، فضای اختصاصی هر پروژه، اتصال امن فایل‌های PROJECT و فایل‌های EVENT دارای ProjectID معتبر و پیش‌نمایش مستقیم فایل‌ها تکمیل شد.
+- ایراد دانلود تصویر سفید با اصلاح مسیر تبدیل Base64 به Blob در مرورگر برطرف شد؛ Base64 قبل از تبدیل normalize می‌شود، data URL با MIME اصلی ساخته می‌شود و Blob خالی رد می‌شود.
+- تغییر دانلود فقط در Frontend انجام شد؛ Backend runtime، Apps Script، APIها، permissionها، Google Sheets، Google Drive و داده‌های عملیاتی بدون تغییر باقی ماندند.
+
+### نقشه فنی و فایل‌های اجرایی
+- Frontend: `pages/attachments.html` و `js/modules/attachments.js` برای کارت پروژه، workspace، نمایش فایل و عملیات دانلود؛ `index.html` برای cache-busting ماژول.
+- تابع `MODULE.fetchAttachmentBlob()` در `js/modules/attachments.js`: دریافت محتوای موجود از API دانلود، حذف data URI prefix و whitespace از Base64، ساخت data URL با MIME اصلی، تبدیل از طریق `fetch(dataUrl).blob()` و اعتبارسنجی اندازه Blob.
+- API موجود حفظ شد: `GET /attachments/:id/download`. هیچ endpoint یا payload جدیدی اضافه نشد.
+- Cache key نهایی در `index.html`: `js/modules/attachments.js?v=20261112-download-dataurl-1`.
+- Backend: مسیرهای موجود `Router.js`، `AttachmentService.js` و `AttachmentRepository.js` بدون تغییر؛ metadata در شیت `15_Attachments` و باینری در Google Drive باقی ماند.
+
+### آزمون، انتشار و پذیرش
+- Frontend PR #110 با squash merge commit `8a03d5851f04b96b6a868a940d933ff8e505b059` در `main` ادغام شد.
+- CIهای Frontend checks، PMS frontend agent suite، PMS cross-repository QA و UI/performance checks در PR موفق بودند.
+- GitHub Pages workflow رسمی `.github/workflows/deploy-pages-staging.yml` پس از ادغام روی commit فوق اجرا شد؛ run `43256144236` با conclusion=success و تمام مراحل Checkout، Verify، Upload artifact و Publish موفق تکمیل شد.
+- Product Owner پس از انتشار، دانلود تصویر قدیمی و تصویر جدید را در نسخه عملیاتی تست و موفقیت را در 2026-11-12 تأیید کرد.
+- Taskهای پیاده‌سازی و Regression Validation پذیرفته شدند؛ فاز با درخواست صریح Product Owner در 2026-11-12 بسته شد.
+- هیچ انتشار Backend لازم نبود و هیچ داده عملیاتی حذف، جابه‌جا یا migrate نشد.
