@@ -4,7 +4,7 @@
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
 ### مخازن و شاخه
 - Frontend عملیاتی: `Saeidesl/PRSPRO2-PRODUCTION`؛ شاخه فاز: `feature/simplify-project-create-form-20261112`؛ مبنا: `main` با آخرین commit بررسی‌شده `632799ed71792b4db7bcf2a56676a19ed974091b`.
-- Backend عملیاتی: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`؛ شاخه فاز: `feature/simplify-project-create-form-20261112`؛ مبنا: `main` با آخرین commit بررسی‌شده `6c7b8b35eb47be2c0095a0409b6179840597d1e0`.
+- Backend عملیاتی: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`؛ شاخه فاز جاری حذف فیزیکی ستون‌ها: `feature/remove-project-unused-db-columns-20261112`؛ مبنا: `main` با آخرین commit بررسی‌شده `8ebf8cedebb04c81bff51c11f7e193689de3af04`.
 - هر دو مخزن مجاز و قابل دسترسی‌اند؛ شاخه پیش‌فرض هر دو `main` است. پیاده‌سازی این فاز روی شاخه feature انجام می‌شود و تا تأیید Product Owner به main ادغام نمی‌شود.
 - Backend: Google Apps Script V8 + Google Sheets؛ Frontend: HTML/CSS/JavaScript؛ API از `PMS.Api` و `Router.js`.
 
@@ -65,3 +65,4 @@
   - *Log:* Backend `DatabaseSetup.js` — تعریف `APP_CONFIG.SHEETS.PROJECTS.headers` از `RunNumber` و `ReferenceSourceRevision` پاک شد. Backend `ProjectService.js` — مقداردهی `ReferenceSourceRevision` در `ProjectService.create()` حذف شد. PR #73 در `main` ادغام شد؛ commit `3cc3ce6481e8836862ea9fcdb4e273acb3659741`. Syntax check هر دو فایل موفق؛ بررسی main تأیید کرد هیچ‌یک از دو ستون در تعریف/تولید schema باقی نمانده‌اند. داده‌های شیت عملیاتی هنوز تغییر نکرده‌اند.
 - [ ] **Task 7 — Production Sync, Deployment & Safe Column Removal (IN PROGRESS):** انتشار کد Backend از workflow رسمی؛ تهیه پشتیبان و بررسی آخرین وابستگی‌ها/مقادیر دو ستون در شیت عملیاتی؛ سپس حذف فیزیکی فقط همین دو ستون و راستی‌آزمایی سلامت داده و برنامه.
   - *Log:* workflow رسمی `.github/workflows/sync-apps-script.yml` فقط با اجرای دستی `workflow_dispatch` اجرا می‌شود؛ ابزار متصل امکان dispatch ندارد. هیچ deployment یا حذف فیزیکی هنوز انجام نشده است.
+  - *Log:* Backend `DatabaseSetup.js` — تابع `removeUnusedProjectColumns_(ss)` اضافه شد و در `setupDatabase()` پیش از `createAllSheets_(ss)` اجرا می‌شود. تابع فقط `RunNumber` و `ReferenceSourceRevision` را در شیت `08_Projects` شناسایی می‌کند؛ در صورت وجود داده یا فرمول در هرکدام، بدون حذف هیچ ستونی خطا می‌دهد؛ در حالت خالی ابتدا یک کپی کامل از شیت با نام یکتای `08_Projects_Backup_UnusedColumns_...` می‌سازد و سپس ستون‌ها را از راست به چپ حذف می‌کند. چون این دو نام در `APP_CONFIG.SHEETS.PROJECTS.headers` وجود ندارند، اجرای بعدی setup آن‌ها را دوباره ایجاد نمی‌کند. این migration هنوز در Google Sheets عملیاتی اجرا نشده است؛ انتشار Backend و اجرای کنترل‌شده `setupDatabase()` بعد از تأیید PR لازم است.
