@@ -325,11 +325,40 @@ const ProjectService = {
         return true;
       });
 
+    // Resolve the three independent project status dimensions in bulk.
+    // Reuse the existing tenant-scoped lookup sources; no extra API round trips.
+    const projectStatusRows = typeof ProjectStatusService !== 'undefined'
+      ? (ProjectStatusService._getRows_() || []).filter(function(item) {
+          return String(item.TenantID) === String(user.TenantID) &&
+            String(item.Status || 'ACTIVE').toUpperCase() === 'ACTIVE';
+        }) : [];
+    const projectStatusByValue = Object.create(null);
+    projectStatusRows.forEach(function(item) {
+      if (item.Code) projectStatusByValue[String(item.Code)] = item.Name || item.Code;
+      if (item.ID) projectStatusByValue[String(item.ID)] = item.Name || item.Code || item.ID;
+    });
+    const workflowStepsById = Object.create(null);
+    (WorkflowStepRepository.getAll() || []).forEach(function(step) {
+      if (String(step.TenantID) !== String(user.TenantID) ||
+          String(step.Status || 'ACTIVE').toUpperCase() === 'DELETED') return;
+      workflowStepsById[String(step.ID)] = step.Name || step.Title || step.Code || String(step.ID);
+    });
+    const enrichProjectStatuses = function(project) {
+      const statusValue = String(project.Status || '');
+      const stepId = String(project.CurrentStepID || '');
+      return Object.assign({}, project, {
+        OverallStatusName: projectStatusByValue[statusValue] || statusValue,
+        CurrentStepName: project.CurrentStepName || project.WorkflowStepName ||
+          workflowStepsById[stepId] || '',
+        CurrentStepStatus: project.CurrentStepStatus || ''
+      });
+    };
+
     // The event form needs only project identity and workflow eligibility.
     // Avoid building the full CardInformation projection for this read-only picker.
     if (String((params || {}).view || '').toLowerCase() === 'event-picker') {
       return Response.success(tenantProjects.map(function(project) {
-        return {
+        return enrichProjectStatuses({
           ID: project.ID,
           ProjectCode: project.ProjectCode || '',
           Title: project.Title || '',
@@ -342,7 +371,7 @@ const ProjectService = {
           WorkflowStepName: project.WorkflowStepName || '',
           CurrentStepStatus: project.CurrentStepStatus || '',
           Status: project.Status || ''
-        };
+        });
       }));
     }
 
@@ -384,6 +413,12 @@ const ProjectService = {
         });
       });
     }
+
+    tenantProjects.forEach(function(project) {
+      const enriched = enrichProjectStatuses(project);
+      project.OverallStatusName = enriched.OverallStatusName;
+      project.CurrentStepName = enriched.CurrentStepName;
+    });
 
     return Response.success(tenantProjects);
 
