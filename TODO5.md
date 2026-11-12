@@ -76,6 +76,9 @@
 - حذف GET تکراری در navigation عادی؛ refresh فقط طبق TTL/رویداد invalidation یا درخواست دستی.
 - بررسی و اصلاح lifecycle در Router برای حفظ state لازم صفحات یا بازیابی آن، بدون باقی‌ماندن DOM/listener ناسالم.
 - حفظ فیلتر، جستجو، مرتب‌سازی، تب انتخابی، اسکرول و وضعیت باز/بسته بخش‌ها تا حدی که با امنیت و داده تازه سازگار باشد.
+- Frontend عملیاتی روی شاخه `feat/shared-page-data-cache` تا commit `feb1b3a4aa12a088e0338b6ee856733d8ec61133` پیش رفته است: cache-first برای داده‌های هدف و بازیابی فیلتر/جستجو/مرتب‌سازی/تب/scroll در حافظه پیاده‌سازی شده؛ state با reset نشست پاک می‌شود و فرم‌های ثبت‌نشده ذخیره نمی‌شوند.
+- Backend runtime، API contract، permissions و Google Sheets تغییری نکرده‌اند؛ این تصمیم بر اساس بازبینی مسیرهای موجود است.
+- Frontend Regression Tests، syntax، asset QA و cross-repository QA موفق شده‌اند؛ ممیزی نهایی UI/performance هنوز در حال اجراست. هیچ merge یا deployment انجام نشده است.
 - Backend/API/DB فقط در صورت نیاز اثبات‌شده؛ هیچ تغییر عملیاتی داده یا migration بدون مجوز.
 
 ### Task 3 — اتصال invalidation، آزمون یکپارچگی و تحویل
