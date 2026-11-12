@@ -5,9 +5,8 @@
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
 
 ### مخازن و شاخه‌های تأییدشده
-- Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه `main`.
-- Frontend: `Saeidesl/PRSPRO2-PRODUCTION`، شاخه `main`.
-- آخرین commit مشاهده‌شده Frontend: `2bc6c8c9bf803e16eef0eab8a1c736455670ce83`.
+- Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه `fix/inline-attachment-display-20261112` (مبنای main: `955b3ffe1abc843b911b9a8f1784a0fd04f93173`).
+- Frontend: `Saeidesl/PRSPRO2-PRODUCTION`، شاخه `fix/inline-attachment-display-20261112`؛ commit پیاده‌سازی مستقیم: `3bbd9a17910aced895f898b9d145b79764f94a88`.
 - هر دو فایل TODO5 در شروع فاز مقدار `Ready for the next feature` داشتند.
 - ARCHITECTURE.md هر دو مخزن در ابتدای فاز خوانده شد؛ سند Backend حاوی نقشه Attachment و APIهای جاری و سند Frontend حاوی Log فاز کش مشترک مورخ 2026-11-12 است.
 
@@ -45,12 +44,13 @@
   - نتیجه: قابلیت باید بر پایه APIها و کش موجود توسعه یابد؛ هیچ مسیر ذخیره‌سازی موازی ایجاد نمی‌شود.
   - *Log:* Frontend: `pages/attachments.html`, `js/modules/attachments.js`, `js/modules/projects.js`, `index.html`. Backend: `Router.js`, `AttachmentService.js`, `AttachmentRepository.js`. APIهای موجود: `GET /projects`, `GET /events`, `GET /attachments`, `GET /projects/:projectId/attachments`, `GET /events/:eventId/attachments`, `GET /attachments/:id/download`, `POST /attachments`. پایگاه داده: شیت `15_Attachments` و فایل‌های Google Drive. هر دو مخزن روی `main` و آخرین TODO5 قبل از شروع پاک/آماده بود.
 
-- [ ] **Task 2 — Project Cards, Project Workspace & Inline Preview (IN PROGRESS; implementation submitted, awaiting CI and Product Owner test)**
+- [ ] **Task 2 — Project Cards, Project Workspace & Direct Inline File Display (IN PROGRESS; production test identified preview-only-on-click behavior)**
   - Frontend: نمای اصلی صفحه فایل‌ها در `pages/attachments.html` به جستجوی پروژه و کانتینر کارت‌ها تبدیل شد؛ `js/modules/attachments.js` اکنون کارت پروژه، شمارش فایل‌ها، ورود به فضای اختصاصی و بازگشت را رندر می‌کند.
   - `MODULE.projectFiles()` فایل‌های PROJECT را با ProjectID و فایل‌های EVENT را فقط با ProjectID معتبر رویداد به پروژه متصل می‌کند؛ داده پروژه از `GET /projects` و داده رویداد از `GET /events` با cache مشترک خوانده می‌شود.
-  - جستجو، وضعیت خالی، کنترل upload و cache/invalidation حفظ شده‌اند؛ رویداد مستقل به پروژه الصاق نمی‌شود. پیش‌نمایش تصویر/PDF و خواندن DOCX/XLSX با بارگذاری تنبل کتابخانه‌ها اضافه شده است؛ HTML خروجی فایل‌ها قبل از درج پاک‌سازی می‌شود. دانلود فایل اصلی حفظ شده است.
+  - جستجو، وضعیت خالی، کنترل upload و cache/invalidation حفظ شده‌اند؛ رویداد مستقل به پروژه الصاق نمی‌شود. پیش‌نمایش مودالی اولیه برای تصویر/PDF و خواندن DOCX/XLSX ایجاد شده بود؛ تست عملی نشان داد نمایش فقط پس از کلیک انجام می‌شود و نیاز محصول، مشاهده مستقیم داخل فضای پروژه است.
 
-- [ ] **Task 3 — Inline Preview & Regression Validation**
+  - *Log تکمیلی — ایراد تست عملی و اصلاح:* در 2026-11-12 تصویر کاربر نشان داد کارت فایل فقط آیکون و دکمه «مشاهده فایل» دارد؛ علت، استفاده صرف از MODULE.preview() مودالی در js/modules/attachments.js بود. در شاخه fix/inline-attachment-display-20261112 پیش‌نمایش خودکار داخل کارت فایل اضافه شد: تصاویر به‌صورت img، PDF در iframe و DOCX/XLSX با Mammoth/SheetJS درون کارت رندر می‌شوند؛ بارگذاری با IntersectionObserver تنبل است؛ دکمه‌های نمایش بزرگ‌تر و دانلود حفظ شده‌اند؛ URLهای موقت Blob هنگام رندر مجدد آزاد می‌شوند. index.html برای cache-busting به 20261112-inline-attachment-preview-1 تغییر کرد. Backend runtime/API/Sheets/Drive بدون تغییر است. این اصلاح هنوز نیازمند CI و تست عملی مجدد کاربر است.
+- [ ] **Task 3 — Regression Validation**
   - Frontend: `MODULE.fetchAttachmentBlob()`, `MODULE.preview()`, `MODULE.download()` و `MODULE.sanitizePreviewHtml()` برای دریافت مجاز محتوا، پیش‌نمایش و دانلود اصلی اضافه/تکمیل شدند.
   - DOCX با Mammoth و XLSX با SheetJS به‌صورت lazy-load نمایش داده می‌شوند؛ PDF در iframe داخلی و تصاویر در مودال نمایش داده می‌شوند. در صورت عدم پشتیبانی، پیام واضح و امکان دانلود ارائه می‌شود.
   - بررسی CI اولیه یک خطای Syntax در escapeJs را شناسایی کرد؛ regex اصلاح شد. CI commit اصلاحی و تست زنده هنوز در انتظار است؛ هیچ ادعای موفقیت نهایی/انتشار وجود ندارد.
