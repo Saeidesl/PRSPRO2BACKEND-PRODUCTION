@@ -12,6 +12,7 @@ const ProjectValidator = {
     if (String(data.RecordState || 'ACTIVE').toUpperCase() === 'DRAFT') {
       Validator.required(data.Title, 'Title');
       Validator.string(data.Title, 'Title');
+      if (data.Description !== undefined && data.Description !== null) Validator.string(data.Description, 'Description');
       return true;
     }
 
@@ -34,6 +35,24 @@ const ProjectValidator = {
       data.Title,
       'Title'
     );
+
+    // تعداد اولیه اختیاری است؛ در صورت ثبت باید عدد صحیح مثبت باشد.
+    if (data.Quantity !== undefined && data.Quantity !== null && String(data.Quantity).trim() !== '') {
+      var quantity = Number(data.Quantity);
+      if (!isFinite(quantity) || quantity < 1 || Math.floor(quantity) !== quantity) {
+        throw ErrorHandler.create(
+          Constants.ERROR.VALIDATION_ERROR,
+          'تعداد پروژه باید عدد صحیح بزرگ‌تر از صفر باشد.'
+        );
+      }
+    }
+
+    if (data.Description !== undefined && data.Description !== null) {
+      Validator.string(
+        data.Description,
+        'Description'
+      );
+    }
 
     Validator.required(data.WorkflowID, 'گردش کار');
     Validator.id(data.WorkflowID, 'WorkflowID');
@@ -106,6 +125,25 @@ const ProjectValidator = {
       Validator.string(
         data.Title,
         'Title'
+      );
+
+    }
+
+    if (data.Quantity !== undefined && data.Quantity !== null && String(data.Quantity).trim() !== '') {
+      var quantity = Number(data.Quantity);
+      if (!isFinite(quantity) || quantity < 1 || Math.floor(quantity) !== quantity) {
+        throw ErrorHandler.create(
+          Constants.ERROR.VALIDATION_ERROR,
+          'تعداد پروژه باید عدد صحیح بزرگ‌تر از صفر باشد.'
+        );
+      }
+    }
+
+    if (data.Description !== undefined && data.Description !== null) {
+
+      Validator.string(
+        data.Description,
+        'Description'
       );
 
     }
