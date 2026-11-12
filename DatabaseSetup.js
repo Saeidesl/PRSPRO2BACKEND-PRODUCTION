@@ -573,6 +573,7 @@ function setupDatabase() {
       );
     }
 
+    removeUnusedProjectColumns_(ss);
     createAllSheets_(ss);
     ensureProjectReferenceCopySchema_(ss);
     backfillPurchaseOrderSurplus_(ss);
@@ -597,6 +598,107 @@ function setupDatabase() {
   } finally {
     lock.releaseLock();
   }
+}
+
+
+/**
+ * حذف فیزیکی ستون‌های منسوخ از شیت پروژه‌ها.
+ * فقط ستون‌های RunNumber و ReferenceSourceRevision هدف هستند.
+ * اگر هرکدام داده یا فرمول داشته باشند، عملیات متوقف می‌شود.
+ * پیش از حذف، یک نسخه کامل از شیت 08_Projects در همان Spreadsheet ساخته می‌شود.
+ * این مهاجرت قبل از createAllSheets_ اجرا می‌شود تا ستون‌ها دوباره ساخته نشوند.
+ */
+function removeUnusedProjectColumns_(ss) {
+  const sheet = ss && ss.getSheetByName('08_Projects');
+  if (!sheet) return [];
+
+  const lastColumn = sheet.getLastColumn();
+  if (lastColumn < 1) return [];
+
+  const headers = sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0]
+    .map(function(value) { return String(value || '').trim(); });
+  const targetNames = ['RunNumber', 'ReferenceSourceRevision'];
+  const targets = [];
+
+  targetNames.forEach(function(name) {
+    const matches = [];
+    headers.forEach(function(header, index) {
+      if (header === name) matches.push(index + 1);
+    });
+
+    if (matches.length > 1) {
+      throw new Error(
+        'ستون منسوخ "' + name + '" بیش از یک بار در شیت 08_Projects وجود دارد؛ حذف خودکار متوقف شد.'
+      );
+    }
+    if (matches.length === 1) {
+      targets.push({ name: name, column: matches[0] });
+    }
+  });
+
+  if (!targets.length) {
+    Logger.log('ستون‌های منسوخ RunNumber و ReferenceSourceRevision از قبل در 08_Projects وجود ندارند.');
+    return [];
+  }
+
+  const lastRow = sheet.getLastRow();
+  targets.forEach(function(target) {
+    if (lastRow < 2) return;
+
+    const range = sheet.getRange(2, target.column, lastRow - 1, 1);
+    const values = range.getValues();
+    const formulas = range.getFormulas();
+    const hasValues = values.some(function(row) {
+      return row[0] !== '' && row[0] !== null && row[0] !== undefined;
+    });
+    const hasFormulas = formulas.some(function(row) {
+      return String(row[0] || '').trim() !== '';
+    });
+
+    if (hasValues || hasFormulas) {
+      throw new Error(
+        'ستون "' + target.name + '" هنوز دارای داده یا فرمول است. ' +
+        'برای جلوگیری از حذف ناخواسته اطلاعات، هیچ ستونی حذف نشد.'
+      );
+    }
+  });
+
+  const timestamp = Utilities.formatDate(
+    new Date(),
+    Session.getScriptTimeZone(),
+    'yyyyMMdd_HHmmss'
+  );
+  const baseName = '08_Projects_Backup_UnusedColumns_' + timestamp;
+  let backupName = baseName;
+  let suffix = 1;
+
+  while (ss.getSheetByName(backupName)) {
+    backupName = baseName + '_' + suffix;
+    suffix += 1;
+  }
+
+  // Keep a full sheet-level recovery copy before changing the operational sheet.
+  sheet.copyTo(ss).setName(backupName);
+
+  // Delete from right to left so the remaining column indexes stay valid.
+  targets.sort(function(a, b) {
+    return b.column - a.column;
+  }).forEach(function(target) {
+    sheet.deleteColumn(target.column);
+  });
+
+  SpreadsheetApp.flush();
+
+  const removedNames = targets.map(function(target) {
+    return target.name;
+  });
+  Logger.log(
+    'ستون‌های منسوخ از 08_Projects حذف شدند: ' +
+    removedNames.join(', ') +
+    '؛ نسخه پشتیبان: ' + backupName
+  );
+
+  return removedNames;
 }
 
 
