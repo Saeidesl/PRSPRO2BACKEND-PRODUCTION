@@ -510,13 +510,11 @@ const ProjectService = {
         TenantID: tenantId,
         ProjectCode: '',
         Title: String(project.Title || '').trim(),
-        Description: String(project.Description || ''),
         WorkflowID: '',
         WorkflowVersion: '',
         CurrentStepID: '',
         CurrentStepStatus: '',
         Status: '',
-        Quantity: '',
         AvailableDepartmentIDs: JSON.stringify([]),
         AllowedUserIDs: JSON.stringify([]),
         NotifyEnabled: true,
@@ -713,17 +711,6 @@ const ProjectService = {
 
       Title:
         project.Title,
-
-      Quantity:
-        project.Quantity === undefined ||
-        project.Quantity === null ||
-        String(project.Quantity).trim() === ''
-          ? ''
-          : Number(project.Quantity),
-
-      Description:
-        project.Description ||
-        '',
 
       AvailableDepartmentIDs: JSON.stringify(departmentIds),
       AllowedUserIDs: JSON.stringify(allowedUserIds),
@@ -1226,22 +1213,6 @@ const ProjectService = {
 
       updateData.Title =
         data.Title;
-
-    }
-
-    if (data.Quantity !== undefined) {
-      updateData.Quantity =
-        data.Quantity === null || String(data.Quantity).trim() === ''
-          ? ''
-          : Number(data.Quantity);
-    }
-
-    if (
-      data.Description !== undefined
-    ) {
-
-      updateData.Description =
-        data.Description;
 
     }
 
