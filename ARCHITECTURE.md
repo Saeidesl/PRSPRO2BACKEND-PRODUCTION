@@ -1199,3 +1199,36 @@
 - Product Owner پس از انتشار، دانلود تصویر قدیمی و تصویر جدید را در نسخه عملیاتی تست و موفقیت را در 2026-11-12 تأیید کرد.
 - Taskهای پیاده‌سازی و Regression Validation پذیرفته شدند؛ فاز با درخواست صریح Product Owner در 2026-11-12 بسته شد.
 - هیچ انتشار Backend لازم نبود و هیچ داده عملیاتی حذف، جابه‌جا یا migrate نشد.
+
+
+
+## 2026-11-12 — بستن فاز حذف امن ستون‌های بلااستفاده از دیتابیس پروژه
+
+### محدوده و نتیجه نهایی
+- فاز پس از تأیید صریح Product Owner بسته شد. هدف، حذف فیزیکی فقط دو ستون بلااستفاده `RunNumber` و `ReferenceSourceRevision` از شیت عملیاتی `08_Projects` و جلوگیری از بازتولید آن‌ها در setupهای بعدی بود.
+- Product Owner تأیید کرد اجرای migration در محیط عملیاتی موفق بوده است؛ پیش از حذف، نسخه پشتیبان کامل شیت ساخته شد و فقط همین دو ستون حذف شدند.
+- ستون‌های معتبر از جمله `Description` و `Quantity` حفظ شدند. هیچ ستون یا داده عملیاتی دیگری هدف migration نبود.
+- Frontend runtime، API contract و مخزن Frontend در این فاز نیازمند تغییر نبودند؛ تمام تغییرات اجرایی و migration در Backend عملیاتی انجام شد.
+
+### نقشه فنی و تغییرات Backend
+- `DatabaseSetup.js`:
+  - ستون‌های `RunNumber` و `ReferenceSourceRevision` از `APP_CONFIG.SHEETS.PROJECTS.headers` حذف شدند؛ بنابراین `ensureHeaders_()` در setupهای بعدی این دو ستون را مجدداً ایجاد نمی‌کند.
+  - تابع `removeUnusedProjectColumns_(ss)` برای migration محدود به شیت `08_Projects` اضافه شد. تابع فقط دو نام مجاز را هدف می‌گیرد و پیش از هر حذف، وجود مقدار یا فرمول در ستون‌های هدف را بررسی می‌کند؛ در صورت مشاهده هر مقدار/فرمول، عملیات متوقف می‌شود.
+  - در صورت خالی بودن ستون‌ها، ابتدا یک کپی کامل از شیت با نام یکتای `08_Projects_Backup_UnusedColumns_YYYYMMDD_HHmmss` ایجاد می‌شود؛ سپس ستون‌ها از راست به چپ حذف می‌شوند تا جابه‌جایی indexها باعث حذف ستون اشتباه نشود.
+  - migration در مسیر `setupDatabase()` پیش از `createAllSheets_()` قرار گرفت تا تعریف schema و وضعیت شیت پس از setup هم‌راستا بمانند.
+  - تابع مستقل `removeUnusedProjectColumnsFromProduction()` با ScriptLock و Spreadsheet ID حاصل از `getConfiguredDatabaseSpreadsheetId_()` اضافه شد تا اقدام منویی فقط همین migration را روی دیتابیس عملیاتی اجرا کند و نیازمند اجرای کامل setup نباشد.
+  - گزینه منوی «حذف ستون‌های بلااستفاده پروژه» به منوی «سیستم تولید» در `onOpen()` اضافه شد. خطا در صورت وجود داده/فرمول به کاربر اعلام می‌شود و در موفقیت نام backup در Execution log ثبت می‌شود.
+- `ProjectService.js`:
+  - مقداردهی `ReferenceSourceRevision` در مسیر `ProjectService.create()` حذف شد؛ این فیلد دیگر توسط ایجاد پروژه تولید نمی‌شود.
+- `ProjectRepository.js` و مسیرهای Frontend: وابستگی اجرایی به این دو ستون یافت نشد و تغییری در آن‌ها لازم نبود.
+- ساختار داده: تنها شیت هدف `08_Projects` بود؛ هیچ API، payload، permission، tenant boundary یا مسیر خواندن/نوشتن پروژه تغییر نکرد.
+
+### ایمنی، آزمون و پذیرش
+- آزمون‌های mock برای ستون‌های خالی، توقف در صورت وجود مقدار یا فرمول، حذف از راست به چپ، no-op در صورت نبود ستون‌ها، ایجاد backup، ترتیب اجرای migration در setup، وجود گزینه منو و نبود نام ستون‌ها در schema اجرا شدند و همگی موفق بودند.
+- بررسی syntax فایل‌های JavaScript تغییرکرده موفق بود.
+- Backend PR #73 برای پاک‌سازی تعریف schema در `main` ادغام شد؛ commit `3cc3ce6481e8836862ea9fcdb4e273acb3659741`.
+- Backend PR #74 شامل migration ایمن و گزینه اجرای مستقل آن در `main` ادغام شد؛ merge commit نهایی `93c263919f6e2acb0afcd1f3aa757d0be7b41a87`.
+- کنترل‌های CI مربوط به PR #74: Backend source checks و PMS agent suite هر دو موفق شدند.
+- Backend از workflow رسمی `.github/workflows/sync-apps-script.yml` با مسیر `push_and_deploy` منتشر شد؛ Product Owner موفقیت انتشار و سپس اجرای موفق گزینه منو را تأیید کرد.
+- بر اساس تأیید Product Owner، backup کامل شیت پیش از حذف ایجاد شد و فقط `RunNumber` و `ReferenceSourceRevision` از شیت عملیاتی حذف شدند. نام دقیق backup در گزارش تأیید کاربر اعلام نشده و در این سند حدس زده نشده است.
+- تغییرات GitHub، انتشار Backend و اجرای migration عملیاتی سه مرحله جداگانه بودند و هر سه بر اساس commit/گزارش workflow و تأیید Product Owner انجام‌شده ثبت می‌شوند. انتشار Frontend لازم نبود.
