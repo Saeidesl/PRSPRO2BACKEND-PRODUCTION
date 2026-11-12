@@ -1232,3 +1232,22 @@
 - Backend از workflow رسمی `.github/workflows/sync-apps-script.yml` با مسیر `push_and_deploy` منتشر شد؛ Product Owner موفقیت انتشار و سپس اجرای موفق گزینه منو را تأیید کرد.
 - بر اساس تأیید Product Owner، backup کامل شیت پیش از حذف ایجاد شد و فقط `RunNumber` و `ReferenceSourceRevision` از شیت عملیاتی حذف شدند. نام دقیق backup در گزارش تأیید کاربر اعلام نشده و در این سند حدس زده نشده است.
 - تغییرات GitHub، انتشار Backend و اجرای migration عملیاتی سه مرحله جداگانه بودند و هر سه بر اساس commit/گزارش workflow و تأیید Product Owner انجام‌شده ثبت می‌شوند. انتشار Frontend لازم نبود.
+
+
+## 2026-11-12 — پشتیبانی Backend از فاز انیمیشن پیشرفت ایجاد پروژه در صفحه رویدادها
+
+### محدوده و تصمیم معماری
+- مخزن عملیاتی: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه `main`.
+- این فاز صرفاً اصلاح Frontend بود؛ بررسی مسیرهای موجود نشان داد قراردادهای Backend برای ایجاد پروژه و انتخاب پروژه در صفحه رویدادها کافی هستند.
+- هیچ تغییر runtime، API، permission، schema، migration، Google Sheets یا داده عملیاتی در Backend انجام نشد و انتشار Backend لازم نبود.
+
+### قراردادهای موجود و حفظ‌شده
+- `Router.js`: مسیر `POST /projects` با مجوز `PROJECT_CREATE` به `ProjectService.create(body, params)` متصل است.
+- `ProjectService.js` و `ProjectValidator.js`: قواعد فعلی ایجاد پروژه، tenant، گردش‌کار و اعتبارسنجی حفظ شدند.
+- فهرست انتخاب پروژه از `GET /projects?view=event-picker` و داده‌های رویداد از مسیرهای موجود `GET /events` و `GET /event-types` دریافت می‌شوند.
+- شیت `08_Projects` بدون تغییر باقی ماند.
+
+### آزمون و پذیرش
+- QA بین‌مخزنی پس از ادغام Frontend موفق بود (run `43296139443`).
+- Product Owner در 2026-11-12 تست نسخه عملیاتی نمایش انیمیشن پیشرفت هنگام ایجاد پروژه از صفحه رویدادها را موفق اعلام کرد.
+- این سند تصمیم عدم نیاز به تغییر Backend را ثبت می‌کند؛ هیچ ادعایی درباره انتشار Backend در این فاز وجود ندارد.
