@@ -45,12 +45,12 @@
   - نتیجه: قابلیت باید بر پایه APIها و کش موجود توسعه یابد؛ هیچ مسیر ذخیره‌سازی موازی ایجاد نمی‌شود.
   - *Log:* Frontend: `pages/attachments.html`, `js/modules/attachments.js`, `js/modules/projects.js`, `index.html`. Backend: `Router.js`, `AttachmentService.js`, `AttachmentRepository.js`. APIهای موجود: `GET /projects`, `GET /events`, `GET /attachments`, `GET /projects/:projectId/attachments`, `GET /events/:eventId/attachments`, `GET /attachments/:id/download`, `POST /attachments`. پایگاه داده: شیت `15_Attachments` و فایل‌های Google Drive. هر دو مخزن روی `main` و آخرین TODO5 قبل از شروع پاک/آماده بود.
 
-- [ ] **Task 2 — Project Cards & Project File Workspace (IN PROGRESS; implementation submitted, awaiting Product Owner test)**
+- [ ] **Task 2 — Project Cards, Project Workspace & Inline Preview (IN PROGRESS; implementation submitted, awaiting CI and Product Owner test)**
   - Frontend: نمای اصلی صفحه فایل‌ها در `pages/attachments.html` به جستجوی پروژه و کانتینر کارت‌ها تبدیل شد؛ `js/modules/attachments.js` اکنون کارت پروژه، شمارش فایل‌ها، ورود به فضای اختصاصی و بازگشت را رندر می‌کند.
   - `MODULE.projectFiles()` فایل‌های PROJECT را با ProjectID و فایل‌های EVENT را فقط با ProjectID معتبر رویداد به پروژه متصل می‌کند؛ داده پروژه از `GET /projects` و داده رویداد از `GET /events` با cache مشترک خوانده می‌شود.
-  - جستجو، وضعیت خالی/خطا، کنترل‌های upload و cache/invalidation موجود حفظ شده‌اند؛ رویداد مستقل به هیچ پروژه‌ای الصاق نمی‌شود. بررسی خودکار و تست زنده هنوز در انتظار است.
+  - جستجو، وضعیت خالی، کنترل upload و cache/invalidation حفظ شده‌اند؛ رویداد مستقل به پروژه الصاق نمی‌شود. پیش‌نمایش تصویر/PDF و خواندن DOCX/XLSX با بارگذاری تنبل کتابخانه‌ها اضافه شده است؛ HTML خروجی فایل‌ها قبل از درج پاک‌سازی می‌شود. دانلود فایل اصلی حفظ شده است.
 
 - [ ] **Task 3 — Inline Preview & Regression Validation**
-  - ساخت پیش‌نمایش درون‌صفحه‌ای برای تصویر و PDF با کنترل بازکردن بزرگ‌نمایی و دانلود فایل اصلی.
-  - تعیین رفتار قابل اتکا برای DOCX/XLSX بر اساس پشتیبانی واقعی مرورگر/کتابخانه‌های موجود؛ عدم استفاده از لینک خام به‌عنوان تجربه اصلی.
-  - اجرای تست‌های خودکار/ساختاری، بررسی موبایل/دسکتاپ، upload و invalidation کش؛ تحویل برای تست Product Owner.
+  - Frontend: `MODULE.fetchAttachmentBlob()`, `MODULE.preview()`, `MODULE.download()` و `MODULE.sanitizePreviewHtml()` برای دریافت مجاز محتوا، پیش‌نمایش و دانلود اصلی اضافه/تکمیل شدند.
+  - DOCX با Mammoth و XLSX با SheetJS به‌صورت lazy-load نمایش داده می‌شوند؛ PDF در iframe داخلی و تصاویر در مودال نمایش داده می‌شوند. در صورت عدم پشتیبانی، پیام واضح و امکان دانلود ارائه می‌شود.
+  - بررسی CI اولیه یک خطای Syntax در escapeJs را شناسایی کرد؛ regex اصلاح شد. CI commit اصلاحی و تست زنده هنوز در انتظار است؛ هیچ ادعای موفقیت نهایی/انتشار وجود ندارد.
