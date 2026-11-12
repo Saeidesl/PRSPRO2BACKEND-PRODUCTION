@@ -338,7 +338,10 @@ const ProjectService = {
       if (item.ID) projectStatusByValue[String(item.ID)] = item.Name || item.Code || item.ID;
     });
     const workflowStepsById = Object.create(null);
-    (WorkflowStepRepository.getAll() || []).forEach(function(step) {
+    const workflowStepRows = typeof WorkflowStepRepository !== 'undefined' &&
+      WorkflowStepRepository && typeof WorkflowStepRepository.getAll === 'function'
+      ? (WorkflowStepRepository.getAll() || []) : [];
+    workflowStepRows.forEach(function(step) {
       if (String(step.TenantID) !== String(user.TenantID) ||
           String(step.Status || 'ACTIVE').toUpperCase() === 'DELETED') return;
       workflowStepsById[String(step.ID)] = step.Name || step.Title || step.Code || String(step.ID);
