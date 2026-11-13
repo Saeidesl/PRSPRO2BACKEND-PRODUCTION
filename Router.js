@@ -729,7 +729,7 @@ const Router = {
     const projectInformationSaveMatch = path.match(/^\/projects\/([^/]+)\/information\/([^/]+)$/);
     if (projectInformationSaveMatch) {
       AccessControlService.require(params, 'PROJECT_EDIT');
-      return ProjectInformationService.save(decodeURIComponent(projectInformationSaveMatch[1]), decodeURIComponent(projectInformationSaveMatch[2]), body, params);
+      return ProjectInformationService.saveWithLock(decodeURIComponent(projectInformationSaveMatch[1]), decodeURIComponent(projectInformationSaveMatch[2]), body, params);
     }
 
     if (path === '/forms') {
@@ -863,6 +863,11 @@ const Router = {
     if (informationTypeColumnUpdateMatch) {
       AccessControlService.require(params, 'SYSTEM_SETTINGS');
       return InformationTypeService.updateColumn(decodeURIComponent(informationTypeColumnUpdateMatch[1]), decodeURIComponent(informationTypeColumnUpdateMatch[2]), body, params);
+    }
+
+    const printTemplateProjectDataParts = path.split('/');
+    if (printTemplateProjectDataParts.length === 4 && printTemplateProjectDataParts[1] === 'print-templates' && printTemplateProjectDataParts[3] === 'project-data') {
+      return PrintTemplateService.updateProjectBinding(decodeURIComponent(printTemplateProjectDataParts[2]), body, params);
     }
 
     const printTemplateUpdateParts = path.split('/');

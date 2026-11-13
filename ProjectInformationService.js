@@ -171,6 +171,9 @@ const ProjectInformationService = {
     var valueJSON=JSON.stringify(value);
     if(valueJSON.length>45000)throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR,'حجم اطلاعات بیش از ظرفیت مجاز یک سلول صفحه‌گسترده است. لطفاً اطلاعات را در چند بخش ثبت کنید.');
     var existing=ProjectInformationRepository.findAnyByProjectAndType(projectId,typeId);
+    if (body.ExpectedRevision !== undefined && Number(body.ExpectedRevision) !== Number(existing && existing.Revision || 0)) {
+      throw ErrorHandler.create(Constants.ERROR.CONFLICT, 'اطلاعات این بخش هم‌زمان تغییر کرده است؛ قالب را تازه‌سازی کنید.');
+    }
     var wasActive=existing&&String(existing.Status || 'ACTIVE')==='ACTIVE';
     // Idempotent replay of the same event/value must not create duplicate revisions.
     if(wasActive && eventId && String(existing.SourceEventID || '')===eventId &&
@@ -301,6 +304,15 @@ const ProjectInformationService = {
     AuditService.log({TenantID:user.TenantID,UserID:user.ID,Action:Constants.ACTION.DELETE,EntityType:'PROJECT_INFORMATION',EntityID:existing.ID,OldData:existing,NewData:updated,Reason:reason});
     updated.HistoryID=history.ID;
     return Response.success(updated,{message:'اطلاعات پرونده حذف منطقی شد.'});
+  },
+  saveWithLock: function(projectId,typeId,body,params) {
+    var lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    try {
+      return this.save(projectId,typeId,body,params);
+    } finally {
+      lock.releaseLock();
+    }
   },
   history: function(projectId,typeId,params){
     var user=this._user(params);this._project(projectId,user.TenantID,user);this._type(typeId,user.TenantID);

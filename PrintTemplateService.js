@@ -422,7 +422,7 @@ const PrintTemplateService = {
         const department = departmentsById[String(event.DepartmentID || '')];
         return {
           ID: event.ID, EventTypeID: event.EventTypeID, OccurredAt: event.OccurredAt || '',
-          CreatedAt: event.CreatedAt || '', Description: event.Description || '', Status: event.Status || '',
+          CreatedAt: event.CreatedAt || '', UpdatedAt: event.UpdatedAt || '', Description: event.Description || '', Status: event.Status || '',
           EventTypeName: type ? (type.Name || type.Code || '') : '',
           CreatorName: creator ? EventService.getUserDisplayName(creator) : (event.CreatedBy || ''),
           PerformedByName: performer ? EventService.getUserDisplayName(performer) : (event.PerformedBy || ''),
@@ -431,6 +431,7 @@ const PrintTemplateService = {
       });
     }
     const resolved = Object.create(null);
+    const sources = Object.create(null);
     definition.bindings.forEach(function(binding) {
       let value = null;
       if (binding.sourceType === 'EVENT_FIELD') {
@@ -449,16 +450,19 @@ const PrintTemplateService = {
         else {
           const latest = matchingEvents.length ? matchingEvents[matchingEvents.length - 1] : null;
           value = latest ? latest[field] : null;
+          if (latest && ['OccurredAt','Description'].indexOf(field) !== -1) sources[String(binding.id)] = { sourceType: 'EVENT_FIELD', eventId: String(latest.ID), expectedUpdatedAt: String(latest.UpdatedAt || latest.CreatedAt || '') };
         }
       } else if (binding.sourceType === 'PROJECT_FIELD') {
         const field = String(binding.field || '');
         if (!projectFieldAllowList[field]) throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'فیلد پروژه در منبع قالب مجاز نیست.');
         value = project[field] !== undefined ? project[field] : null;
+        if (['ProjectCode','Title','Description','Quantity'].indexOf(field) !== -1) sources[String(binding.id)] = { sourceType: 'PROJECT_FIELD', expectedUpdatedAt: String(project.UpdatedAt || project.CreatedAt || '') };
       } else if (binding.sourceType === 'PROJECT_INFORMATION') {
         const typeId = String(binding.informationTypeId || '');
         if (!infoById[typeId]) throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'نوع اطلاعات متصل به قالب پیدا نشد یا غیرفعال است.');
         const row = informationByType[typeId];
         value = row ? this._parse(row.ValueJSON, null) : null;
+        sources[String(binding.id)] = { sourceType: 'PROJECT_INFORMATION', informationTypeId: typeId, expectedRevision: Number((ProjectInformationRepository.findAnyByProjectAndType(projectId, typeId) || {}).Revision || 0) };
       } else {
         const formId = String(binding.formId || '');
         if (binding.eventTypeId) {
@@ -480,7 +484,7 @@ const PrintTemplateService = {
           const event = events.find(function(item) { return String(item.ID) === String(row.EventID); });
           return {
             ID: row.ID, EventID: row.EventID, FormID: row.FormID, FormVersion: Number(row.FormVersion || 1),
-            CreatedAt: row.CreatedAt || '', EventOccurredAt: event ? (event.OccurredAt || event.CreatedAt || '') : '',
+            CreatedAt: row.CreatedAt || '', UpdatedAt: row.UpdatedAt || '', EventOccurredAt: event ? (event.OccurredAt || event.CreatedAt || '') : '',
             Values: this._parse(row.ResponseJSON, {}), Definition: this._parse(row.DefinitionSnapshotJSON, {})
           };
         }, this).sort(function(a,b) { return String(a.CreatedAt).localeCompare(String(b.CreatedAt)); });
@@ -500,12 +504,19 @@ const PrintTemplateService = {
         if (selection === 'ALL') value = matching.map(pickValue);
         else if (selection === 'EVENT' || selection === 'RESPONSE') value = matching.length ? pickValue(matching[matching.length - 1]) : null;
         else value = matching.length ? pickValue(matching[matching.length - 1]) : null;
+        if (binding.sourceType === 'EVENT_FORM_FIELD' && matching.length && selection !== 'ALL') {
+          const selected = matching[matching.length - 1];
+          const selectedField = selected.Definition && Array.isArray(selected.Definition.Fields) ? selected.Definition.Fields.find(function(field) { return String(field.ID || '') === String(binding.fieldId || '') || String(field.InformationTypeID || '') === String(binding.informationTypeId || ''); }) : null;
+          const typeId = String(binding.informationTypeId || (selectedField && selectedField.InformationTypeID) || '');
+          if (typeId) sources[String(binding.id)] = { sourceType: 'EVENT_FORM_FIELD', eventId: String(selected.EventID), responseId: String(selected.ID), formId: String(selected.FormID), informationTypeId: typeId, expectedUpdatedAt: String(selected.UpdatedAt || selected.CreatedAt || ''), expectedFormVersion: Number(((FormRepository.getForms() || []).find(function(form) { return String(form.ID) === String(selected.FormID) && String(form.TenantID) === String(user.TenantID); }) || {}).Version || selected.FormVersion || 1), expectedInformationRevision: Number((ProjectInformationRepository.findAnyByProjectAndType(projectId, typeId) || {}).Revision || 0) };
+        }
       }
       resolved[String(binding.id)] = value;
     }, this);
     return {
       project: { ID: project.ID, ProjectCode: project.ProjectCode || '', Title: project.Title || '' },
-      data: resolved
+      data: resolved,
+      sources: sources
     };
   },
   preview: function(body, params) {
@@ -517,8 +528,54 @@ const PrintTemplateService = {
     return Response.success({
       project: resolved.project,
       data: resolved.data,
+      sources: resolved.sources || {},
       resolvedAt: this._now()
     });
+  },
+  updateProjectBinding: function(templateId, body, params) {
+    const user = this._user(params);
+    body = body || {};
+    const template = this._template(templateId, user.TenantID);
+    if (String(template.Status || 'ACTIVE') !== 'ACTIVE') {
+      throw ErrorHandler.create(Constants.ERROR.INVALID_OPERATION, 'قالب غیرفعال است.');
+    }
+    const definition = this._definition(template);
+    const bindingId = String(body.BindingID || '');
+    const binding = (definition.bindings || []).find(function(item) { return String(item.id) === bindingId; });
+    if (!binding) throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'اتصال داده قالب پیدا نشد.');
+    if (String(binding.selection || 'LATEST').toUpperCase() !== 'LATEST') {
+      throw ErrorHandler.create(Constants.ERROR.PERMISSION_DENIED, 'فقط آخرین مقدار منبع داده قابل ویرایش است.');
+    }
+    const resolved = this._resolveProjectData(body.ProjectID, definition, user);
+    const source = resolved.sources && resolved.sources[bindingId];
+    if (!source || !body.ExpectedSource || Object.keys(source).some(function(key) { return String(source[key]) !== String(body.ExpectedSource[key]); })) {
+      throw ErrorHandler.create(Constants.ERROR.CONFLICT, 'منبع اطلاعات از زمان بازشدن قالب تغییر کرده است؛ قالب را تازه‌سازی کنید.');
+    }
+    let result;
+    if (binding.sourceType === 'PROJECT_FIELD') {
+      AccessControlService.require(params, 'PROJECT_EDIT');
+      result = ProjectService.updateFromTemplate(body.ProjectID, binding.field, body.Value, source.expectedUpdatedAt, params);
+    } else if (binding.sourceType === 'PROJECT_INFORMATION') {
+      AccessControlService.require(params, 'PROJECT_EDIT');
+      result = ProjectInformationService.saveWithLock(body.ProjectID, binding.informationTypeId, {
+        Value: body.Value, ExpectedRevision: source.expectedRevision,
+        Reason: 'ویرایش مستقیم اطلاعات مرکزی روی قالب'
+      }, params);
+    } else if (binding.sourceType === 'EVENT_FORM_FIELD') {
+      AccessControlService.require(params, 'EVENT_EDIT');
+      result = FormService.updateEventFormFieldFromTemplate(
+        source.eventId, source.formId, source.informationTypeId, body.Value, source, params
+      );
+    } else if (binding.sourceType === 'EVENT_FIELD') {
+      AccessControlService.require(params, 'EVENT_EDIT');
+      result = EventService.updateFieldFromTemplate(
+        source.eventId, binding.field, body.Value, source.expectedUpdatedAt, params
+      );
+    } else {
+      throw ErrorHandler.create(Constants.ERROR.PERMISSION_DENIED, 'این منبع داده از طریق قالب قابل ویرایش نیست.');
+    }
+    return Response.success({saved:true, bindingId:bindingId, sourceType:binding.sourceType, result:result},
+      {message:'تغییر در منبع اصلی اطلاعات ذخیره شد.'});
   },
   resolve: function(id, body, params) {
     const user = this._user(params);
@@ -533,6 +590,7 @@ const PrintTemplateService = {
       template: { ID: template.ID, Code: template.Code, Name: template.Name, Version: Number(template.Version || 1) },
       project: resolved.project,
       data: resolved.data,
+      sources: resolved.sources || {},
       resolvedAt: this._now()
     });
   }

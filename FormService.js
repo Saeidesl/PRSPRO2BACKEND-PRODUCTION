@@ -467,6 +467,122 @@ const FormService = {
       projectCodeUpdated: projectCodeUpdated
     };
   },
+  updateEventFormFieldFromTemplate: function(eventId, formId, informationTypeId, value, expected, params) {
+    var user = this._user(params), body = expected || {};
+    var event = EventRepository.findById(eventId);
+    if (!event || String(event.TenantID) !== String(user.TenantID) || !event.ProjectID ||
+        ['VOID','CANCELLED','CANCELED'].indexOf(String(event.Status || '').toUpperCase()) !== -1) {
+      throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'رویداد قابل ویرایش پیدا نشد.');
+    }
+    var project = ProjectRepository.findById(event.ProjectID);
+    if (!project || String(project.TenantID) !== String(user.TenantID) ||
+        !ProjectService._isProjectAvailableToUser_(project, user)) {
+      throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'پروژه رویداد پیدا نشد.');
+    }
+    var lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    try {
+      var existing = FormRepository.findResponse(eventId, formId);
+      if (!existing || String(existing.TenantID) !== String(user.TenantID)) {
+        throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'پاسخ همان رویداد پیدا نشد.');
+      }
+      var currentVersion = String(existing.UpdatedAt || existing.CreatedAt || '');
+      if (currentVersion !== String(body.expectedUpdatedAt || '')) {
+        throw ErrorHandler.create(Constants.ERROR.CONFLICT, 'پاسخ فرم هم‌زمان تغییر کرده است؛ قالب را تازه‌سازی کنید.');
+      }
+      var form = this._form(formId, user.TenantID);
+      if (Number(form.Version || 1) !== Number(body.expectedFormVersion || 0)) {
+        throw ErrorHandler.create(Constants.ERROR.CONFLICT, 'نسخه فرم تغییر کرده است؛ قالب را دوباره بارگذاری کنید.');
+      }
+      var fields = this._definition(form, user.TenantID);
+      fields.forEach(function(field) {
+        var fullType = InformationTypeRepository.findById(field.InformationTypeID);
+        if (!fullType || String(fullType.TenantID) !== String(user.TenantID) || String(fullType.Status || 'ACTIVE') !== 'ACTIVE') {
+          throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'نوع اطلاعات فرم پیدا نشد یا غیرفعال است.');
+        }
+        fullType.Columns = InformationTypeRepository.findColumns(fullType.ID).filter(function(column) {
+          return String(column.TenantID) === String(user.TenantID) && String(column.Status || 'ACTIVE') === 'ACTIVE';
+        });
+        field.InformationType = fullType;
+      });
+      var target = fields.find(function(field) {
+        return String(field.InformationTypeID) === String(informationTypeId);
+      });
+      if (!target) throw ErrorHandler.create(Constants.ERROR.PERMISSION_DENIED, 'این فیلد در فرم اصلی وجود ندارد.');
+      var oldValues = this._parse(existing.ResponseJSON, {});
+      var values = Object.assign({}, oldValues);
+      values[String(informationTypeId)] = value;
+      var clean = Object.create(null), allowed = Object.create(null);
+      fields.forEach(function(field) {
+        var type = field.InformationType, key = String(type.ID);
+        allowed[key] = true;
+        var next = Object.prototype.hasOwnProperty.call(values, key) ? values[key] : this._emptyValueForType_(type);
+        if (!this._isVisible_(field.VisibilityRule || {}, values)) next = this._emptyValueForType_(type);
+        if ((field.IsRequired === true || String(field.IsRequired).toLowerCase() === 'true') && this._isEmptyValue_(next)) {
+          throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'تکمیل «' + (field.LabelOverride || type.Name) + '» الزامی است.');
+        }
+        clean[key] = this._isEmptyValue_(next) ? this._emptyValueForType_(type) :
+          ProjectInformationService._validate(type, type.Columns || [], next, {projectId:String(project.ID),tenantId:String(user.TenantID)});
+      }, this);
+      Object.keys(values).forEach(function(key) {
+        if (!allowed[key]) throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'فیلد خارج از فرم ارسال شده است.');
+      });
+      var type = target.InformationType;
+      var nextValue = clean[String(informationTypeId)];
+      var currentInfo = ProjectInformationRepository.findAnyByProjectAndType(project.ID, informationTypeId);
+      if (body.expectedInformationRevision !== undefined &&
+          Number(body.expectedInformationRevision) !== Number(currentInfo && currentInfo.Revision || 0)) {
+        throw ErrorHandler.create(Constants.ERROR.CONFLICT, 'اطلاعات مرکزی مرتبط با این پاسخ هم‌زمان تغییر کرده است؛ قالب را تازه‌سازی کنید.');
+      }
+      if (String(type.Code || '').toUpperCase() === 'PROJECT_CODE') {
+        if (this._isEmptyValue_(nextValue)) {
+          throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'کد پروژه نمی‌تواند خالی باشد.');
+        }
+        ProjectService.validateProjectCodeFromEvent(project.ID, nextValue, user.TenantID);
+        var duplicateProjectCode = ProjectRepository.getAll().some(function(item) {
+          return String(item.TenantID) === String(user.TenantID) &&
+            String(item.ID) !== String(project.ID) &&
+            String(item.ProjectCode || '').trim().toLowerCase() === String(nextValue).trim().toLowerCase();
+        });
+        if (duplicateProjectCode) {
+          throw ErrorHandler.create(Constants.ERROR.DUPLICATE, 'کد پروژه قبلاً در این Tenant ثبت شده است.');
+        }
+      } else if (!this._isEmptyValue_(nextValue) && JSON.stringify(nextValue).length > 45000) {
+        throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'حجم اطلاعات بیش از ظرفیت مجاز یک سلول صفحه‌گسترده است.');
+      }
+      var now = new Date().toISOString();
+      var updated = FormRepository.updateResponse(existing.ID, {
+        ResponseJSON: JSON.stringify(clean), FormVersion: Number(form.Version || 1),
+        UpdatedBy: user.ID, UpdatedAt: now
+      });
+      if (!updated) throw ErrorHandler.create(Constants.ERROR.INTERNAL_ERROR, 'ذخیره پاسخ همان رویداد انجام نشد.');
+      if (String(type.Code || '').toUpperCase() === 'PROJECT_CODE') {
+        ProjectService.updateProjectCodeFromEvent(project.ID, nextValue, event.ID, user, true);
+      } else if (this._isEmptyValue_(nextValue)) {
+        if (currentInfo && String(currentInfo.Status || 'ACTIVE') === 'ACTIVE') {
+          ProjectInformationService.deactivate(project.ID, informationTypeId, params, {
+            SourceEventID: event.ID, Reason: 'ویرایش مستقیم پاسخ فرم روی قالب'
+          });
+        }
+      } else {
+        ProjectInformationService.save(project.ID, informationTypeId, {
+          Value: nextValue, SourceEventID: event.ID,
+          ExpectedRevision: Number(currentInfo && currentInfo.Revision || 0),
+          Reason: 'ویرایش مستقیم پاسخ فرم روی قالب'
+        }, params || {});
+      }
+      AuditService.log({
+        TenantID:user.TenantID, UserID:user.ID, Action:Constants.ACTION.UPDATE,
+        EntityType:'EVENT_FORM_DATA', EntityID:existing.ID,
+        OldData:{EventID:event.ID,FormID:formId,Values:oldValues},
+        NewData:{EventID:event.ID,FormID:formId,Values:clean},
+        Reason:'ویرایش مستقیم پاسخ فرم روی قالب؛ بدون ایجاد رویداد جدید'
+      });
+      return Response.success(Object.assign({}, updated, {Values:clean}), {message:'پاسخ همان رویداد ذخیره شد.'});
+    } finally {
+      lock.releaseLock();
+    }
+  },
   updateEventFormResponse: function(eventId, formId, body, params) {
     var user=this._user(params), event=EventRepository.findById(eventId); body=body||{};
     if(!event||String(event.TenantID)!==String(user.TenantID)||!event.ProjectID)throw ErrorHandler.create(Constants.ERROR.NOT_FOUND,'رویداد مبنا پیدا نشد.');

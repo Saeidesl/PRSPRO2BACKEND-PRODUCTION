@@ -21,7 +21,7 @@ function loadPrintTemplates() {
       ResponseJSON:JSON.stringify({I1:'پاسخ نوع دیگر'}),DefinitionSnapshotJSON:JSON.stringify({Version:3,Fields:[{ID:'FF1',InformationTypeID:'I1'}]}) }
   ];
   const context = {
-    AccessControlService: { getCurrentUser: () => ({ID:'U1',TenantID:'T1'}) },
+    AccessControlService: { getCurrentUser: () => ({ID:'U1',TenantID:'T1'}), require: () => ({ID:'U1',TenantID:'T1'}) },
     PrintTemplateRepository: {
       getAll: () => templates,
       findById: id => templates.find(row => String(row.ID) === String(id)) || null,
@@ -29,14 +29,15 @@ function loadPrintTemplates() {
       update: (id, patch) => { const row=templates.find(item=>String(item.ID)===String(id)); if(row)Object.assign(row,patch); return row; }
     },
     ProjectRepository: { findById: id => String(id)==='P1' ? ({ID:'P1',TenantID:'T1',ProjectCode:'PR-1',Title:'پروژه آزمایشی',Status:'ACTIVE'}) : null },
-    ProjectService: { _isProjectAvailableToUser_: () => true },
+    ProjectService: { _isProjectAvailableToUser_: () => true, updateFromTemplate: (id,field,value,expected) => ({success:true,data:{id,field,value,expected}}) },
     InformationTypeRepository: {
       findByTenant: () => [{ID:'I1',TenantID:'T1',Code:'MODEL',Name:'نام مدل',DataType:'text',Cardinality:'SINGLE',Status:'ACTIVE'}],
       findById: id => String(id)==='I1' ? {ID:'I1',TenantID:'T1',Status:'ACTIVE'} : null,
       findColumns: () => []
     },
     ProjectInformationRepository: {
-      findByProject: () => [{ID:'PI1',TenantID:'T1',ProjectID:'P1',InformationTypeID:'I1',ValueJSON:'"مقدار جاری"',Status:'ACTIVE'}]
+      findByProject: () => [{ID:'PI1',TenantID:'T1',ProjectID:'P1',InformationTypeID:'I1',ValueJSON:'"مقدار جاری"',Revision:4,Status:'ACTIVE'}],
+      findAnyByProjectAndType: () => ({ID:'PI1',Revision:4})
     },
     EventRepository: {
       findByProjectId: () => [
@@ -99,7 +100,7 @@ function loadPrintTemplates() {
     },
     Response: { success: (data,meta) => ({success:true,data,meta:meta||{}}) },
     ErrorHandler: { create: (_code,message) => new Error(message) },
-    Constants: { ERROR:{NOT_FOUND:'NOT_FOUND',VALIDATION_ERROR:'VALIDATION_ERROR',DUPLICATE:'DUPLICATE'}, ACTION:{CREATE:'CREATE',UPDATE:'UPDATE',DELETE:'DELETE'} },
+    Constants: { ERROR:{NOT_FOUND:'NOT_FOUND',VALIDATION_ERROR:'VALIDATION_ERROR',DUPLICATE:'DUPLICATE',CONFLICT:'CONFLICT',PERMISSION_DENIED:'PERMISSION_DENIED'}, ACTION:{CREATE:'CREATE',UPDATE:'UPDATE',DELETE:'DELETE'} },
     Utilities: { getUuid: () => 'test-uuid', base64Decode: value => Array.from(Buffer.from(value, 'base64')) },
     Date, Object, String, Array, JSON, Number, Math, isFinite
   };
@@ -159,6 +160,30 @@ test('data resolution uses current project information and the latest form snaps
   assert.equal(result.data.data.current_model,'مقدار جاری');
   assert.equal(result.data.data.latest_form_value,'جدید');
   assert.deepEqual(Array.from(result.data.data.all_form_values),['قدیمی','جدید']);
+  assert.equal(result.data.sources.project_code.sourceType,'PROJECT_FIELD');
+  assert.equal(result.data.sources.current_model.expectedRevision,4);
+  assert.equal(result.data.sources.latest_form_value.eventId,'E2');
+  assert.equal(result.data.sources.latest_form_value.responseId,'R2');
+  assert.equal(result.data.sources.latest_form_value.expectedFormVersion,3);
+});
+
+test('inline project-field update dispatches only after source token validation',()=>{
+  const h=loadPrintTemplates();
+  const created=h.service.create({Code:'INLINE',Name:'قالب ویرایش',Definition:{bindings:[
+    {id:'project_title',sourceType:'PROJECT_FIELD',field:'Title',selection:'LATEST'}
+  ]}}, {});
+  const resolved=h.service.resolve(created.data.ID,{ProjectID:'P1'}, {});
+  const source=resolved.data.sources.project_title;
+  const saved=h.service.updateProjectBinding(created.data.ID,{
+    ProjectID:'P1',BindingID:'project_title',Value:'عنوان جدید',ExpectedSource:source
+  },{});
+  assert.equal(saved.success,true);
+  assert.equal(saved.data.saved,true);
+  assert.equal(saved.data.result.data.value,'عنوان جدید');
+  assert.throws(()=>h.service.updateProjectBinding(created.data.ID,{
+    ProjectID:'P1',BindingID:'project_title',Value:'داده قدیمی',
+    ExpectedSource:Object.assign({},source,{expectedUpdatedAt:'stale'})
+  },{}),/منبع اطلاعات از زمان بازشدن قالب تغییر کرده است/);
 });
 
 test('resolve rejects projects outside the current tenant or access boundary',()=>{
@@ -387,4 +412,30 @@ test('failed PDF metadata update removes the newly uploaded file and preserves t
   assert.equal(h.templates[0].PdfStorageKey,previousKey);
   assert.ok(h.storedFiles[previousKey]);
   assert.equal(Object.keys(h.storedFiles).length,1);
+});
+
+test('inline template writes are bound to tenant-scoped source records and never create amendment events', () => {
+  const root = path.join(__dirname, '..');
+  const service = fs.readFileSync(path.join(root, 'PrintTemplateService.js'), 'utf8');
+  const router = fs.readFileSync(path.join(root, 'Router.js'), 'utf8');
+  const forms = fs.readFileSync(path.join(root, 'FormService.js'), 'utf8');
+  const events = fs.readFileSync(path.join(root, 'EventService.js'), 'utf8');
+  const projects = fs.readFileSync(path.join(root, 'ProjectService.js'), 'utf8');
+  const projectInformation = fs.readFileSync(path.join(root, 'ProjectInformationService.js'), 'utf8');
+  assert.match(service, /updateProjectBinding: function/);
+  assert.match(service, /ExpectedSource/);
+  assert.match(service, /sourceType: 'PROJECT_INFORMATION'/);
+  assert.match(service, /sourceType: 'EVENT_FORM_FIELD'/);
+  assert.match(service, /ProjectInformationService\.saveWithLock/);
+  assert.match(projectInformation, /saveWithLock: function/);
+  assert.match(projectInformation, /ExpectedRevision/);
+  assert.match(router, /ProjectInformationService\.saveWithLock/);
+  assert.match(router, /printTemplateProjectDataParts/);
+  assert.match(forms, /updateEventFormFieldFromTemplate: function/);
+  assert.match(forms, /FormRepository\.updateResponse\(existing\.ID/);
+  assert.match(forms, /updateProjectCodeFromEvent\(project\.ID, nextValue, event\.ID, user, true\)/);
+  assert.match(forms, /Reason:\s*'ویرایش مستقیم پاسخ فرم روی قالب'/);
+  assert.doesNotMatch(forms.slice(forms.indexOf('updateEventFormFieldFromTemplate:'), forms.indexOf('updateEventFormResponse:')), /AmendmentEventID/);
+  assert.match(events, /updateFieldFromTemplate: function/);
+  assert.match(projects, /updateFromTemplate: function/);
 });
