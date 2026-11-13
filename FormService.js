@@ -495,6 +495,16 @@ const FormService = {
         throw ErrorHandler.create(Constants.ERROR.CONFLICT, 'نسخه فرم تغییر کرده است؛ قالب را دوباره بارگذاری کنید.');
       }
       var fields = this._definition(form, user.TenantID);
+      fields.forEach(function(field) {
+        var fullType = InformationTypeRepository.findById(field.InformationTypeID);
+        if (!fullType || String(fullType.TenantID) !== String(user.TenantID) || String(fullType.Status || 'ACTIVE') !== 'ACTIVE') {
+          throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'نوع اطلاعات فرم پیدا نشد یا غیرفعال است.');
+        }
+        fullType.Columns = InformationTypeRepository.findColumns(fullType.ID).filter(function(column) {
+          return String(column.TenantID) === String(user.TenantID) && String(column.Status || 'ACTIVE') === 'ACTIVE';
+        });
+        field.InformationType = fullType;
+      });
       var target = fields.find(function(field) {
         return String(field.InformationTypeID) === String(informationTypeId);
       });
