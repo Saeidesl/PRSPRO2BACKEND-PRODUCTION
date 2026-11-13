@@ -21,7 +21,7 @@ function loadPrintTemplates() {
       ResponseJSON:JSON.stringify({I1:'پاسخ نوع دیگر'}),DefinitionSnapshotJSON:JSON.stringify({Version:3,Fields:[{ID:'FF1',InformationTypeID:'I1'}]}) }
   ];
   const context = {
-    AccessControlService: { getCurrentUser: () => ({ID:'U1',TenantID:'T1'}) },
+    AccessControlService: { getCurrentUser: () => ({ID:'U1',TenantID:'T1'}), require: () => ({ID:'U1',TenantID:'T1'}) },
     PrintTemplateRepository: {
       getAll: () => templates,
       findById: id => templates.find(row => String(row.ID) === String(id)) || null,
@@ -29,7 +29,7 @@ function loadPrintTemplates() {
       update: (id, patch) => { const row=templates.find(item=>String(item.ID)===String(id)); if(row)Object.assign(row,patch); return row; }
     },
     ProjectRepository: { findById: id => String(id)==='P1' ? ({ID:'P1',TenantID:'T1',ProjectCode:'PR-1',Title:'پروژه آزمایشی',Status:'ACTIVE'}) : null },
-    ProjectService: { _isProjectAvailableToUser_: () => true },
+    ProjectService: { _isProjectAvailableToUser_: () => true, updateFromTemplate: (id,field,value,expected) => ({success:true,data:{id,field,value,expected}}) },
     InformationTypeRepository: {
       findByTenant: () => [{ID:'I1',TenantID:'T1',Code:'MODEL',Name:'نام مدل',DataType:'text',Cardinality:'SINGLE',Status:'ACTIVE'}],
       findById: id => String(id)==='I1' ? {ID:'I1',TenantID:'T1',Status:'ACTIVE'} : null,
@@ -159,6 +159,30 @@ test('data resolution uses current project information and the latest form snaps
   assert.equal(result.data.data.current_model,'مقدار جاری');
   assert.equal(result.data.data.latest_form_value,'جدید');
   assert.deepEqual(Array.from(result.data.data.all_form_values),['قدیمی','جدید']);
+  assert.equal(result.data.sources.project_code.sourceType,'PROJECT_FIELD');
+  assert.equal(result.data.sources.current_model.expectedRevision,4);
+  assert.equal(result.data.sources.latest_form_value.eventId,'E2');
+  assert.equal(result.data.sources.latest_form_value.responseId,'R2');
+  assert.equal(result.data.sources.latest_form_value.expectedFormVersion,3);
+});
+
+test('inline project-field update dispatches only after source token validation',()=>{
+  const h=loadPrintTemplates();
+  const created=h.service.create({Code:'INLINE',Name:'قالب ویرایش',Definition:{bindings:[
+    {id:'project_title',sourceType:'PROJECT_FIELD',field:'Title',selection:'LATEST'}
+  ]}}, {});
+  const resolved=h.service.resolve(created.data.ID,{ProjectID:'P1'}, {});
+  const source=resolved.data.sources.project_title;
+  const saved=h.service.updateProjectBinding(created.data.ID,{
+    ProjectID:'P1',BindingID:'project_title',Value:'عنوان جدید',ExpectedSource:source
+  },{});
+  assert.equal(saved.success,true);
+  assert.equal(saved.data.saved,true);
+  assert.equal(saved.data.result.data.value,'عنوان جدید');
+  assert.throws(()=>h.service.updateProjectBinding(created.data.ID,{
+    ProjectID:'P1',BindingID:'project_title',Value:'داده قدیمی',
+    ExpectedSource:Object.assign({},source,{expectedUpdatedAt:'stale'})
+  },{}),/منبع اطلاعات از زمان بازشدن قالب تغییر کرده است/);
 });
 
 test('resolve rejects projects outside the current tenant or access boundary',()=>{
