@@ -729,7 +729,7 @@ const Router = {
     const projectInformationSaveMatch = path.match(/^\/projects\/([^/]+)\/information\/([^/]+)$/);
     if (projectInformationSaveMatch) {
       AccessControlService.require(params, 'PROJECT_EDIT');
-      return ProjectInformationService.save(decodeURIComponent(projectInformationSaveMatch[1]), decodeURIComponent(projectInformationSaveMatch[2]), body, params);
+      return ProjectInformationService.saveWithLock(decodeURIComponent(projectInformationSaveMatch[1]), decodeURIComponent(projectInformationSaveMatch[2]), body, params);
     }
 
     if (path === '/forms') {
