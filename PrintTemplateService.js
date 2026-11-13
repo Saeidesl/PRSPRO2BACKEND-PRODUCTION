@@ -548,7 +548,7 @@ const PrintTemplateService = {
     }
     const resolved = this._resolveProjectData(body.ProjectID, definition, user);
     const source = resolved.sources && resolved.sources[bindingId];
-    if (!source || !body.ExpectedSource || JSON.stringify(source) !== JSON.stringify(body.ExpectedSource)) {
+    if (!source || !body.ExpectedSource || Object.keys(source).some(function(key) { return String(source[key]) !== String(body.ExpectedSource[key]); })) {
       throw ErrorHandler.create(Constants.ERROR.CONFLICT, 'منبع اطلاعات از زمان بازشدن قالب تغییر کرده است؛ قالب را تازه‌سازی کنید.');
     }
     let result;
