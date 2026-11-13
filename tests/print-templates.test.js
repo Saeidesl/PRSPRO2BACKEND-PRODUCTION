@@ -36,7 +36,8 @@ function loadPrintTemplates() {
       findColumns: () => []
     },
     ProjectInformationRepository: {
-      findByProject: () => [{ID:'PI1',TenantID:'T1',ProjectID:'P1',InformationTypeID:'I1',ValueJSON:'"مقدار جاری"',Revision:4,Status:'ACTIVE'}],\n      findAnyByProjectAndType: () => ({ID:'PI1',Revision:4})
+      findByProject: () => [{ID:'PI1',TenantID:'T1',ProjectID:'P1',InformationTypeID:'I1',ValueJSON:'"مقدار جاری"',Revision:4,Status:'ACTIVE'}],
+      findAnyByProjectAndType: () => ({ID:'PI1',Revision:4})
     },
     EventRepository: {
       findByProjectId: () => [
