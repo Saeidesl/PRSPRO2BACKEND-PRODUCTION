@@ -36,7 +36,7 @@ function loadPrintTemplates() {
       findColumns: () => []
     },
     ProjectInformationRepository: {
-      findByProject: () => [{ID:'PI1',TenantID:'T1',ProjectID:'P1',InformationTypeID:'I1',ValueJSON:'"مقدار جاری"',Status:'ACTIVE'}]
+      findByProject: () => [{ID:'PI1',TenantID:'T1',ProjectID:'P1',InformationTypeID:'I1',ValueJSON:'"مقدار جاری"',Revision:4,Status:'ACTIVE'}],\n      findAnyByProjectAndType: () => ({ID:'PI1',Revision:4})
     },
     EventRepository: {
       findByProjectId: () => [
@@ -99,7 +99,7 @@ function loadPrintTemplates() {
     },
     Response: { success: (data,meta) => ({success:true,data,meta:meta||{}}) },
     ErrorHandler: { create: (_code,message) => new Error(message) },
-    Constants: { ERROR:{NOT_FOUND:'NOT_FOUND',VALIDATION_ERROR:'VALIDATION_ERROR',DUPLICATE:'DUPLICATE'}, ACTION:{CREATE:'CREATE',UPDATE:'UPDATE',DELETE:'DELETE'} },
+    Constants: { ERROR:{NOT_FOUND:'NOT_FOUND',VALIDATION_ERROR:'VALIDATION_ERROR',DUPLICATE:'DUPLICATE',CONFLICT:'CONFLICT',PERMISSION_DENIED:'PERMISSION_DENIED'}, ACTION:{CREATE:'CREATE',UPDATE:'UPDATE',DELETE:'DELETE'} },
     Utilities: { getUuid: () => 'test-uuid', base64Decode: value => Array.from(Buffer.from(value, 'base64')) },
     Date, Object, String, Array, JSON, Number, Math, isFinite
   };
