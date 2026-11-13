@@ -388,3 +388,23 @@ test('failed PDF metadata update removes the newly uploaded file and preserves t
   assert.ok(h.storedFiles[previousKey]);
   assert.equal(Object.keys(h.storedFiles).length,1);
 });
+
+test('inline template writes are bound to tenant-scoped source records and never create amendment events', () => {
+  const root = path.join(__dirname, '..');
+  const service = fs.readFileSync(path.join(root, 'PrintTemplateService.js'), 'utf8');
+  const router = fs.readFileSync(path.join(root, 'Router.js'), 'utf8');
+  const forms = fs.readFileSync(path.join(root, 'FormService.js'), 'utf8');
+  const events = fs.readFileSync(path.join(root, 'EventService.js'), 'utf8');
+  const projects = fs.readFileSync(path.join(root, 'ProjectService.js'), 'utf8');
+  assert.match(service, /updateProjectBinding: function/);
+  assert.match(service, /ExpectedSource/);
+  assert.match(service, /sourceType: 'PROJECT_INFORMATION'/);
+  assert.match(service, /sourceType: 'EVENT_FORM_FIELD'/);
+  assert.match(router, /printTemplateProjectDataParts/);
+  assert.match(forms, /updateEventFormFieldFromTemplate: function/);
+  assert.match(forms, /FormRepository\.updateResponse\(existing\.ID/);
+  assert.match(forms, /Reason:'ویرایش مستقیم پاسخ فرم روی قالب'/);
+  assert.doesNotMatch(forms.slice(forms.indexOf('updateEventFormFieldFromTemplate:'), forms.indexOf('updateEventFormResponse:')), /AmendmentEventID/);
+  assert.match(events, /updateFieldFromTemplate: function/);
+  assert.match(projects, /updateFromTemplate: function/);
+});
