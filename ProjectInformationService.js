@@ -171,6 +171,9 @@ const ProjectInformationService = {
     var valueJSON=JSON.stringify(value);
     if(valueJSON.length>45000)throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR,'حجم اطلاعات بیش از ظرفیت مجاز یک سلول صفحه‌گسترده است. لطفاً اطلاعات را در چند بخش ثبت کنید.');
     var existing=ProjectInformationRepository.findAnyByProjectAndType(projectId,typeId);
+    if (body.ExpectedRevision !== undefined && Number(body.ExpectedRevision) !== Number(existing && existing.Revision || 0)) {
+      throw ErrorHandler.create(Constants.ERROR.CONFLICT, 'اطلاعات این بخش هم‌زمان تغییر کرده است؛ قالب را تازه‌سازی کنید.');
+    }
     var wasActive=existing&&String(existing.Status || 'ACTIVE')==='ACTIVE';
     // Idempotent replay of the same event/value must not create duplicate revisions.
     if(wasActive && eventId && String(existing.SourceEventID || '')===eventId &&
