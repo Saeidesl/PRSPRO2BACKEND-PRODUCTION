@@ -1124,6 +1124,65 @@ const ProjectService = {
     }
   },
 
+  updateFromTemplate: function(id, field, value, expectedUpdatedAt, params) {
+    const user = AccessControlService.getCurrentUser(params || {});
+    const allowed = ['ProjectCode', 'Title', 'Description', 'Quantity'];
+    if (allowed.indexOf(String(field)) === -1) {
+      throw ErrorHandler.create(Constants.ERROR.PERMISSION_DENIED, 'این فیلد پروژه از طریق قالب قابل ویرایش نیست.');
+    }
+    const lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    try {
+      const existing = ProjectRepository.findById(id);
+      if (!existing || String(existing.TenantID) !== String(user.TenantID) ||
+          !this._isProjectAvailableToUser_(existing, user)) {
+        throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'پروژه مورد نظر پیدا نشد.');
+      }
+      const currentVersion = String(existing.UpdatedAt || existing.CreatedAt || '');
+      if (currentVersion !== String(expectedUpdatedAt || '')) {
+        throw ErrorHandler.create(Constants.ERROR.CONFLICT, 'اطلاعات پروژه هم‌زمان تغییر کرده است؛ قالب را تازه‌سازی کنید.');
+      }
+      const patch = {};
+      if (field === 'ProjectCode') {
+        patch.ProjectCode = String(value === null || value === undefined ? '' : value).trim();
+        const duplicate = ProjectRepository.getAll().some(function(item) {
+          return String(item.TenantID) === String(user.TenantID) &&
+            String(item.ID) !== String(id) &&
+            String(item.ProjectCode || '').trim().toLowerCase() === patch.ProjectCode.toLowerCase();
+        });
+        if (patch.ProjectCode && duplicate) {
+          throw ErrorHandler.create(Constants.ERROR.DUPLICATE, 'کد پروژه قبلاً در این Tenant ثبت شده است.');
+        }
+      } else if (field === 'Quantity') {
+        if (value === '' || value === null || value === undefined) patch.Quantity = '';
+        else {
+          patch.Quantity = Number(value);
+          if (!isFinite(patch.Quantity) || patch.Quantity < 0) {
+            throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'تعداد پروژه باید عدد معتبر و غیرمنفی باشد.');
+          }
+        }
+      } else {
+        patch[field] = String(value === null || value === undefined ? '' : value);
+        if (field === 'Title' && !patch.Title.trim()) {
+          throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'نام پروژه نمی‌تواند خالی باشد.');
+        }
+        if (patch[field].length > (field === 'Description' ? 5000 : 250)) {
+          throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'طول مقدار واردشده بیش از حد مجاز است.');
+        }
+      }
+      patch.UpdatedAt = new Date().toISOString();
+      const updated = ProjectRepository.update(id, patch);
+      AuditService.log({
+        TenantID: user.TenantID, UserID: user.ID, Action: Constants.ACTION.UPDATE,
+        EntityType: Constants.ENTITY.PROJECT, EntityID: id,
+        OldData: existing, NewData: updated, Reason: 'ویرایش مستقیم اطلاعات پروژه از روی قالب'
+      });
+      return Response.success(updated, { message: 'اطلاعات پروژه ذخیره شد.' });
+    } finally {
+      lock.releaseLock();
+    }
+  },
+
   update: function(id, data, params) {
 
     Validator.required(
