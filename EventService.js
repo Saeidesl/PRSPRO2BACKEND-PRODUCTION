@@ -971,6 +971,18 @@ const EventService = {
           !ProjectService._isProjectAvailableToUser_(project, user)) {
         throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'پروژه رویداد پیدا نشد.');
       }
+      const eventType = EventTypeRepository.findById(event.EventTypeID);
+      if (!eventType || String(eventType.TenantID) !== String(user.TenantID) ||
+          String(eventType.Status || 'ACTIVE').toUpperCase() !== 'ACTIVE') {
+        throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'نوع رویداد معتبر نیست.');
+      }
+      if (!this._isAdmin_(user) &&
+          String(event.DepartmentID || '') !== String(user.DepartmentID || '')) {
+        throw ErrorHandler.create(Constants.ERROR.PERMISSION_DENIED, 'ویرایش این رویداد فقط برای واحد ثبت‌کننده مجاز است.');
+      }
+      if (field === 'OccurredAt' && this._hasLaterEventInAnotherDepartment_(event, user.TenantID)) {
+        throw ErrorHandler.create(Constants.ERROR.INVALID_STATUS, 'زمان این رویداد قابل تغییر نیست؛ پس از آن در واحد دیگری رویداد ثبت شده است.');
+      }
       const currentVersion = String(event.UpdatedAt || event.CreatedAt || '');
       if (currentVersion !== String(expectedUpdatedAt || '')) {
         throw ErrorHandler.create(Constants.ERROR.CONFLICT, 'رویداد هم‌زمان تغییر کرده است؛ قالب را تازه‌سازی کنید.');
