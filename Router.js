@@ -865,11 +865,9 @@ const Router = {
       return InformationTypeService.updateColumn(decodeURIComponent(informationTypeColumnUpdateMatch[1]), decodeURIComponent(informationTypeColumnUpdateMatch[2]), body, params);
     }
 
-    const printTemplateProjectDataMatch = path.match(new RegExp('^/print-templates/([^/]+)/project-data
-    if (printTemplateProjectDataMatch) {
-      return PrintTemplateService.updateProjectBinding(
-        decodeURIComponent(printTemplateProjectDataMatch[1]), body, params
-      );
+    const printTemplateProjectDataParts = path.split('/');
+    if (printTemplateProjectDataParts.length === 4 && printTemplateProjectDataParts[1] === 'print-templates' && printTemplateProjectDataParts[3] === 'project-data') {
+      return PrintTemplateService.updateProjectBinding(decodeURIComponent(printTemplateProjectDataParts[2]), body, params);
     }
 
     const printTemplateUpdateParts = path.split('/');
