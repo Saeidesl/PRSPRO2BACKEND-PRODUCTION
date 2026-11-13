@@ -534,14 +534,28 @@ const FormService = {
           Number(body.expectedInformationRevision) !== Number(currentInfo && currentInfo.Revision || 0)) {
         throw ErrorHandler.create(Constants.ERROR.CONFLICT, 'اطلاعات مرکزی مرتبط با این پاسخ هم‌زمان تغییر کرده است؛ قالب را تازه‌سازی کنید.');
       }
-      if (String(type.Code || '').toUpperCase() === 'PROJECT_CODE' && this._isEmptyValue_(nextValue)) {
-        throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'کد پروژه نمی‌تواند خالی باشد.');
+      if (String(type.Code || '').toUpperCase() === 'PROJECT_CODE') {
+        if (this._isEmptyValue_(nextValue)) {
+          throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'کد پروژه نمی‌تواند خالی باشد.');
+        }
+        ProjectService.validateProjectCodeFromEvent(project.ID, nextValue, user.TenantID);
+        var duplicateProjectCode = ProjectRepository.getAll().some(function(item) {
+          return String(item.TenantID) === String(user.TenantID) &&
+            String(item.ID) !== String(project.ID) &&
+            String(item.ProjectCode || '').trim().toLowerCase() === String(nextValue).trim().toLowerCase();
+        });
+        if (duplicateProjectCode) {
+          throw ErrorHandler.create(Constants.ERROR.DUPLICATE, 'کد پروژه قبلاً در این Tenant ثبت شده است.');
+        }
+      } else if (!this._isEmptyValue_(nextValue) && JSON.stringify(nextValue).length > 45000) {
+        throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'حجم اطلاعات بیش از ظرفیت مجاز یک سلول صفحه‌گسترده است.');
       }
       var now = new Date().toISOString();
       var updated = FormRepository.updateResponse(existing.ID, {
         ResponseJSON: JSON.stringify(clean), FormVersion: Number(form.Version || 1),
         UpdatedBy: user.ID, UpdatedAt: now
       });
+      if (!updated) throw ErrorHandler.create(Constants.ERROR.INTERNAL_ERROR, 'ذخیره پاسخ همان رویداد انجام نشد.');
       if (String(type.Code || '').toUpperCase() === 'PROJECT_CODE') {
         ProjectService.updateProjectCodeFromEvent(project.ID, nextValue, event.ID, user);
       } else if (this._isEmptyValue_(nextValue)) {
