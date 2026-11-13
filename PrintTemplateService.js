@@ -557,7 +557,7 @@ const PrintTemplateService = {
       result = ProjectService.updateFromTemplate(body.ProjectID, binding.field, body.Value, source.expectedUpdatedAt, params);
     } else if (binding.sourceType === 'PROJECT_INFORMATION') {
       AccessControlService.require(params, 'PROJECT_EDIT');
-      result = ProjectInformationService.save(body.ProjectID, binding.informationTypeId, {
+      result = ProjectInformationService.saveWithLock(body.ProjectID, binding.informationTypeId, {
         Value: body.Value, ExpectedRevision: source.expectedRevision,
         Reason: 'ویرایش مستقیم اطلاعات مرکزی روی قالب'
       }, params);
