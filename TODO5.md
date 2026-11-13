@@ -5,8 +5,8 @@
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
 
 ### مخازن و شاخه‌ها
-- Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه `feature/event-project-template-view-20261113`؛ مبنا: `main` در commit `a313b06aa96ed3bebc844a219df30d0df75a0213`.
-- Frontend: `Saeidesl/PRSPRO2-PRODUCTION`، شاخه `feature/event-project-template-view-20261113`؛ مبنا: `main` در commit `09811c8e88c6beed7216861b66eb0b91a61ac59d`.
+- Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه `feat/event-project-template-view-20261113`؛ مبنا: `main` در commit `a313b06aa96ed3bebc844a219df30d0df75a0213`.
+- Frontend: `Saeidesl/PRSPRO2-PRODUCTION`، شاخه `feat/event-project-template-view-20261113`؛ مبنا: `main` در commit `09811c8e88c6beed7216861b66eb0b91a61ac59d`.
 - هر دو مخزن مجوز push دارند؛ هیچ تغییر مستقیمی روی `main` انجام نمی‌شود.
 
 ### معماری کشف‌شده
