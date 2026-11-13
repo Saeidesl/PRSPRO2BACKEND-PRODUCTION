@@ -428,7 +428,7 @@ test('inline template writes are bound to tenant-scoped source records and never
   assert.match(router, /printTemplateProjectDataParts/);
   assert.match(forms, /updateEventFormFieldFromTemplate: function/);
   assert.match(forms, /FormRepository\.updateResponse\(existing\.ID/);
-  assert.match(forms, /Reason:'ویرایش مستقیم پاسخ فرم روی قالب'/);
+  assert.match(forms, /Reason:\s*'ویرایش مستقیم پاسخ فرم روی قالب'/);
   assert.doesNotMatch(forms.slice(forms.indexOf('updateEventFormFieldFromTemplate:'), forms.indexOf('updateEventFormResponse:')), /AmendmentEventID/);
   assert.match(events, /updateFieldFromTemplate: function/);
   assert.match(projects, /updateFromTemplate: function/);
