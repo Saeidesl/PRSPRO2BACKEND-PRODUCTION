@@ -421,10 +421,15 @@ test('inline template writes are bound to tenant-scoped source records and never
   const forms = fs.readFileSync(path.join(root, 'FormService.js'), 'utf8');
   const events = fs.readFileSync(path.join(root, 'EventService.js'), 'utf8');
   const projects = fs.readFileSync(path.join(root, 'ProjectService.js'), 'utf8');
+  const projectInformation = fs.readFileSync(path.join(root, 'ProjectInformationService.js'), 'utf8');
   assert.match(service, /updateProjectBinding: function/);
   assert.match(service, /ExpectedSource/);
   assert.match(service, /sourceType: 'PROJECT_INFORMATION'/);
   assert.match(service, /sourceType: 'EVENT_FORM_FIELD'/);
+  assert.match(service, /ProjectInformationService\.saveWithLock/);
+  assert.match(projectInformation, /saveWithLock: function/);
+  assert.match(projectInformation, /ExpectedRevision/);
+  assert.match(router, /ProjectInformationService\.saveWithLock/);
   assert.match(router, /printTemplateProjectDataParts/);
   assert.match(forms, /updateEventFormFieldFromTemplate: function/);
   assert.match(forms, /FormRepository\.updateResponse\(existing\.ID/);
