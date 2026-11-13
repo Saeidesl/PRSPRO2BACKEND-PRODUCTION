@@ -305,6 +305,15 @@ const ProjectInformationService = {
     updated.HistoryID=history.ID;
     return Response.success(updated,{message:'اطلاعات پرونده حذف منطقی شد.'});
   },
+  saveWithLock: function(projectId,typeId,body,params) {
+    var lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    try {
+      return this.save(projectId,typeId,body,params);
+    } finally {
+      lock.releaseLock();
+    }
+  },
   history: function(projectId,typeId,params){
     var user=this._user(params);this._project(projectId,user.TenantID,user);this._type(typeId,user.TenantID);
     var current=ProjectInformationRepository.findAnyByProjectAndType(projectId,typeId);
