@@ -23,6 +23,7 @@
   - QA بین‌مخزنی پس از آماده‌شدن PR فرانت‌اند اجرا و نتیجه ثبت شود.
   - هیچ استقرار Backend انجام نشود؛ تغییر runtime لازم نیست.
 
-- [ ] Task 3 — ارائه نام وضعیت کلی و نام مرحله در قرارداد پروژه (IN PROGRESS)
+- [x] Task 3 — ارائه نام وضعیت کلی و نام مرحله در قرارداد پروژه
   - افزودن `OverallStatusName` و تکمیل `CurrentStepName` به خروجی `GET /projects?view=event-picker` و پاسخ عادی پروژه‌ها.
   - کنترل tenant isolation و عدم افزایش درخواست به ازای هر کارت.
+  - *Log:* `ProjectService.js` پاسخ پروژه‌ها را با `OverallStatusName` و `CurrentStepName` غنی کرد؛ وضعیت مرحله `CurrentStepStatus` مستقل باقی ماند. lookup وضعیت‌ها و مراحل به‌صورت گروهی و tenant-scoped انجام شد. قرارداد `GET /projects?view=event-picker` حفظ شد و هیچ Sheet/schema، migration یا عملیات نوشتن داده ایجاد نشد. آزمون `tests/event-project-picker-projection.test.js` و Backend source checks/PMS agent suite موفق شدند. Backend PR #78 با merge commit `9f88ea63e50b03929ffbf8ab4e821bf3c7999a50` ادغام و Workflow رسمی `43402963994` با موفقیت Web App نسخه 26 را منتشر کرد؛ Product Owner تست عملیاتی سه وضعیت مستقل را در 2026-11-13 موفق تأیید کرد.
