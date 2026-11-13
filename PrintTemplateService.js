@@ -590,6 +590,7 @@ const PrintTemplateService = {
       template: { ID: template.ID, Code: template.Code, Name: template.Name, Version: Number(template.Version || 1) },
       project: resolved.project,
       data: resolved.data,
+      sources: resolved.sources || {},
       resolvedAt: this._now()
     });
   }
