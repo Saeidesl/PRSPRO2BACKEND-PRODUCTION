@@ -6,8 +6,8 @@
 
 ### مخازن و شاخه‌ها
 - Backend: Saeidesl/PRSPRO2BACKEND-PRODUCTION، شاخه feat/template-inline-data-edit-20261113، مبنا: main در commit a313b06aa96ed3bebc844a219df30d0df75a0213.
-- Frontend: Saeidesl/PRSPRO2-PRODUCTION، شاخه feat/template-inline-data-edit-20261113، مبنا: main در commit 9595b3e060ab7b544830045e1db08170db3cdbd6.
-- هیچ تغییر مستقیمی روی main انجام نمی‌شود؛ مخازن Development خارج از محدوده‌اند.
+- Frontend: Saeidesl/PRSPRO2-PRODUCTION، شاخه main؛ Task 2 از PR #129 با merge commit 19ec7226960a643d7242f3f5836bc8876e1fcde3 ادغام و توسط Product Owner تست شد.
+- مخازن Development خارج از محدوده‌اند؛ تغییرات Backend همچنان فقط روی شاخه feature انجام می‌شوند.
 
 ### معماری و داده‌های موجود
 - Google Apps Script V8 و Google Sheets؛ Router مرجع کنترل مجوز و tenant است.
@@ -32,9 +32,10 @@
 
 - [x] **Task 1 — Discovery & Planning:** بررسی Router، سرویس‌ها، مخازن، bindingهای قالب، APIهای موجود و مسیرهای ثبت/اصلاح رویداد انجام شد.
   - *Log:* Router.js, PrintTemplateService.js, ProjectInformationService.js, FormService.js, EventService.js, EventRepository.js, FormRepository.js و tests/print-templates.test.js بررسی شدند. ProjectInformationService.save() تاریخچه پروژه را حفظ می‌کند؛ FormRepository.updateResponse() امکان اصلاح همان پاسخ را دارد؛ اما FormService.updateEventFormResponse() فعلی به رویداد اصلاحی مجزا وابسته است و برای تصمیم جدید کافی نیست. EventRepository.update() موجود است ولی متد عمومی امن در EventService وجود ندارد. هیچ کد عملیاتی تغییر نکرد.
-- [ ] **Task 2 — Inline Editing UX (IN PROGRESS):** ویرایش درجا در خروجی قالب، با اتصال به bindingها و کنترل حالت ذخیره/لغو/خطا.
-- [ ] **Task 3 — Source Update Services:** تکمیل سرویس‌های امن Backend برای اصلاح پروژه/اطلاعات مرکزی/پاسخ فرم/فیلدهای همان رویداد، بدون ساخت رویداد جدید.
+- [x] **Task 2 — Inline Editing UX:** رابط ویرایش درجا در Frontend عملیاتی پیاده‌سازی، CI و بررسی عملکرد مرورگر با موفقیت گذرانده، ادغام و توسط Product Owner تست شد.
+  - *Log:* تغییرات UX فقط در مخزن Frontend انجام شد: `js/modules/print-designer.js` (allow-list ویرایش، مدیریت ویرایش inline، ویرایش سلول جدول و حفظ مقدار هنگام چاپ)، `css/print-template-library.css` (ظاهر کنترل‌ها، موبایل و چاپ)، `index.html` (cache-bust) و تست‌های `tests/project-print-designer.test.js` و `tests/print-template-library.test.js`. PR #129 با همه بررسی‌های CI از جمله comprehensive UI performance audit موفق، با merge commit `19ec7226960a643d7242f3f5836bc8876e1fcde3` در Frontend main ادغام شد و Product Owner موفقیت تست ویرایش را اعلام کرد. در Backend هیچ فایل اجرایی، API، Sheet یا داده عملیاتی تغییر نکرد؛ ذخیره منبع اصلی موضوع Task 3 است.
+- [ ] **Task 3 — Source Update Services (IN PROGRESS):** تکمیل سرویس‌های امن Backend برای اصلاح پروژه/اطلاعات مرکزی/پاسخ فرم/فیلدهای همان رویداد، بدون ساخت رویداد جدید.
 - [ ] **Task 4 — Integration & Regression:** آزمون امنیت، داده چندردیفی، تاریخچه، سازگاری API، چاپ/PDF و جریان‌های موجود.
 
 ## وضعیت پیاده‌سازی
-- فقط Task 1 انجام شده است. در این مرحله هیچ فایل اجرایی، API، شیت، داده عملیاتی یا deployment تغییر نکرده است.
+- Task 1 و Task 2 تکمیل شده‌اند؛ Task 2 صرفاً تغییر Frontend بوده و هیچ فایل اجرایی، API، شیت یا داده عملیاتی Backend تغییر نکرده است. Task 3 اکنون در حال انجام است؛ deployment مستقل Frontend در این ثبت تأیید نشده است.
