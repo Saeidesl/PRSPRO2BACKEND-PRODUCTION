@@ -422,7 +422,7 @@ const PrintTemplateService = {
         const department = departmentsById[String(event.DepartmentID || '')];
         return {
           ID: event.ID, EventTypeID: event.EventTypeID, OccurredAt: event.OccurredAt || '',
-          CreatedAt: event.CreatedAt || '', Description: event.Description || '', Status: event.Status || '',
+          CreatedAt: event.CreatedAt || '', UpdatedAt: event.UpdatedAt || '', Description: event.Description || '', Status: event.Status || '',
           EventTypeName: type ? (type.Name || type.Code || '') : '',
           CreatorName: creator ? EventService.getUserDisplayName(creator) : (event.CreatedBy || ''),
           PerformedByName: performer ? EventService.getUserDisplayName(performer) : (event.PerformedBy || ''),
@@ -431,6 +431,7 @@ const PrintTemplateService = {
       });
     }
     const resolved = Object.create(null);
+    const sources = Object.create(null);
     definition.bindings.forEach(function(binding) {
       let value = null;
       if (binding.sourceType === 'EVENT_FIELD') {
@@ -449,16 +450,19 @@ const PrintTemplateService = {
         else {
           const latest = matchingEvents.length ? matchingEvents[matchingEvents.length - 1] : null;
           value = latest ? latest[field] : null;
+          if (latest && ['OccurredAt','Description'].indexOf(field) !== -1) sources[String(binding.id)] = { sourceType: 'EVENT_FIELD', eventId: String(latest.ID), expectedUpdatedAt: String(latest.UpdatedAt || latest.CreatedAt || '') };
         }
       } else if (binding.sourceType === 'PROJECT_FIELD') {
         const field = String(binding.field || '');
         if (!projectFieldAllowList[field]) throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'فیلد پروژه در منبع قالب مجاز نیست.');
         value = project[field] !== undefined ? project[field] : null;
+        if (['ProjectCode','Title','Description','Quantity'].indexOf(field) !== -1) sources[String(binding.id)] = { sourceType: 'PROJECT_FIELD', expectedUpdatedAt: String(project.UpdatedAt || project.CreatedAt || '') };
       } else if (binding.sourceType === 'PROJECT_INFORMATION') {
         const typeId = String(binding.informationTypeId || '');
         if (!infoById[typeId]) throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'نوع اطلاعات متصل به قالب پیدا نشد یا غیرفعال است.');
         const row = informationByType[typeId];
         value = row ? this._parse(row.ValueJSON, null) : null;
+        sources[String(binding.id)] = { sourceType: 'PROJECT_INFORMATION', informationTypeId: typeId, expectedRevision: Number(row && row.Revision || 0) };
       } else {
         const formId = String(binding.formId || '');
         if (binding.eventTypeId) {
@@ -480,7 +484,7 @@ const PrintTemplateService = {
           const event = events.find(function(item) { return String(item.ID) === String(row.EventID); });
           return {
             ID: row.ID, EventID: row.EventID, FormID: row.FormID, FormVersion: Number(row.FormVersion || 1),
-            CreatedAt: row.CreatedAt || '', EventOccurredAt: event ? (event.OccurredAt || event.CreatedAt || '') : '',
+            CreatedAt: row.CreatedAt || '', UpdatedAt: row.UpdatedAt || '', EventOccurredAt: event ? (event.OccurredAt || event.CreatedAt || '') : '',
             Values: this._parse(row.ResponseJSON, {}), Definition: this._parse(row.DefinitionSnapshotJSON, {})
           };
         }, this).sort(function(a,b) { return String(a.CreatedAt).localeCompare(String(b.CreatedAt)); });
@@ -500,12 +504,19 @@ const PrintTemplateService = {
         if (selection === 'ALL') value = matching.map(pickValue);
         else if (selection === 'EVENT' || selection === 'RESPONSE') value = matching.length ? pickValue(matching[matching.length - 1]) : null;
         else value = matching.length ? pickValue(matching[matching.length - 1]) : null;
+        if (binding.sourceType === 'EVENT_FORM_FIELD' && matching.length && selection !== 'ALL') {
+          const selected = matching[matching.length - 1];
+          const selectedField = selected.Definition && Array.isArray(selected.Definition.Fields) ? selected.Definition.Fields.find(function(field) { return String(field.ID || '') === String(binding.fieldId || '') || String(field.InformationTypeID || '') === String(binding.informationTypeId || ''); }) : null;
+          const typeId = String(binding.informationTypeId || (selectedField && selectedField.InformationTypeID) || '');
+          if (typeId) sources[String(binding.id)] = { sourceType: 'EVENT_FORM_FIELD', eventId: String(selected.EventID), responseId: String(selected.ID), formId: String(selected.FormID), informationTypeId: typeId, expectedUpdatedAt: String(selected.UpdatedAt || selected.CreatedAt || ''), expectedFormVersion: Number(selected.FormVersion || 1) };
+        }
       }
       resolved[String(binding.id)] = value;
     }, this);
     return {
       project: { ID: project.ID, ProjectCode: project.ProjectCode || '', Title: project.Title || '' },
-      data: resolved
+      data: resolved,
+      sources: sources
     };
   },
   preview: function(body, params) {
@@ -517,6 +528,7 @@ const PrintTemplateService = {
     return Response.success({
       project: resolved.project,
       data: resolved.data,
+      sources: resolved.sources || {},
       resolvedAt: this._now()
     });
   },
