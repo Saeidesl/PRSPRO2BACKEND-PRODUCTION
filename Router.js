@@ -865,6 +865,13 @@ const Router = {
       return InformationTypeService.updateColumn(decodeURIComponent(informationTypeColumnUpdateMatch[1]), decodeURIComponent(informationTypeColumnUpdateMatch[2]), body, params);
     }
 
+    const printTemplateProjectDataMatch = path.match(/^\\/print-templates\\/([^/]+)\\/project-data$/);
+    if (printTemplateProjectDataMatch) {
+      return PrintTemplateService.updateProjectBinding(
+        decodeURIComponent(printTemplateProjectDataMatch[1]), body, params
+      );
+    }
+
     const printTemplateUpdateParts = path.split('/');
     if (printTemplateUpdateParts.length === 3 && printTemplateUpdateParts[1] === 'print-templates' && printTemplateUpdateParts[2]) {
       AccessControlService.require(params, 'SYSTEM_SETTINGS');
