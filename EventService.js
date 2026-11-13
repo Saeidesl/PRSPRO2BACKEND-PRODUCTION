@@ -953,6 +953,53 @@ const EventService = {
     return Response.success(progress);
   },
 
+  updateFieldFromTemplate: function(eventId, field, value, expectedUpdatedAt, params) {
+    const user = AccessControlService.getCurrentUser(params || {});
+    if (['OccurredAt','Description'].indexOf(String(field)) === -1) {
+      throw ErrorHandler.create(Constants.ERROR.PERMISSION_DENIED, 'این فیلد رویداد از روی قالب قابل ویرایش نیست.');
+    }
+    const lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    try {
+      const event = EventRepository.findById(eventId);
+      if (!event || String(event.TenantID) !== String(user.TenantID) || !event.ProjectID ||
+          ['VOID','CANCELLED','CANCELED'].indexOf(String(event.Status || '').toUpperCase()) !== -1) {
+        throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'رویداد قابل ویرایش پیدا نشد.');
+      }
+      const project = ProjectRepository.findById(event.ProjectID);
+      if (!project || String(project.TenantID) !== String(user.TenantID) ||
+          !ProjectService._isProjectAvailableToUser_(project, user)) {
+        throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'پروژه رویداد پیدا نشد.');
+      }
+      const currentVersion = String(event.UpdatedAt || event.CreatedAt || '');
+      if (currentVersion !== String(expectedUpdatedAt || '')) {
+        throw ErrorHandler.create(Constants.ERROR.CONFLICT, 'رویداد هم‌زمان تغییر کرده است؛ قالب را تازه‌سازی کنید.');
+      }
+      const patch = { UpdatedAt: new Date().toISOString() };
+      if (field === 'Description') {
+        patch.Description = String(value === null || value === undefined ? '' : value);
+        if (patch.Description.length > 5000) {
+          throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'توضیحات رویداد بیش از حد مجاز است.');
+        }
+      } else {
+        const date = new Date(String(value || ''));
+        if (!String(value || '').trim() || isNaN(date.getTime())) {
+          throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'تاریخ و ساعت رویداد معتبر نیست.');
+        }
+        patch.OccurredAt = date.toISOString();
+      }
+      const updated = EventRepository.update(eventId, patch);
+      AuditService.log({
+        TenantID:user.TenantID, UserID:user.ID, Action:Constants.ACTION.UPDATE,
+        EntityType:'EVENT', EntityID:eventId, OldData:event, NewData:updated,
+        Reason:'ویرایش مستقیم فیلد رویداد روی قالب؛ بدون اجرای مجدد گردش‌کار'
+      });
+      return Response.success(updated, {message:'اطلاعات همان رویداد ذخیره شد.'});
+    } finally {
+      lock.releaseLock();
+    }
+  },
+
   // ثبت رویداد با جلوگیری از ایجاد تکراری هنگام تکرار درخواست شبکه
   create: function(event, params) {
     Validator.object(event, 'event');
