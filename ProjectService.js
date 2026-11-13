@@ -1145,6 +1145,9 @@ const ProjectService = {
       const patch = {};
       if (field === 'ProjectCode') {
         patch.ProjectCode = String(value === null || value === undefined ? '' : value).trim();
+        if (patch.ProjectCode.length > 100) {
+          throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'کد پروژه نمی‌تواند بیش از ۱۰۰ نویسه باشد.');
+        }
         const duplicate = ProjectRepository.getAll().some(function(item) {
           return String(item.TenantID) === String(user.TenantID) &&
             String(item.ID) !== String(id) &&
@@ -1172,6 +1175,7 @@ const ProjectService = {
       }
       patch.UpdatedAt = new Date().toISOString();
       const updated = ProjectRepository.update(id, patch);
+      if (!updated) throw ErrorHandler.create(Constants.ERROR.INTERNAL_ERROR, 'ذخیره اطلاعات پروژه انجام نشد.');
       AuditService.log({
         TenantID: user.TenantID, UserID: user.ID, Action: Constants.ACTION.UPDATE,
         EntityType: Constants.ENTITY.PROJECT, EntityID: id,
