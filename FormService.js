@@ -557,7 +557,7 @@ const FormService = {
       });
       if (!updated) throw ErrorHandler.create(Constants.ERROR.INTERNAL_ERROR, 'ذخیره پاسخ همان رویداد انجام نشد.');
       if (String(type.Code || '').toUpperCase() === 'PROJECT_CODE') {
-        ProjectService.updateProjectCodeFromEvent(project.ID, nextValue, event.ID, user);
+        ProjectService.updateProjectCodeFromEvent(project.ID, nextValue, event.ID, user, true);
       } else if (this._isEmptyValue_(nextValue)) {
         if (currentInfo && String(currentInfo.Status || 'ACTIVE') === 'ACTIVE') {
           ProjectInformationService.deactivate(project.ID, informationTypeId, params, {
