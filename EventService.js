@@ -972,8 +972,7 @@ const EventService = {
         throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'پروژه رویداد پیدا نشد.');
       }
       const eventType = EventTypeRepository.findById(event.EventTypeID);
-      if (!eventType || String(eventType.TenantID) !== String(user.TenantID) ||
-          String(eventType.Status || 'ACTIVE').toUpperCase() !== 'ACTIVE') {
+      if (!eventType || String(eventType.TenantID) !== String(user.TenantID)) {
         throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'نوع رویداد معتبر نیست.');
       }
       if (!this._isAdmin_(user) &&
@@ -1001,6 +1000,7 @@ const EventService = {
         patch.OccurredAt = date.toISOString();
       }
       const updated = EventRepository.update(eventId, patch);
+      if (!updated) throw ErrorHandler.create(Constants.ERROR.INTERNAL_ERROR, 'ذخیره اطلاعات رویداد انجام نشد.');
       AuditService.log({
         TenantID:user.TenantID, UserID:user.ID, Action:Constants.ACTION.UPDATE,
         EntityType:'EVENT', EntityID:eventId, OldData:event, NewData:updated,
