@@ -462,7 +462,7 @@ const PrintTemplateService = {
         if (!infoById[typeId]) throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'نوع اطلاعات متصل به قالب پیدا نشد یا غیرفعال است.');
         const row = informationByType[typeId];
         value = row ? this._parse(row.ValueJSON, null) : null;
-        sources[String(binding.id)] = { sourceType: 'PROJECT_INFORMATION', informationTypeId: typeId, expectedRevision: Number((ProjectInformationRepository.findAnyByProjectAndType(projectId, typeId) || {}).Revision || 0) };
+        sources[String(binding.id)] = { sourceType: 'PROJECT_INFORMATION', informationTypeId: typeId, dataType: String(infoById[typeId].DataType || '').toLowerCase(), expectedRevision: Number((ProjectInformationRepository.findAnyByProjectAndType(projectId, typeId) || {}).Revision || 0) };
       } else {
         const formId = String(binding.formId || '');
         if (binding.eventTypeId) {
@@ -508,7 +508,7 @@ const PrintTemplateService = {
           const selected = matching[matching.length - 1];
           const selectedField = selected.Definition && Array.isArray(selected.Definition.Fields) ? selected.Definition.Fields.find(function(field) { return String(field.ID || '') === String(binding.fieldId || '') || String(field.InformationTypeID || '') === String(binding.informationTypeId || ''); }) : null;
           const typeId = String(binding.informationTypeId || (selectedField && selectedField.InformationTypeID) || '');
-          if (typeId) sources[String(binding.id)] = { sourceType: 'EVENT_FORM_FIELD', eventId: String(selected.EventID), responseId: String(selected.ID), formId: String(selected.FormID), informationTypeId: typeId, expectedUpdatedAt: String(selected.UpdatedAt || selected.CreatedAt || ''), expectedFormVersion: Number(((FormRepository.getForms() || []).find(function(form) { return String(form.ID) === String(selected.FormID) && String(form.TenantID) === String(user.TenantID); }) || {}).Version || selected.FormVersion || 1), expectedInformationRevision: Number((ProjectInformationRepository.findAnyByProjectAndType(projectId, typeId) || {}).Revision || 0) };
+          if (typeId) sources[String(binding.id)] = { sourceType: 'EVENT_FORM_FIELD', eventId: String(selected.EventID), responseId: String(selected.ID), formId: String(selected.FormID), informationTypeId: typeId, dataType: String((infoById[typeId] || {}).DataType || '').toLowerCase(), expectedUpdatedAt: String(selected.UpdatedAt || selected.CreatedAt || ''), expectedFormVersion: Number(((FormRepository.getForms() || []).find(function(form) { return String(form.ID) === String(selected.FormID) && String(form.TenantID) === String(user.TenantID); }) || {}).Version || selected.FormVersion || 1), expectedInformationRevision: Number((ProjectInformationRepository.findAnyByProjectAndType(projectId, typeId) || {}).Revision || 0) };
         }
       }
       resolved[String(binding.id)] = value;
