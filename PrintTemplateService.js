@@ -462,7 +462,23 @@ const PrintTemplateService = {
         if (!infoById[typeId]) throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'نوع اطلاعات متصل به قالب پیدا نشد یا غیرفعال است.');
         const row = informationByType[typeId];
         value = row ? this._parse(row.ValueJSON, null) : null;
-        sources[String(binding.id)] = { sourceType: 'PROJECT_INFORMATION', informationTypeId: typeId, expectedRevision: Number((ProjectInformationRepository.findAnyByProjectAndType(projectId, typeId) || {}).Revision || 0) };
+        const columns = InformationTypeRepository.findColumns(typeId).filter(function(column) {
+          return String(column.TenantID) === String(user.TenantID) && String(column.Status || 'ACTIVE') === 'ACTIVE';
+        }).map(function(column) {
+          return {
+            Code: String(column.Code || ''), Name: String(column.Name || column.Code || ''),
+            DataType: String(column.DataType || 'text').toLowerCase(),
+            IsRequired: column.IsRequired === true || String(column.IsRequired).toLowerCase() === 'true',
+            Options: this._parse(column.OptionsJSON, [])
+          };
+        }, this);
+        sources[String(binding.id)] = {
+          sourceType: 'PROJECT_INFORMATION', informationTypeId: typeId,
+          expectedRevision: Number((ProjectInformationRepository.findAnyByProjectAndType(projectId, typeId) || {}).Revision || 0),
+          dataType: String(infoById[typeId].DataType || 'text').toLowerCase(),
+          cardinality: String(infoById[typeId].Cardinality || 'SINGLE').toUpperCase(),
+          columns: columns
+        };
       } else {
         const formId = String(binding.formId || '');
         if (binding.eventTypeId) {
@@ -508,7 +524,30 @@ const PrintTemplateService = {
           const selected = matching[matching.length - 1];
           const selectedField = selected.Definition && Array.isArray(selected.Definition.Fields) ? selected.Definition.Fields.find(function(field) { return String(field.ID || '') === String(binding.fieldId || '') || String(field.InformationTypeID || '') === String(binding.informationTypeId || ''); }) : null;
           const typeId = String(binding.informationTypeId || (selectedField && selectedField.InformationTypeID) || '');
-          if (typeId) sources[String(binding.id)] = { sourceType: 'EVENT_FORM_FIELD', eventId: String(selected.EventID), responseId: String(selected.ID), formId: String(selected.FormID), informationTypeId: typeId, expectedUpdatedAt: String(selected.UpdatedAt || selected.CreatedAt || ''), expectedFormVersion: Number(((FormRepository.getForms() || []).find(function(form) { return String(form.ID) === String(selected.FormID) && String(form.TenantID) === String(user.TenantID); }) || {}).Version || selected.FormVersion || 1), expectedInformationRevision: Number((ProjectInformationRepository.findAnyByProjectAndType(projectId, typeId) || {}).Revision || 0) };
+          if (typeId) {
+            const informationType = (selectedField && selectedField.InformationType) || InformationTypeRepository.findById(typeId) || {};
+            const formColumns = Array.isArray(informationType.Columns) ? informationType.Columns : InformationTypeRepository.findColumns(typeId);
+            const columns = (formColumns || []).filter(function(column) {
+              return String(column.TenantID || user.TenantID) === String(user.TenantID) && String(column.Status || 'ACTIVE') === 'ACTIVE';
+            }).map(function(column) {
+              return {
+                Code: String(column.Code || ''), Name: String(column.Name || column.Code || ''),
+                DataType: String(column.DataType || 'text').toLowerCase(),
+                IsRequired: column.IsRequired === true || String(column.IsRequired).toLowerCase() === 'true',
+                Options: Array.isArray(column.Options) ? column.Options : this._parse(column.OptionsJSON, [])
+              };
+            }, this);
+            sources[String(binding.id)] = {
+              sourceType: 'EVENT_FORM_FIELD', eventId: String(selected.EventID), responseId: String(selected.ID),
+              formId: String(selected.FormID), informationTypeId: typeId,
+              expectedUpdatedAt: String(selected.UpdatedAt || selected.CreatedAt || ''),
+              expectedFormVersion: Number(((FormRepository.getForms() || []).find(function(form) { return String(form.ID) === String(selected.FormID) && String(form.TenantID) === String(user.TenantID); }) || {}).Version || selected.FormVersion || 1),
+              expectedInformationRevision: Number((ProjectInformationRepository.findAnyByProjectAndType(projectId, typeId) || {}).Revision || 0),
+              dataType: String(informationType.DataType || 'text').toLowerCase(),
+              cardinality: String(informationType.Cardinality || 'SINGLE').toUpperCase(),
+              columns: columns
+            };
+          }
         }
       }
       resolved[String(binding.id)] = value;
