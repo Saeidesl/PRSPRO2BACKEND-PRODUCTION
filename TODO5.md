@@ -1,6 +1,6 @@
 ## 🎯 Current Objective
 
-پیاده‌سازی امکان ویرایش مستقیم داده‌های متصل به قالب پروژه با ذخیره در منبع اصلی؛ ویرایش فیلدهای رویداد و پاسخ فرم باید همان رکورد قبلی را اصلاح کند و رویداد جدید ایجاد نکند.
+افزایش سرعت دریافت، resolve، پردازش و نمایش اطلاعات در بخش خروجی قالب پروژه، با حفظ صحت داده، سازگاری و معماری موجود.
 
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
 
@@ -37,6 +37,14 @@
 
 ## 📋 Macro-Task Queue & Implementation Log
 
+- [x] **Task 1 — Discovery & Planning:** ثبت دامنه بهینه‌سازی و شناسایی مسیرهای اصلی برای بررسی عملکرد انجام شد.
+  - *Log:* دامنه تسک به بخش خروجی قالب پروژه محدود شد. نقاط بررسی: Frontend در `pages/print-output.html` و `js/modules/print-designer.js` شامل `PrintDesigner.initProjectOutput()` و `renderOutputDocument()`؛ Backend در مسیر `POST /print-templates/:id/resolve` و `PrintTemplateService._resolveProjectData()`؛ API ذخیره موجود `PUT /print-templates/:id/project-data`؛ منابع Google Sheets و پیوست‌ها طبق bindingهای موجود. آخرین شاخه‌های مجاز بررسی شدند: Backend فقط `main`؛ Frontend شامل `main` و شاخه‌های feature ثبت‌شده. آخرین commitهای main هنگام برنامه‌ریزی: Backend `509539b5115c182bce0de738b65039fa787e70d6` و Frontend `060f257791c48091d15051617de5cbf53c0328b8`. سابقه Task 1 تا 4 حفظ شده است؛ هنوز هیچ کد runtime یا داده عملیاتی تغییر نکرده است.
+- [ ] **Task 2 — Performance Baseline & Bottleneck Discovery (IN PROGRESS):** اندازه‌گیری زمان و تعداد درخواست‌ها در بارگذاری خروجی قالب، ردیابی زمان Backend resolve، خواندن Google Sheets، تبدیل/پردازش داده و رندر Frontend؛ شناسایی نقاط کندی با داده واقعی و ثبت خط مبنا قبل از هر بهینه‌سازی.
+- [ ] **Task 3 — End-to-End Performance Optimization:** بهینه‌سازی هدفمند دریافت و پردازش اطلاعات در Backend و Frontend بر اساس نتایج Task 2؛ حذف درخواست‌ها/خواندن‌های تکراری، استفاده درست از cache و batch، کاهش پردازش و render تکراری، بدون تغییر قرارداد API یا ایجاد مسیر موازی مگر با اثبات ضرورت.
+- [ ] **Task 4 — Regression, Data Integrity & Operational Acceptance:** بررسی سازگاری Frontend/Backend، tenant و permission، صحت خروجی قالب و اطلاعات فرم/رویداد/فایل، رفتار ویرایش و ذخیره، چاپ/PDF و responsive؛ مقایسه سرعت با خط مبنا و آماده‌سازی انتشار کنترل‌شده.
+
+## 📋 Macro-Task Queue & Implementation Log
+
 - [x] **Task 1 — Discovery & Planning:** بررسی Router، سرویس‌ها، مخازن، bindingهای قالب، APIهای موجود و مسیرهای ثبت/اصلاح رویداد انجام شد.
   - *Log:* Router.js, PrintTemplateService.js, ProjectInformationService.js, FormService.js, EventService.js, EventRepository.js, FormRepository.js و tests/print-templates.test.js بررسی شدند. ProjectInformationService.save() تاریخچه پروژه را حفظ می‌کند؛ FormRepository.updateResponse() امکان اصلاح همان پاسخ را دارد؛ اما FormService.updateEventFormResponse() فعلی به رویداد اصلاحی مجزا وابسته است و برای تصمیم جدید کافی نیست. EventRepository.update() موجود است ولی متد عمومی امن در EventService وجود ندارد. هیچ کد عملیاتی تغییر نکرد.
 - [x] **Task 2 — Inline Editing UX:** رابط ویرایش درجا در Frontend عملیاتی پیاده‌سازی، CI و بررسی عملکرد مرورگر با موفقیت گذرانده، ادغام و توسط Product Owner تست شد.
@@ -47,7 +55,7 @@
   - *Log:* قابلیت فایل/تصویر و افزودن/حذف ردیف در PR #133 و ذخیره draft تک‌ردیفی در PR #134 پیاده‌سازی شد؛ Product Owner تأیید کرد آپلود/حذف فایل و تصویر و افزودن/ذخیره یک ردیف درست کار می‌کند. محدودیت چندردیفی در PR #135 برطرف شد: در `js/modules/print-designer.js`، `projectOutputDraftRows[bindingId]` آرایه index تمام ردیف‌های موقت را نگه می‌دارد؛ افزودن چند ردیف متوالی مجاز است و دکمه «ذخیره همه ردیف‌ها» با تابع `saveProjectOutputBinding()` کل آرایه را در یک درخواست به API موجود `PUT /print-templates/:id/project-data` ذخیره می‌کند. لغو هر draft مستقل است و indexهای بعدی در state و DOM اصلاح می‌شوند؛ حذف ردیف‌های ذخیره‌شده تا زمان وجود draft غیرفعال می‌ماند تا indexها جابه‌جا نشوند. مسیر فایل/تصویر از APIهای موجود `POST /projects/:projectId/attachments`، `GET /attachments/:attachmentId/download` و `DELETE /attachments/:attachmentId` استفاده می‌کند و reference پیوست در منبع اصلی ثبت می‌شود. فایل‌های Frontend: `js/modules/print-designer.js`، `index.html` (cache key: `20261114-inline-file-table-edit-3`)، `tests/project-print-designer.test.js` و `tests/print-template-library.test.js`. در Backend فقط metadata نوع داده در `PrintTemplateService._resolveProjectData()` برای تشخیص `dataType` اضافه شده بود؛ در PR #135 هیچ تغییر runtime در Backend، API/payload، Google Sheets، schema یا داده عملیاتی انجام نشد. PR #135 در مخزن `Saeidesl/PRSPRO2-PRODUCTION` با merge commit `841ad3106247b9a1e303335202f807efc8a1d236` در `main` ادغام شد؛ هفت بررسی CI پیش از ادغام موفق بودند و GitHub Actions run `43630777432`، job `deploy` با موفقیت GitHub Pages را منتشر کرد. Product Owner در 2026-11-14 تست عملیاتی را موفق اعلام کرد: افزودن چند ردیف و ذخیره همزمان، باقی‌ماندن داده پس از refresh، لغو draft بدون تغییر ردیف‌های قبلی و حفظ رفتار فایل/تصویر. Backend deploy جدید لازم نبود؛ هیچ تغییر runtime Backend در PR #135 وجود نداشت.
 
 ## وضعیت پیاده‌سازی
-- Taskهای 1 تا 4 تکمیل شده‌اند. Task 4 پس از ادغام PR #135 و انتشار موفق Frontend در GitHub Pages، توسط Product Owner در نسخه عملیاتی با موفقیت تست شد.
+- فاز قبلی و Taskهای 1 تا 4 آن تکمیل و توسط Product Owner تأیید شده‌اند. فاز جدید بهینه‌سازی سرعت خروجی قالب پروژه آغاز شده است؛ Task 1 برنامه‌ریزی ثبت شده و Task 2 در حال انجام است. در این فاز هنوز هیچ کد اجرایی یا داده عملیاتی تغییر نکرده است.
   - *Progress Log:* در `PrintTemplateService._resolveProjectData()`، metadata نوع داده `dataType` به source tokenهای `PROJECT_INFORMATION` و `EVENT_FORM_FIELD` اضافه شد تا Frontend نوع واقعی فیلد را بدون حدس تشخیص دهد. در Frontend، `js/modules/print-designer.js` از API موجود `POST /projects/:projectId/attachments` با `AttachmentType=INFORMATION` برای آپلود استفاده می‌کند؛ reference امن پیوست را با API موجود `PUT /print-templates/:id/project-data` در منبع اصلی ذخیره می‌کند؛ دریافت فایل از `GET /attachments/:attachmentId/download` انجام می‌شود. جدول‌ها کنترل افزودن/حذف ردیف دارند و کل آرایه پس از تغییر از همان API ذخیره می‌شود. `css/print-template-library.css` کنترل‌ها و حذف آن‌ها از چاپ را پوشش می‌دهد؛ `index.html` cache key را به `20261114-inline-file-table-edit-1` تغییر داد. تست‌های ایستا برای upload/download و افزودن/حذف ردیف اضافه شدند. تغییرات اولیه فایل/تصویر و ردیف جدول در PR #133 ادغام شدند؛ هیچ داده عملیاتی مستقیماً تغییر نکرده است.
 
 
