@@ -484,12 +484,15 @@ const PrintTemplateService = {
       });
     });
 
-    const formsById = Object.create(null);
-    if (needsEventFormFields) {
+    let formsById = null;
+    const getFormsById = function() {
+      if (formsById) return formsById;
+      formsById = Object.create(null);
       (FormRepository.getForms() || []).forEach(function(form) {
         if (String(form.TenantID) === String(user.TenantID)) formsById[String(form.ID)] = form;
       });
-    }
+      return formsById;
+    };
 
     const resolved = Object.create(null);
     const sources = Object.create(null);
@@ -573,7 +576,7 @@ const PrintTemplateService = {
               }) : null;
           const typeId = String(binding.informationTypeId || (selectedField && selectedField.InformationTypeID) || '');
           if (typeId) {
-            const form = formsById[String(selected.FormID)];
+            const form = getFormsById()[String(selected.FormID)];
             sources[String(binding.id)] = { sourceType: 'EVENT_FORM_FIELD', eventId: String(selected.EventID),
               responseId: String(selected.ID), formId: String(selected.FormID), informationTypeId: typeId,
               dataType: String((infoById[typeId] || {}).DataType || '').toLowerCase(),
