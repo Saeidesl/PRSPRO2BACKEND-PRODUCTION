@@ -198,6 +198,21 @@ test('resolver exposes active multi-row information column metadata for inline t
   assert.equal(source.columns[1].DataType,'number');
 });
 
+test('resolver exposes image field type and multi-file cardinality for latest event form answers',()=>{
+  const h=loadPrintTemplates();
+  h.context.InformationTypeRepository.findById = id => String(id)==='I1'
+    ? {ID:'I1',TenantID:'T1',DataType:'image',Cardinality:'MULTIPLE',Status:'ACTIVE'}
+    : null;
+  h.context.InformationTypeRepository.findColumns = () => [];
+  const created=h.service.create({Code:'IMAGE_META',Name:'قالب تصویر',Definition:{bindings:[
+    {id:'sample_images',sourceType:'EVENT_FORM_FIELD',formId:'F1',fieldId:'FF1',selection:'LATEST'}
+  ]}}, {});
+  const result=h.service.resolve(created.data.ID,{ProjectID:'P1'}, {});
+  assert.equal(result.data.sources.sample_images.dataType,'image');
+  assert.equal(result.data.sources.sample_images.cardinality,'MULTIPLE');
+  assert.deepEqual(Array.from(result.data.sources.sample_images.columns),[]);
+});
+
 test('inline project-field update dispatches only after source token validation',()=>{
   const h=loadPrintTemplates();
   const created=h.service.create({Code:'INLINE',Name:'قالب ویرایش',Definition:{bindings:[
