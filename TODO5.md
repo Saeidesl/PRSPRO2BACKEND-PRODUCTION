@@ -6,7 +6,7 @@
 
 ### مخازن و شاخه‌ها
 - Backend: Saeidesl/PRSPRO2BACKEND-PRODUCTION، شاخه feat/template-inline-data-edit-20261113، مبنا: main در commit a313b06aa96ed3bebc844a219df30d0df75a0213.
-- Frontend: Saeidesl/PRSPRO2-PRODUCTION، شاخه main؛ Task 2 از PR #129 با merge commit 19ec7226960a643d7242f3f5836bc8876e1fcde3 ادغام و توسط Product Owner تست شد.
+- Frontend: `Saeidesl/PRSPRO2-PRODUCTION`، شاخه عملیاتی `main` در commit مبنای این اصلاح `3c4b6cd672596077aeb48a455c21a6dcfa2af518`؛ شاخه جاری اصلاح چندردیفی `fix/template-output-multiple-draft-rows-20261114` بر همین مبنا ساخته شد. اصلاح تک‌ردیفی قبلی PR #134 با commit `f0be230ed3db512cd747f3c908d3d038bc6705d7` در main ادغام و در GitHub Pages منتشر شد.
 - مخازن Development خارج از محدوده‌اند؛ تغییرات Backend همچنان فقط روی شاخه feature انجام می‌شوند.
 
 ### معماری و داده‌های موجود
@@ -48,3 +48,12 @@
 ## وضعیت پیاده‌سازی
 - Taskهای 1 تا 3 تکمیل شده‌اند. Task 3 در هر دو مخزن ادغام شده و Product Owner ذخیره ویرایش متنی را در نسخه عملیاتی موفق تست کرده است. Task 4 روی شاخه‌های مستقل عملیاتی در حال توسعه است؛ هنوز ادغام یا انتشار نشده است.
   - *Progress Log:* در `PrintTemplateService._resolveProjectData()`، metadata نوع داده `dataType` به source tokenهای `PROJECT_INFORMATION` و `EVENT_FORM_FIELD` اضافه شد تا Frontend نوع واقعی فیلد را بدون حدس تشخیص دهد. در Frontend، `js/modules/print-designer.js` از API موجود `POST /projects/:projectId/attachments` با `AttachmentType=INFORMATION` برای آپلود استفاده می‌کند؛ reference امن پیوست را با API موجود `PUT /print-templates/:id/project-data` در منبع اصلی ذخیره می‌کند؛ دریافت فایل از `GET /attachments/:attachmentId/download` انجام می‌شود. جدول‌ها کنترل افزودن/حذف ردیف دارند و کل آرایه پس از تغییر از همان API ذخیره می‌شود. `css/print-template-library.css` کنترل‌ها و حذف آن‌ها از چاپ را پوشش می‌دهد؛ `index.html` cache key را به `20261114-inline-file-table-edit-1` تغییر داد. تست‌های ایستا برای upload/download و افزودن/حذف ردیف اضافه شدند. تغییرات هنوز در حال بررسی CI هستند؛ هیچ داده عملیاتی تغییر نکرده است.
+
+
+## 2026-11-14 — توسعه افزودن و ذخیره همزمان چند ردیف در خروجی قالب پروژه
+
+- *Discovery:* Product Owner تست کرد که افزودن و ذخیره یک ردیف در PR #134 موفق است؛ محدودیت باقی‌مانده این بود که پس از ایجاد یک ردیف موقت، امکان افزودن ردیف موقت بعدی وجود نداشت. علت در `PrintDesigner.bindProjectOutputSection()` و شرط جلوگیری از افزودن هنگام وجود `pendingRows` بود.
+- *Implementation:* در `js/modules/print-designer.js` افزودن چند ردیف موقت برای یک binding فعال شد؛ شاخص تمام ردیف‌های موقت در `projectOutputDraftRows[bindingId]` نگهداری می‌شود. دکمه واحد «ذخیره همه ردیف‌ها» پس از اعتبارسنجی خالی نبودن هر ردیف، کل آرایه را با یک فراخوانی `saveProjectOutputBinding()` به API موجود `PUT /print-templates/:id/project-data` می‌فرستد. لغو هر ردیف موقت به‌صورت مستقل انجام و index ردیف‌های بعدی در DOM و state اصلاح می‌شود. حذف ردیف‌های ذخیره‌شده تا زمان وجود draft غیرفعال می‌شود تا indexها جابه‌جا نشوند؛ دکمه افزودن فعال می‌ماند.
+- *Frontend files:* `js/modules/print-designer.js`، `index.html` (cache key: `20261114-inline-file-table-edit-3`)، `tests/project-print-designer.test.js` و `tests/print-template-library.test.js`.
+- *Backend/API/Database:* هیچ تغییر runtime در Backend، هیچ API یا payload جدید، هیچ Sheet/column/schema و هیچ داده عملیاتی تغییر نکرد. همان API و همان منبع داده چندردیفی استفاده می‌شود.
+- *CI:* روی commit `f26d015e366404841c50f76bd63e7327c5a10e0b`، Frontend checks، Print designer regression، PMS frontend agent suite و PMS cross-repository QA موفق شدند؛ ممیزی جامع UI/performance هنوز در حال اجراست. ادغام PR #135 و پذیرش عملیاتی هنوز انجام نشده‌اند.
