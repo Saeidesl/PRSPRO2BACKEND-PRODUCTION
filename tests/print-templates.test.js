@@ -162,7 +162,12 @@ test('data resolution uses current project information and the latest form snaps
   assert.deepEqual(Array.from(result.data.data.all_form_values),['قدیمی','جدید']);
   assert.equal(result.data.sources.project_code.sourceType,'PROJECT_FIELD');
   assert.equal(result.data.sources.current_model.expectedRevision,4);
+  assert.equal(result.data.sources.current_model.dataType,'text');
+  assert.equal(result.data.sources.current_model.cardinality,'SINGLE');
+  assert.deepEqual(Array.from(result.data.sources.current_model.columns),[]);
   assert.equal(result.data.sources.latest_form_value.eventId,'E2');
+  assert.equal(result.data.sources.latest_form_value.dataType,'text');
+  assert.equal(result.data.sources.latest_form_value.cardinality,'SINGLE');
   assert.equal(result.data.sources.latest_form_value.responseId,'R2');
   assert.equal(result.data.sources.latest_form_value.expectedFormVersion,3);
 });
