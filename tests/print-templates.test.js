@@ -162,9 +162,55 @@ test('data resolution uses current project information and the latest form snaps
   assert.deepEqual(Array.from(result.data.data.all_form_values),['قدیمی','جدید']);
   assert.equal(result.data.sources.project_code.sourceType,'PROJECT_FIELD');
   assert.equal(result.data.sources.current_model.expectedRevision,4);
+  assert.equal(result.data.sources.current_model.dataType,'text');
+  assert.equal(result.data.sources.current_model.cardinality,'SINGLE');
+  assert.deepEqual(Array.from(result.data.sources.current_model.columns),[]);
   assert.equal(result.data.sources.latest_form_value.eventId,'E2');
+  assert.equal(result.data.sources.latest_form_value.dataType,'text');
+  assert.equal(result.data.sources.latest_form_value.cardinality,'SINGLE');
   assert.equal(result.data.sources.latest_form_value.responseId,'R2');
   assert.equal(result.data.sources.latest_form_value.expectedFormVersion,3);
+});
+
+test('resolver exposes active multi-row information column metadata for inline table editing',()=>{
+  const h=loadPrintTemplates();
+  h.context.InformationTypeRepository.findByTenant = () => [{
+    ID:'I_TABLE',TenantID:'T1',Code:'SUPPLIES',Name:'ملزومات',DataType:'text',Cardinality:'MULTIPLE',Status:'ACTIVE'
+  }];
+  h.context.InformationTypeRepository.findColumns = () => [
+    {ID:'C1',TenantID:'T1',Code:'ITEM',Name:'قلم',DataType:'text',IsRequired:true,Status:'ACTIVE',OptionsJSON:'[]'},
+    {ID:'C2',TenantID:'T1',Code:'QTY',Name:'تعداد',DataType:'number',IsRequired:true,Status:'ACTIVE',OptionsJSON:'[]'}
+  ];
+  h.context.ProjectInformationRepository.findByProject = () => [{
+    ID:'PI-TABLE',TenantID:'T1',ProjectID:'P1',InformationTypeID:'I_TABLE',
+    ValueJSON:JSON.stringify([{ITEM:'پارچه',QTY:10}]),Revision:7,Status:'ACTIVE'
+  }];
+  h.context.ProjectInformationRepository.findAnyByProjectAndType = () => ({ID:'PI-TABLE',Revision:7});
+  const created=h.service.create({Code:'TABLE_META',Name:'قالب جدول',Definition:{bindings:[
+    {id:'supplies',sourceType:'PROJECT_INFORMATION',informationTypeId:'I_TABLE',selection:'LATEST'}
+  ]}}, {});
+  const result=h.service.resolve(created.data.ID,{ProjectID:'P1'}, {});
+  const source=result.data.sources.supplies;
+  assert.equal(source.dataType,'text');
+  assert.equal(source.cardinality,'MULTIPLE');
+  assert.deepEqual(Array.from(source.columns).map(column=>column.Code),['ITEM','QTY']);
+  assert.equal(source.columns[0].IsRequired,true);
+  assert.equal(source.columns[1].DataType,'number');
+});
+
+test('resolver exposes image field type and multi-file cardinality for latest event form answers',()=>{
+  const h=loadPrintTemplates();
+  h.context.InformationTypeRepository.findById = id => String(id)==='I1'
+    ? {ID:'I1',TenantID:'T1',DataType:'image',Cardinality:'MULTIPLE',Status:'ACTIVE'}
+    : null;
+  h.context.InformationTypeRepository.findColumns = () => [];
+  const created=h.service.create({Code:'IMAGE_META',Name:'قالب تصویر',Definition:{bindings:[
+    {id:'sample_images',sourceType:'EVENT_FORM_FIELD',formId:'F1',fieldId:'FF1',selection:'LATEST'}
+  ]}}, {});
+  const result=h.service.resolve(created.data.ID,{ProjectID:'P1'}, {});
+  assert.equal(result.data.sources.sample_images.dataType,'image');
+  assert.equal(result.data.sources.sample_images.cardinality,'MULTIPLE');
+  assert.deepEqual(Array.from(result.data.sources.sample_images.columns),[]);
 });
 
 test('inline project-field update dispatches only after source token validation',()=>{
