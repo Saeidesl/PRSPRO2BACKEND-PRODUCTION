@@ -362,77 +362,141 @@ const PrintTemplateService = {
         !ProjectService._isProjectAvailableToUser_(project, user)) {
       throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'پروژه موردنظر پیدا نشد.');
     }
+
+    const bindings = definition.bindings || [];
+    const hasSource = function(sourceType) {
+      return bindings.some(function(binding) { return binding.sourceType === sourceType; });
+    };
     const projectFieldAllowList = {
       ID: true, ProjectCode: true, Title: true, Description: true, Status: true,
       Quantity: true, CreatedAt: true, UpdatedAt: true, RecordState: true
     };
-    const infoTypes = InformationTypeRepository.findByTenant(user.TenantID);
+    const needsEventFields = hasSource('EVENT_FIELD');
+    const needsProjectInformation = hasSource('PROJECT_INFORMATION');
+    const needsEventFormFields = hasSource('EVENT_FORM_FIELD');
+    const hasFormBindings = bindings.some(function(binding) {
+      return binding.sourceType !== 'PROJECT_FIELD' &&
+        binding.sourceType !== 'PROJECT_INFORMATION' &&
+        binding.sourceType !== 'EVENT_FIELD';
+    });
+    const needsEvents = needsEventFields || hasFormBindings;
+    const needsInformationTypes = needsProjectInformation || needsEventFormFields;
+
+    // Read each required sheet at most once per resolve request. Do not retain
+    // project data between requests, so edits are visible on the next resolve.
+    const infoTypes = needsInformationTypes
+      ? InformationTypeRepository.findByTenant(user.TenantID) : [];
     const infoById = Object.create(null);
     infoTypes.forEach(function(type) {
       if (String(type.Status || 'ACTIVE') === 'ACTIVE') infoById[String(type.ID)] = type;
     });
-    const informationRows = ProjectInformationRepository.findByProject(projectId).filter(function(row) {
-      return String(row.TenantID) === String(user.TenantID) && String(row.Status || 'ACTIVE') === 'ACTIVE';
-    });
+
+    const allInformationRows = needsProjectInformation || needsEventFormFields
+      ? ProjectInformationRepository.findByProject(projectId) : [];
     const informationByType = Object.create(null);
-    informationRows.forEach(function(row) { informationByType[String(row.InformationTypeID)] = row; });
-    const events = EventRepository.findByProjectId(projectId).filter(function(event) {
+    const informationRevisionByType = Object.create(null);
+    allInformationRows.forEach(function(row) {
+      if (String(row.TenantID) !== String(user.TenantID)) return;
+      const typeId = String(row.InformationTypeID);
+      if (!Object.prototype.hasOwnProperty.call(informationRevisionByType, typeId)) {
+        informationRevisionByType[typeId] = Number(row.Revision || 0);
+      }
+      if (String(row.Status || 'ACTIVE') === 'ACTIVE') informationByType[typeId] = row;
+    });
+
+    const events = needsEvents ? EventRepository.findByProjectId(projectId).filter(function(event) {
       const status = String(event.Status || '').toUpperCase();
       return String(event.TenantID) === String(user.TenantID) && status !== 'VOID' &&
         status !== 'CANCELLED' && status !== 'CANCELED';
-    });
+    }) : [];
     const eventIds = Object.create(null);
     const eventById = Object.create(null);
     events.forEach(function(event) {
       eventIds[String(event.ID)] = true;
       eventById[String(event.ID)] = event;
     });
-    const responses = FormRepository.getEventResponses().filter(function(row) {
+
+    const responses = hasFormBindings ? FormRepository.getEventResponses().filter(function(row) {
       return String(row.TenantID) === String(user.TenantID) && !!eventIds[String(row.EventID)];
+    }) : [];
+    const responsesByFormId = Object.create(null);
+    responses.forEach(function(row) {
+      const formId = String(row.FormID);
+      if (!responsesByFormId[formId]) responsesByFormId[formId] = [];
+      responsesByFormId[formId].push(row);
     });
-    const eventBindings = definition.bindings.filter(function(binding) { return binding.sourceType === 'EVENT_FIELD'; });
-    const needsEventFields = eventBindings.length > 0;
+
+    const eventBindings = bindings.filter(function(binding) { return binding.sourceType === 'EVENT_FIELD'; });
     const requestedEventFields = Object.create(null);
     eventBindings.forEach(function(binding) { requestedEventFields[String(binding.field || '')] = true; });
+
+    const needsEventTypes = needsEventFields || bindings.some(function(binding) {
+      return !!binding.eventTypeId && binding.sourceType !== 'PROJECT_FIELD' &&
+        binding.sourceType !== 'PROJECT_INFORMATION';
+    });
     const eventTypeById = Object.create(null);
-    const usersById = Object.create(null);
-    const departmentsById = Object.create(null);
-    let resolvedEvents = [];
-    if (needsEventFields) {
+    if (needsEventTypes) {
       EventTypeRepository.getAll().forEach(function(type) {
-        if (String(type.TenantID) === String(user.TenantID) && String(type.Status || 'ACTIVE').toUpperCase() === 'ACTIVE' &&
+        if (String(type.TenantID) === String(user.TenantID) &&
+            String(type.Status || 'ACTIVE').toUpperCase() === 'ACTIVE' &&
             String(type.ConnectionType || 'PROJECT').toUpperCase() !== 'INDEPENDENT') {
           eventTypeById[String(type.ID)] = type;
         }
       });
-      if (requestedEventFields.CreatorName || requestedEventFields.PerformedByName) {
-        (UserRepository.getAll() || []).forEach(function(item) {
-          if (item && String(item.TenantID) === String(user.TenantID)) usersById[String(item.ID)] = item;
-        });
-      }
-      if (requestedEventFields.DepartmentName) {
-        (DepartmentRepository.getAll() || []).forEach(function(item) {
-          if (item && String(item.TenantID) === String(user.TenantID)) departmentsById[String(item.ID)] = item;
-        });
-      }
-      resolvedEvents = events.map(function(event) {
-        const type = eventTypeById[String(event.EventTypeID || '')];
-        const creator = usersById[String(event.CreatedBy || '')];
-        const performer = usersById[String(event.PerformedBy || '')];
-        const department = departmentsById[String(event.DepartmentID || '')];
-        return {
-          ID: event.ID, EventTypeID: event.EventTypeID, OccurredAt: event.OccurredAt || '',
-          CreatedAt: event.CreatedAt || '', UpdatedAt: event.UpdatedAt || '', Description: event.Description || '', Status: event.Status || '',
-          EventTypeName: type ? (type.Name || type.Code || '') : '',
-          CreatorName: creator ? EventService.getUserDisplayName(creator) : (event.CreatedBy || ''),
-          PerformedByName: performer ? EventService.getUserDisplayName(performer) : (event.PerformedBy || ''),
-          DepartmentName: department ? (department.Name || department.Title || department.Code || '') : ''
-        };
+    }
+
+    const usersById = Object.create(null);
+    const departmentsById = Object.create(null);
+    if (needsEventFields && (requestedEventFields.CreatorName || requestedEventFields.PerformedByName)) {
+      (UserRepository.getAll() || []).forEach(function(item) {
+        if (item && String(item.TenantID) === String(user.TenantID)) usersById[String(item.ID)] = item;
       });
     }
+    if (needsEventFields && requestedEventFields.DepartmentName) {
+      (DepartmentRepository.getAll() || []).forEach(function(item) {
+        if (item && String(item.TenantID) === String(user.TenantID)) departmentsById[String(item.ID)] = item;
+      });
+    }
+
+    const resolvedEvents = needsEventFields ? events.map(function(event) {
+      const type = eventTypeById[String(event.EventTypeID || '')];
+      const creator = usersById[String(event.CreatedBy || '')];
+      const performer = usersById[String(event.PerformedBy || '')];
+      const department = departmentsById[String(event.DepartmentID || '')];
+      return {
+        ID: event.ID, EventTypeID: event.EventTypeID, OccurredAt: event.OccurredAt || '',
+        CreatedAt: event.CreatedAt || '', UpdatedAt: event.UpdatedAt || '', Description: event.Description || '', Status: event.Status || '',
+        EventTypeName: type ? (type.Name || type.Code || '') : '',
+        CreatorName: creator ? EventService.getUserDisplayName(creator) : (event.CreatedBy || ''),
+        PerformedByName: performer ? EventService.getUserDisplayName(performer) : (event.PerformedBy || ''),
+        DepartmentName: department ? (department.Name || department.Title || department.Code || '') : ''
+      };
+    }) : [];
+    const resolvedEventsByType = Object.create(null);
+    resolvedEvents.forEach(function(event) {
+      const typeId = String(event.EventTypeID || '');
+      if (!resolvedEventsByType[typeId]) resolvedEventsByType[typeId] = [];
+      resolvedEventsByType[typeId].push(event);
+    });
+    Object.keys(resolvedEventsByType).forEach(function(typeId) {
+      resolvedEventsByType[typeId].sort(function(a,b) {
+        return String(a.OccurredAt || a.CreatedAt).localeCompare(String(b.OccurredAt || b.CreatedAt));
+      });
+    });
+
+    let formsById = null;
+    const getFormsById = function() {
+      if (formsById) return formsById;
+      formsById = Object.create(null);
+      (FormRepository.getForms() || []).forEach(function(form) {
+        if (String(form.TenantID) === String(user.TenantID)) formsById[String(form.ID)] = form;
+      });
+      return formsById;
+    };
+
     const resolved = Object.create(null);
     const sources = Object.create(null);
-    definition.bindings.forEach(function(binding) {
+    bindings.forEach(function(binding) {
       let value = null;
       if (binding.sourceType === 'EVENT_FIELD') {
         const typeId = String(binding.eventTypeId || '');
@@ -440,51 +504,50 @@ const PrintTemplateService = {
         const field = String(binding.field || '');
         const allowedEventFields = ['EventTypeName','OccurredAt','CreatedAt','Description','CreatorName','PerformedByName','DepartmentName','Status'];
         if (allowedEventFields.indexOf(field) === -1) throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'فیلد رویداد برای منبع قالب مجاز نیست.');
-        const matchingEvents = resolvedEvents.filter(function(event) {
-          return String(event.EventTypeID) === typeId;
-        }).sort(function(a,b) {
-          return String(a.OccurredAt || a.CreatedAt).localeCompare(String(b.OccurredAt || b.CreatedAt));
-        });
+        const matchingEvents = resolvedEventsByType[typeId] || [];
         const selection = String(binding.selection || 'LATEST').toUpperCase();
         if (selection === 'ALL') value = matchingEvents.map(function(event) { return event[field]; });
         else {
           const latest = matchingEvents.length ? matchingEvents[matchingEvents.length - 1] : null;
           value = latest ? latest[field] : null;
-          if (latest && ['OccurredAt','Description'].indexOf(field) !== -1) sources[String(binding.id)] = { sourceType: 'EVENT_FIELD', eventId: String(latest.ID), expectedUpdatedAt: String(latest.UpdatedAt || latest.CreatedAt || '') };
+          if (latest && ['OccurredAt','Description'].indexOf(field) !== -1) {
+            sources[String(binding.id)] = { sourceType: 'EVENT_FIELD', eventId: String(latest.ID),
+              expectedUpdatedAt: String(latest.UpdatedAt || latest.CreatedAt || '') };
+          }
         }
       } else if (binding.sourceType === 'PROJECT_FIELD') {
         const field = String(binding.field || '');
         if (!projectFieldAllowList[field]) throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'فیلد پروژه در منبع قالب مجاز نیست.');
         value = project[field] !== undefined ? project[field] : null;
-        if (['ProjectCode','Title','Description','Quantity'].indexOf(field) !== -1) sources[String(binding.id)] = { sourceType: 'PROJECT_FIELD', expectedUpdatedAt: String(project.UpdatedAt || project.CreatedAt || '') };
+        if (['ProjectCode','Title','Description','Quantity'].indexOf(field) !== -1) {
+          sources[String(binding.id)] = { sourceType: 'PROJECT_FIELD',
+            expectedUpdatedAt: String(project.UpdatedAt || project.CreatedAt || '') };
+        }
       } else if (binding.sourceType === 'PROJECT_INFORMATION') {
         const typeId = String(binding.informationTypeId || '');
         if (!infoById[typeId]) throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'نوع اطلاعات متصل به قالب پیدا نشد یا غیرفعال است.');
         const row = informationByType[typeId];
         value = row ? this._parse(row.ValueJSON, null) : null;
-        sources[String(binding.id)] = { sourceType: 'PROJECT_INFORMATION', informationTypeId: typeId, dataType: String(infoById[typeId].DataType || '').toLowerCase(), expectedRevision: Number((ProjectInformationRepository.findAnyByProjectAndType(projectId, typeId) || {}).Revision || 0) };
+        sources[String(binding.id)] = { sourceType: 'PROJECT_INFORMATION', informationTypeId: typeId,
+          dataType: String(infoById[typeId].DataType || '').toLowerCase(),
+          expectedRevision: Number(informationRevisionByType[typeId] || 0) };
       } else {
         const formId = String(binding.formId || '');
-        if (binding.eventTypeId) {
-          const selectedType = EventTypeRepository.getAll().find(function(type) {
-            return String(type.ID) === String(binding.eventTypeId) &&
-              String(type.TenantID) === String(user.TenantID) &&
-              String(type.Status || 'ACTIVE').toUpperCase() === 'ACTIVE' &&
-              String(type.ConnectionType || 'PROJECT').toUpperCase() !== 'INDEPENDENT';
-          });
-          if (!selectedType) throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'نوع رویداد متصل به فرم پیدا نشد یا غیرفعال است.');
+        if (binding.eventTypeId && !eventTypeById[String(binding.eventTypeId)]) {
+          throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'نوع رویداد متصل به فرم پیدا نشد یا غیرفعال است.');
         }
-        const matching = responses.filter(function(row) {
+        const matching = (responsesByFormId[formId] || []).filter(function(row) {
           const event = eventById[String(row.EventID)];
-          return String(row.FormID) === formId && !!event &&
+          return !!event &&
             (!binding.eventTypeId || String(event.EventTypeID) === String(binding.eventTypeId)) &&
             (!binding.eventId || String(row.EventID) === String(binding.eventId)) &&
             (!binding.responseId || String(row.ID) === String(binding.responseId));
         }).map(function(row) {
-          const event = events.find(function(item) { return String(item.ID) === String(row.EventID); });
+          const event = eventById[String(row.EventID)];
           return {
             ID: row.ID, EventID: row.EventID, FormID: row.FormID, FormVersion: Number(row.FormVersion || 1),
-            CreatedAt: row.CreatedAt || '', UpdatedAt: row.UpdatedAt || '', EventOccurredAt: event ? (event.OccurredAt || event.CreatedAt || '') : '',
+            CreatedAt: row.CreatedAt || '', UpdatedAt: row.UpdatedAt || '',
+            EventOccurredAt: event ? (event.OccurredAt || event.CreatedAt || '') : '',
             Values: this._parse(row.ResponseJSON, {}), Definition: this._parse(row.DefinitionSnapshotJSON, {})
           };
         }, this).sort(function(a,b) { return String(a.CreatedAt).localeCompare(String(b.CreatedAt)); });
@@ -506,9 +569,21 @@ const PrintTemplateService = {
         else value = matching.length ? pickValue(matching[matching.length - 1]) : null;
         if (binding.sourceType === 'EVENT_FORM_FIELD' && matching.length && selection !== 'ALL') {
           const selected = matching[matching.length - 1];
-          const selectedField = selected.Definition && Array.isArray(selected.Definition.Fields) ? selected.Definition.Fields.find(function(field) { return String(field.ID || '') === String(binding.fieldId || '') || String(field.InformationTypeID || '') === String(binding.informationTypeId || ''); }) : null;
+          const selectedField = selected.Definition && Array.isArray(selected.Definition.Fields)
+            ? selected.Definition.Fields.find(function(field) {
+                return String(field.ID || '') === String(binding.fieldId || '') ||
+                  String(field.InformationTypeID || '') === String(binding.informationTypeId || '');
+              }) : null;
           const typeId = String(binding.informationTypeId || (selectedField && selectedField.InformationTypeID) || '');
-          if (typeId) sources[String(binding.id)] = { sourceType: 'EVENT_FORM_FIELD', eventId: String(selected.EventID), responseId: String(selected.ID), formId: String(selected.FormID), informationTypeId: typeId, dataType: String((infoById[typeId] || {}).DataType || '').toLowerCase(), expectedUpdatedAt: String(selected.UpdatedAt || selected.CreatedAt || ''), expectedFormVersion: Number(((FormRepository.getForms() || []).find(function(form) { return String(form.ID) === String(selected.FormID) && String(form.TenantID) === String(user.TenantID); }) || {}).Version || selected.FormVersion || 1), expectedInformationRevision: Number((ProjectInformationRepository.findAnyByProjectAndType(projectId, typeId) || {}).Revision || 0) };
+          if (typeId) {
+            const form = getFormsById()[String(selected.FormID)];
+            sources[String(binding.id)] = { sourceType: 'EVENT_FORM_FIELD', eventId: String(selected.EventID),
+              responseId: String(selected.ID), formId: String(selected.FormID), informationTypeId: typeId,
+              dataType: String((infoById[typeId] || {}).DataType || '').toLowerCase(),
+              expectedUpdatedAt: String(selected.UpdatedAt || selected.CreatedAt || ''),
+              expectedFormVersion: Number((form || {}).Version || selected.FormVersion || 1),
+              expectedInformationRevision: Number(informationRevisionByType[typeId] || 0) };
+          }
         }
       }
       resolved[String(binding.id)] = value;
