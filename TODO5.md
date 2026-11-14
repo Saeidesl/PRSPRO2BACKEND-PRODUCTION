@@ -28,6 +28,13 @@
 - چاپ/PDF پس از تأیید ذخیره باید با داده resolve‌شده تازه تولید شود؛ شکست ذخیره، داده را موفق/ثبت‌شده نشان ندهد.
 - هیچ Sheet، ستون، migration یا endpoint موازی بدون اثبات نیاز و بررسی سازگاری ایجاد نشود.
 
+### نقشه فنی فاز بهینه‌سازی خروجی قالب پروژه
+- Backend: `PrintTemplateService.js`؛ مسیر `resolve(id, body, params)` از Router و سپس `_resolveProjectData(projectId, definition, user)`؛ API موجود `POST /print-templates/:id/resolve`.
+- مخازن مرتبط: `ProjectRepository.findById()`، `ProjectInformationRepository.findByProject()` و `findAnyByProjectAndType()`، `EventRepository.findByProjectId()`، `FormRepository.getEventResponses()` و `getForms()`، `EventTypeRepository.getAll()`، `UserRepository.getAll()` و `DepartmentRepository.getAll()`. این مخازن از Google Sheets استفاده می‌کنند.
+- Sheetهای درگیر: `30_ProjectInformation`، `32_Forms`، `35_EventFormData`، `13_Events` و جداول انواع رویداد/کاربران/واحدها.
+- Frontend مصرف‌کننده: `pages/print-output.html`، `js/modules/print-designer.js`؛ `initProjectOutput()` قالب‌ها و پروژه را می‌گیرد، برای هر قالب resolve می‌زند و `renderOutputDocument()` را اجرا می‌کند.
+- راهبرد مصوب: فقط cache کوتاه‌عمر در حافظه همان اجرای resolve (Map/lookup محلی) و بارگذاری تنبل منابع موردنیاز؛ بدون CacheService یا localStorage جدید، بدون تغییر قرارداد API، مجوزها، tenant isolation، schema و داده‌ها. ترتیب انتخاب آخرین رویداد/پاسخ و revisionها باید دقیقاً حفظ شود.
+
 ## 🧩 تکمیل دامنه ویرایش در خروجی قالب
 
 - رفتار ویرایش متنی و ذخیره در منبع اصلی در نسخه عملیاتی تست شد و موفق بود.
@@ -37,13 +44,14 @@
 
 ## 📋 Macro-Task Queue & Implementation Log
 
-- [x] **Task 1 — Discovery & Planning:** ثبت دامنه بهینه‌سازی و شناسایی مسیرهای اصلی برای بررسی عملکرد انجام شد.
-  - *Log:* دامنه تسک به بخش خروجی قالب پروژه محدود شد. نقاط بررسی: Frontend در `pages/print-output.html` و `js/modules/print-designer.js` شامل `PrintDesigner.initProjectOutput()` و `renderOutputDocument()`؛ Backend در مسیر `POST /print-templates/:id/resolve` و `PrintTemplateService._resolveProjectData()`؛ API ذخیره موجود `PUT /print-templates/:id/project-data`؛ منابع Google Sheets و پیوست‌ها طبق bindingهای موجود. آخرین شاخه‌های مجاز بررسی شدند: Backend فقط `main`؛ Frontend شامل `main` و شاخه‌های feature ثبت‌شده. آخرین commitهای main هنگام برنامه‌ریزی: Backend `509539b5115c182bce0de738b65039fa787e70d6` و Frontend `060f257791c48091d15051617de5cbf53c0328b8`. سابقه Task 1 تا 4 حفظ شده است؛ هنوز هیچ کد runtime یا داده عملیاتی تغییر نکرده است.
-- [ ] **Task 2 — Performance Baseline & Bottleneck Discovery (IN PROGRESS):** اندازه‌گیری زمان و تعداد درخواست‌ها در بارگذاری خروجی قالب، ردیابی زمان Backend resolve، خواندن Google Sheets، تبدیل/پردازش داده و رندر Frontend؛ شناسایی نقاط کندی با داده واقعی و ثبت خط مبنا قبل از هر بهینه‌سازی.
-- [ ] **Task 3 — End-to-End Performance Optimization:** بهینه‌سازی هدفمند دریافت و پردازش اطلاعات در Backend و Frontend بر اساس نتایج Task 2؛ حذف درخواست‌ها/خواندن‌های تکراری، استفاده درست از cache و batch، کاهش پردازش و render تکراری، بدون تغییر قرارداد API یا ایجاد مسیر موازی مگر با اثبات ضرورت.
-- [ ] **Task 4 — Regression, Data Integrity & Operational Acceptance:** بررسی سازگاری Frontend/Backend، tenant و permission، صحت خروجی قالب و اطلاعات فرم/رویداد/فایل، رفتار ویرایش و ذخیره، چاپ/PDF و responsive؛ مقایسه سرعت با خط مبنا و آماده‌سازی انتشار کنترل‌شده.
+- [x] **Task 1 — Discovery & Planning:** بررسی مسیرهای اصلی خروجی قالب و ثبت دامنه بهینه‌سازی انجام شد.
+  - *Log:* مسیر Frontend در `pages/print-output.html` و `js/modules/print-designer.js` شامل `PrintDesigner.initProjectOutput()` و `renderOutputDocument()` بررسی شد؛ مسیر Backend از `POST /print-templates/:id/resolve` به `PrintTemplateService.resolve()` و `_resolveProjectData()` می‌رسد. API ذخیره `PUT /print-templates/:id/project-data` و مسیرهای پیوست موجود حفظ می‌شوند. شاخه‌های عملیاتی و آخرین commitها بررسی شدند. هیچ کد اجرایی یا داده عملیاتی در مرحله Discovery تغییر نکرد.
+- [x] **Task 2 — Simple Bottleneck Review:** شناسایی گلوگاه‌ها با بررسی مستقیم کد موجود، بدون افزودن ابزار سنجش یا آزمون پیچیده.
+  - *Log:* در `PrintTemplateService._resolveProjectData()` چند خواندن تکراری Google Sheets در حلقه bindingها شناسایی شد: `ProjectInformationRepository.findAnyByProjectAndType()` در هر binding اطلاعات پروژه کل Sheet را دوباره می‌خواند؛ `FormRepository.getForms()` برای هر binding فیلد فرم تکرار می‌شود؛ `EventTypeRepository.getAll()` در مسیر فرم نیز برای هر binding تکرار می‌شود. همچنین `FormRepository.getEventResponses()` حتی برای قالب‌های بدون binding فرم فراخوانی می‌شود و برای هر پاسخ فرم، رویداد متناظر با جست‌وجوی خطی دوباره پیدا می‌شود. این‌ها گلوگاه‌های ساختاری روشن هستند؛ زمان عددی قبل/بعد هنوز اندازه‌گیری نشده و ادعای درصد بهبود نداریم.
+- [ ] **Task 3 — Reduce Repeated Google Sheets Reads (IN PROGRESS):** حذف خواندن‌های تکراری در محدوده هر درخواست resolve با استفاده از داده‌های همان درخواست و Mapهای محلی؛ بارگذاری تنبل منابع غیرضروری؛ بدون cache سراسری، تغییر API یا تغییر ساختار Sheet.
+- [ ] **Task 4 — Existing Checks & Operational Acceptance:** اجرای بررسی‌های موجود و کنترل سازگاری و صحت خروجی قالب؛ سپس تست عملیاتی کوتاه توسط Product Owner. آزمون‌سازی یا ابزار مانیتورینگ جدید به این تسک اضافه نمی‌شود.
 
-## 📋 Macro-Task Queue & Implementation Log
+## 🗂️ سوابق فاز قبلی — Macro-Task Queue & Implementation Log
 
 - [x] **Task 1 — Discovery & Planning:** بررسی Router، سرویس‌ها، مخازن، bindingهای قالب، APIهای موجود و مسیرهای ثبت/اصلاح رویداد انجام شد.
   - *Log:* Router.js, PrintTemplateService.js, ProjectInformationService.js, FormService.js, EventService.js, EventRepository.js, FormRepository.js و tests/print-templates.test.js بررسی شدند. ProjectInformationService.save() تاریخچه پروژه را حفظ می‌کند؛ FormRepository.updateResponse() امکان اصلاح همان پاسخ را دارد؛ اما FormService.updateEventFormResponse() فعلی به رویداد اصلاحی مجزا وابسته است و برای تصمیم جدید کافی نیست. EventRepository.update() موجود است ولی متد عمومی امن در EventService وجود ندارد. هیچ کد عملیاتی تغییر نکرد.
