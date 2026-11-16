@@ -47,6 +47,25 @@ const PrintTemplateService = {
     });
     return Response.success(rows.map(function(row) { return this._public(row); }, this));
   },
+  cacheVersion: function(params) {
+    const user = this._user(params);
+    const rows = PrintTemplateRepository.getAll().filter(function(row) {
+      return String(row.TenantID) === String(user.TenantID);
+    }).map(function(row) {
+      return [String(row.ID || ''), String(row.Version || 1),
+        String(row.Status || 'ACTIVE'), String(row.UpdatedAt || '')];
+    }).sort(function(a, b) {
+      return a[0].localeCompare(b[0]);
+    });
+    const signature = JSON.stringify(rows);
+    const digest = Utilities.computeDigest(
+      Utilities.DigestAlgorithm.SHA_256, signature, Utilities.Charset.UTF_8
+    );
+    return Response.success({
+      revision: Utilities.base64Encode(digest),
+      count: rows.length
+    });
+  },
   get: function(id, params) {
     const user = this._user(params);
     return Response.success(this._public(this._template(id, user.TenantID)));
