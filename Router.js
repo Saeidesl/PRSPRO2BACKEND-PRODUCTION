@@ -270,6 +270,10 @@ const Router = {
       return WorkflowService.get(workflowId, params);
     }
 
+    if (path === '/print-templates/version') {
+      this.requireAny(params, ['SYSTEM_SETTINGS', 'PROJECT_VIEW']);
+      return PrintTemplateService.cacheVersion(params);
+    }
     if (path === '/print-templates') {
       this.requireAny(params, ['SYSTEM_SETTINGS', 'PROJECT_VIEW']);
       return PrintTemplateService.list(params);
