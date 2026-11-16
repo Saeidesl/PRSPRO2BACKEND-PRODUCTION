@@ -5,8 +5,8 @@
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
 
 ### مخازن و شاخه‌های عملیاتی
-- Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه `main`.
-- Frontend: `Saeidesl/PRSPRO2-PRODUCTION`، شاخه `main`.
+- Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه `main`؛ در Discovery تغییری نیاز نشد.
+- Frontend: `Saeidesl/PRSPRO2-PRODUCTION`، شاخه عملیاتی مبنا `main`؛ شاخه کاری این فاز `perf/persistent-print-template-cache-20261116` از آخرین main ساخته شد.
 - فاز قبلی «بهینه‌سازی resolve و نمایش خروجی قالب پروژه» در 2026-11-16 بسته و مستندات آن به ARCHITECTURE.md هر دو مخزن آرشیو شد.
 - مخازن Development خارج از محدوده هستند.
 
