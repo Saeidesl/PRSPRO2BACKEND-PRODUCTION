@@ -1278,3 +1278,29 @@
 ### ثبت پذیرش
 - Taskهای مرتبط با ارائه نام وضعیت کلی/مرحله و تأیید سازگاری Backend پس از تست موفق Product Owner پذیرفته شدند.
 - TODO5 پس از ثبت این مشخصات و لاگ‌ها به وضعیت آماده برای فاز بعد بازنشانی شد.
+
+
+## 2026-11-16 — بهینه‌سازی resolve و نمایش خروجی قالب پروژه
+
+### دامنه و نتیجه نهایی
+- هدف فاز کاهش خواندن‌های تکراری Google Sheets در مسیر resolve قالب پروژه، بدون تغییر قرارداد API، ساختار داده یا رفتار عملیاتی بود.
+- گلوگاه‌های تکراری در resolver شناسایی و در محدوده همان درخواست با بارگذاری تنبل و lookupهای محلی رفع شدند؛ cache سراسری یا بین درخواست‌ها ایجاد نشد.
+- Taskهای 1 تا 4 تکمیل شدند و Product Owner در 2026-11-16 تست نسخه عملیاتی را موفق اعلام کرد.
+
+### نقشه فنی و تغییرات Backend
+- مخزن: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه نهایی `main`.
+- فایل اجرایی: `PrintTemplateService.js`، تابع `_resolveProjectData(projectId, definition, user)`.
+- منابع `InformationTypeRepository`، `ProjectInformationRepository`، `EventRepository`، `FormRepository` و `EventTypeRepository` فقط در صورت نیاز خوانده می‌شوند؛ داده‌های همان درخواست با Mapهای محلی نگهداری می‌شوند.
+- پاسخ‌های فرم بر اساس FormID گروه‌بندی، رویدادها با lookup مستقیم از `eventById` بازیابی و یک‌بار بر اساس EventTypeID گروه‌بندی/مرتب می‌شوند؛ فرم‌ها فقط در صورت نیاز به نسخه فرم خوانده می‌شوند.
+- API موجود `POST /print-templates/:id/resolve` و payload آن بدون تغییر باقی ماند. هیچ Sheet، ستون، schema، migration یا داده عملیاتی تغییر نکرد.
+
+### آزمون، ادغام و انتشار
+- Backend PR #83 با merge commit `bd228ab70c992c71b493e144f2d5059617c0a65d` در `main` ادغام شد.
+- تست‌های `node --test tests/*.test.js`، بررسی syntax فایل‌ها، اعتبارسنجی manifest، Domain contract review و QA/release safety موفق شدند.
+- workflow انتشار رسمی `.github/workflows/sync-apps-script.yml` با run `43924830665` موفق شد؛ 86 فایل با clasp push ارسال و Web App عملیاتی با deployment نسخه `@29` به‌روزرسانی شد.
+- تغییر Frontend یا انتشار GitHub Pages برای این فاز لازم نبود.
+- Product Owner تست زنده انتخاب پروژه، resolve و نمایش قالب‌ها، صحت داده و چاپ/PDF را موفق تأیید کرد.
+
+### ثبت پذیرش و وضعیت
+- Taskهای 1 تا 4 در `TODO5.md` هر دو مخزن عملیاتی با وضعیت [x] ثبت شدند.
+- هیچ تغییر عملیاتی در داده‌ها انجام نشد؛ فاز با درخواست صریح Product Owner در 2026-11-16 بسته شد.
