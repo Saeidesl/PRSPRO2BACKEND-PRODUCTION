@@ -101,7 +101,14 @@ function loadPrintTemplates() {
     Response: { success: (data,meta) => ({success:true,data,meta:meta||{}}) },
     ErrorHandler: { create: (_code,message) => new Error(message) },
     Constants: { ERROR:{NOT_FOUND:'NOT_FOUND',VALIDATION_ERROR:'VALIDATION_ERROR',DUPLICATE:'DUPLICATE',CONFLICT:'CONFLICT',PERMISSION_DENIED:'PERMISSION_DENIED'}, ACTION:{CREATE:'CREATE',UPDATE:'UPDATE',DELETE:'DELETE'} },
-    Utilities: { getUuid: () => 'test-uuid', base64Decode: value => Array.from(Buffer.from(value, 'base64')) },
+    Utilities: {
+      getUuid: () => 'test-uuid',
+      base64Decode: value => Array.from(Buffer.from(value, 'base64')),
+      computeDigest: (_algorithm, value) => Array.from(require('node:crypto').createHash('sha256').update(String(value), 'utf8').digest()),
+      base64Encode: value => Buffer.from(value).toString('base64'),
+      DigestAlgorithm: { SHA_256: 'SHA_256' },
+      Charset: { UTF_8: 'UTF_8' }
+    },
     Date, Object, String, Array, JSON, Number, Math, isFinite
   };
   const root = path.join(__dirname,'..');
@@ -110,6 +117,37 @@ function loadPrintTemplates() {
   vm.runInNewContext(fs.readFileSync(path.join(root,'PrintTemplateService.js'),'utf8')+'\nthis.__service=PrintTemplateService;',context);
   return {service:context.__service,templates,audits,storedFiles,context};
 }
+
+test('template cache revision changes on create, edit, asset version updates and deactivation', () => {
+  const h = loadPrintTemplates();
+  const initial = h.service.cacheVersion({}).data.revision;
+  const created = h.service.create({Code:'CACHE_REV',Name:'قالب کش',Definition:{elements:[],bindings:[]}}, {});
+  const afterCreate = h.service.cacheVersion({}).data.revision;
+  assert.notEqual(afterCreate, initial);
+  h.service.update(created.data.ID, {Name:'قالب ویرایش‌شده'}, {});
+  const afterEdit = h.service.cacheVersion({}).data.revision;
+  assert.notEqual(afterEdit, afterCreate);
+  h.service.deactivate(created.data.ID, {});
+  const afterDeactivate = h.service.cacheVersion({}).data.revision;
+  assert.notEqual(afterDeactivate, afterEdit);
+});
+
+test('template cache revision is tenant-scoped and excludes other tenants', () => {
+  const h = loadPrintTemplates();
+  const before = h.service.cacheVersion({}).data.revision;
+  h.templates.push({ID:'OTHER_TENANT_TEMPLATE',TenantID:'T2',Version:1,Status:'ACTIVE',UpdatedAt:'2026-01-01'});
+  const after = h.service.cacheVersion({}).data.revision;
+  assert.equal(after, before);
+  assert.equal(h.service.cacheVersion({}).data.count, 0);
+});
+
+test('router exposes a tenant-authorized lightweight template cache version endpoint', () => {
+  const source = fs.readFileSync(path.join(__dirname,'..','Router.js'),'utf8');
+  const route = source.match(/if \(path === '\/print-templates\/version'\) \{[\s\S]*?\n    \}/);
+  assert.ok(route, 'template version route exists');
+  assert.match(route[0], /requireAny\(params, \['SYSTEM_SETTINGS', 'PROJECT_VIEW'\]\)/);
+  assert.match(route[0], /PrintTemplateService\.cacheVersion\(params\)/);
+});
 
 test('template definitions accept stable bindings and reject duplicate or unsupported sources',()=>{
   const h=loadPrintTemplates();
