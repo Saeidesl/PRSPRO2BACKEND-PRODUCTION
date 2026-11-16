@@ -47,6 +47,34 @@ const PrintTemplateService = {
     });
     return Response.success(rows.map(function(row) { return this._public(row); }, this));
   },
+  revision: function(params) {
+    const user = this._user(params);
+    const templates = PrintTemplateRepository.getAll().filter(function(row) {
+      return String(row.TenantID) === String(user.TenantID) &&
+        String(row.Status || 'ACTIVE') === 'ACTIVE';
+    }).map(function(row) {
+      return {
+        ID: String(row.ID),
+        Code: String(row.Code || ''),
+        Name: String(row.Name || ''),
+        Description: String(row.Description || ''),
+        Version: Number(row.Version || 1),
+        UpdatedAt: String(row.UpdatedAt || '')
+      };
+    }).sort(function(a, b) {
+      return a.ID.localeCompare(b.ID);
+    });
+    const source = JSON.stringify(templates);
+    let hash = 2166136261;
+    for (let index = 0; index < source.length; index += 1) {
+      hash ^= source.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return Response.success({
+      revision: templates.length + '-' + (hash >>> 0).toString(36),
+      templates: templates
+    });
+  },
   get: function(id, params) {
     const user = this._user(params);
     return Response.success(this._public(this._template(id, user.TenantID)));
