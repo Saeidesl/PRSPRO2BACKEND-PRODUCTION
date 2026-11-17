@@ -169,6 +169,8 @@ test('data resolution uses current project information and the latest form snaps
 
 test('batch resolve reuses project and form repository reads across templates',()=>{
   const h=loadPrintTemplates();
+  let uuidSequence=0;
+  h.context.Utilities.getUuid=()=> 'test-uuid-' + (++uuidSequence);
   const definition={bindings:[
     {id:'project_code',sourceType:'PROJECT_FIELD',field:'ProjectCode'},
     {id:'current_model',sourceType:'PROJECT_INFORMATION',informationTypeId:'I1'},
@@ -204,7 +206,8 @@ test('batch resolve rejects cross-tenant templates and invalid template lists',(
   const h=loadPrintTemplates();
   const created=h.service.create({Code:'BATCH_SECURE',Name:'قالب امن',Definition:{bindings:[]}},{});
   h.templates.push({ID:'FOREIGN',TenantID:'T2',Status:'ACTIVE',DefinitionJSON:'{}'});
-  assert.throws(()=>h.service.resolveMany({ProjectID:'P1',TemplateIDs:[created.data.ID,'FOREIGN']},{}),/پیدا نشد/);
+  const crossTenant=h.service.resolveMany({ProjectID:'P1',TemplateIDs:[created.data.ID,'FOREIGN']},{});
+  assert.equal(crossTenant.data.items[1].error.message,'یکی از قالب‌های انتخاب‌شده پیدا نشد.');
   assert.throws(()=>h.service.resolveMany({ProjectID:'P1',TemplateIDs:[]},{}),/نامعتبر/);
   assert.throws(()=>h.service.resolveMany({ProjectID:'P1',TemplateIDs:[created.data.ID,created.data.ID]},{}),/تکراری/);
 });
