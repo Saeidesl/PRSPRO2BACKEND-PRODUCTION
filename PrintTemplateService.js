@@ -538,10 +538,11 @@ const PrintTemplateService = {
     });
 
     let formsById = null;
+    const service = this;
     const getFormsById = function() {
       if (formsById) return formsById;
       formsById = Object.create(null);
-      this._readResolveShared(sharedReads, 'forms:' + String(user.TenantID), function() {
+      service._readResolveShared(sharedReads, 'forms:' + String(user.TenantID), function() {
         return FormRepository.getForms() || [];
       }).forEach(function(form) {
         if (String(form.TenantID) === String(user.TenantID)) formsById[String(form.ID)] = form;
