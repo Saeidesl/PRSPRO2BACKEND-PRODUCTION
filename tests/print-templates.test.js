@@ -167,6 +167,56 @@ test('data resolution uses current project information and the latest form snaps
   assert.equal(result.data.sources.latest_form_value.expectedFormVersion,3);
 });
 
+test('batch resolve reuses project and form repository reads across templates',()=>{
+  const h=loadPrintTemplates();
+  let uuidSequence=0;
+  h.context.Utilities.getUuid=()=> 'test-uuid-' + (++uuidSequence);
+  const definition={bindings:[
+    {id:'project_code',sourceType:'PROJECT_FIELD',field:'ProjectCode'},
+    {id:'current_model',sourceType:'PROJECT_INFORMATION',informationTypeId:'I1'},
+    {id:'latest_form_value',sourceType:'EVENT_FORM_FIELD',formId:'F1',fieldId:'FF1',eventTypeId:'ET1',selection:'LATEST'},
+    {id:'creator',sourceType:'EVENT_FIELD',eventTypeId:'ET1',field:'CreatorName',selection:'LATEST'},
+    {id:'department',sourceType:'EVENT_FIELD',eventTypeId:'ET1',field:'DepartmentName',selection:'LATEST'}
+  ]};
+  const first=h.service.create({Code:'BATCH_A',Name:'قالب اول',Definition:definition},{});
+  const second=h.service.create({Code:'BATCH_B',Name:'قالب دوم',Definition:definition},{});
+  const counters={project:0,infoTypes:0,projectInfo:0,events:0,responses:0,eventTypes:0,users:0,departments:0,forms:0};
+  const wrap=(object,key,counter)=>{const original=object[key];object[key]=function(){counters[counter]++;return original.apply(this,arguments);};};
+  wrap(h.context.ProjectRepository,'findById','project');
+  wrap(h.context.InformationTypeRepository,'findByTenant','infoTypes');
+  wrap(h.context.ProjectInformationRepository,'findByProject','projectInfo');
+  wrap(h.context.EventRepository,'findByProjectId','events');
+  wrap(h.context.FormRepository,'getEventResponses','responses');
+  wrap(h.context.EventTypeRepository,'getAll','eventTypes');
+  wrap(h.context.UserRepository,'getAll','users');
+  wrap(h.context.DepartmentRepository,'getAll','departments');
+  wrap(h.context.FormRepository,'getForms','forms');
+  const result=h.service.resolveMany({ProjectID:'P1',TemplateIDs:[first.data.ID,second.data.ID]},{});
+  assert.equal(result.success,true);
+  assert.equal(result.data.items.length,2);
+  assert.equal(result.data.items[0].data.project_code,'PR-1');
+  assert.equal(result.data.items[0].data.current_model,'مقدار جاری');
+  assert.equal(result.data.items[0].data.latest_form_value,'جدید');
+  assert.equal(result.data.items[0].data.creator,'کاربر دوم');
+  assert.equal(result.data.items[0].data.department,'واحد برش');
+  Object.values(counters).forEach(count=>assert.equal(count,1));
+});
+
+test('batch resolve rejects cross-tenant templates and invalid template lists',()=>{
+  const h=loadPrintTemplates();
+  const created=h.service.create({Code:'BATCH_SECURE',Name:'قالب امن',Definition:{bindings:[]}},{});
+  h.templates.push({ID:'FOREIGN',TenantID:'T2',Status:'ACTIVE',DefinitionJSON:'{}'});
+  const crossTenant=h.service.resolveMany({ProjectID:'P1',TemplateIDs:[created.data.ID,'FOREIGN']},{});
+  assert.equal(crossTenant.data.items[1].error.message,'یکی از قالب‌های انتخاب‌شده پیدا نشد.');
+  assert.throws(()=>h.service.resolveMany({ProjectID:'P1',TemplateIDs:[]},{}),/نامعتبر/);
+  assert.throws(()=>h.service.resolveMany({ProjectID:'P1',TemplateIDs:[created.data.ID,created.data.ID]},{}),/تکراری/);
+});
+
+test('batch resolve route keeps the existing PROJECT_VIEW permission boundary',()=>{
+  const router=fs.readFileSync(path.join(__dirname,'..','Router.js'),'utf8');
+  assert.match(router,/path === '\/print-templates\/resolve'[\s\S]*?AccessControlService\.require\(params, 'PROJECT_VIEW'\)[\s\S]*?PrintTemplateService\.resolveMany\(body, params\)/);
+});
+
 test('inline project-field update dispatches only after source token validation',()=>{
   const h=loadPrintTemplates();
   const created=h.service.create({Code:'INLINE',Name:'قالب ویرایش',Definition:{bindings:[

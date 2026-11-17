@@ -52,3 +52,29 @@
 - [ ] **Task 2 — Persistent Template Cache (IN PROGRESS):** اتصال فهرست و تعریف قالب‌ها به cache دائمی موجود، با scope امن tenant/user و حذف درخواست شبکه در cache hit.
 - [ ] **Task 3 — Targeted Cache Invalidation:** همگام‌سازی کش پس از ایجاد، ویرایش، تغییر PDF/تصاویر و غیرفعال‌سازی قالب؛ حفظ cache در صورت شکست عملیات.
 - [ ] **Task 4 — Regression & Operational Acceptance:** آزمون cache hit/miss، حساب‌های متفاوت، تغییرات قالب، resolve تازه پروژه، چاپ/PDF و پذیرش عملیاتی Product Owner.
+
+
+## ادامه فاز: بهینه‌سازی زمان نمایش فرم‌های قالب پروژه (2026-11-17)
+
+### هدف و یافته‌های Discovery
+- گزارش عملیاتی Product Owner: فهرست قالب‌ها اکنون نمایش داده می‌شود، اما آماده‌سازی و نمایش فرم/سند همچنان کند است.
+- Frontend در `js/modules/print-designer.js` و تابع `PrintDesigner.initProjectOutput(projectId)` ابتدا فهرست قالب‌ها و پروژه را موازی می‌گیرد؛ سپس برای هر قالب در یک حلقه ترتیبی، `POST /print-templates/:id/resolve` را اجرا و بعد `renderOutputDocument()` را تکمیل می‌کند. در نتیجه زمان شبکه و آماده‌سازی قالب‌ها به‌صورت جمع‌شونده است.
+- `renderOutputDocument()` برای هر قالب `loadTemplateImages()` و در صورت وجود PDF، `loadOutputPdfPages()` را اجرا می‌کند. دریافت تصاویر فرم/پیوست از `loadOutputImage()` به‌صورت درخواست جداگانه انجام می‌شود؛ رندر صفحات PDF نیز در `loadOutputPdfPages()` ترتیبی است.
+- Backend در `Router.js` مسیر POST `/print-templates/:id/resolve` را به `PrintTemplateService.resolve()` متصل می‌کند. هر بار `_resolveProjectData()` مجدداً داده پروژه، نوع اطلاعات، اطلاعات پروژه، رویدادها، پاسخ‌های فرم، انواع رویداد و در صورت نیاز کاربران/واحدها/فرم‌ها را از Repositoryها می‌خواند و فیلتر می‌کند. با چند قالب، خواندن و پردازش داده‌های مشترک پروژه تکرار می‌شود.
+- گزارش جامع UI در `test-results/latest-performance-report.md` (2026-11-17) مسیر عمومی print-output را با Ready=4416ms و Settled=7073ms ثبت کرده، اما سناریوی پروژه با قالب‌های واقعی و زمان resolve/render را اندازه‌گیری نکرده است؛ بنابراین معیار خط مبنا برای این تسک باید در سناریوی کنترل‌شده تکمیل شود.
+- مخازن و شاخه‌ها: Backend و Frontend عملیاتی، شاخه کاری `perf/print-output-form-render-20261117`. نقطه شروع Backend برابر `5178c90110e8a7d4dcba9469947b4ca0095c5137` و Frontend برابر `c170cff1c0815d8ecf4559c6f200e27493fc5f2c` است.
+
+### تصمیم‌های معماری و حفاظت داده
+- مسیر فعلی resolve و قرارداد خروجی آن برای سازگاری سایر مصرف‌کنندگان حفظ می‌شود.
+- برای صفحه خروجی پروژه، یک درخواست دسته‌ای کنترل‌شده طراحی می‌شود تا داده‌های مشترک پروژه/فرم‌ها در یک درخواست سرور فقط یک‌بار خوانده شوند و نتیجه هر قالب جداگانه برگردد.
+- دسترسی `PROJECT_VIEW`، tenant isolation، اعتبارسنجی فعال‌بودن قالب و پروژه، ساختار پاسخ `data/sources/project` و اطلاعات ExpectedRevision/ExpectedUpdatedAt حفظ می‌شوند.
+- داده پروژه و پاسخ فرم‌ها در کش دائمی ذخیره نمی‌شوند؛ هر بار نمایش خروجی باید snapshot تازه و معتبر داشته باشد.
+- رندر باید به‌صورت مرحله‌ای/غیرمسدودکننده نمایش داده شود؛ وضعیت هر قالب مشخص باشد و خرابی یک قالب مانع نمایش قالب‌های سالم نشود.
+- PDF اصلی، وضوح تصاویر، ترتیب صفحات، ویرایش مستقیم فیلدها و رفتار چاپ نباید آسیب ببینند. از اجرای موازی نامحدود و رقابت روی state مشترک رندر جلوگیری شود.
+
+### Macro-Task Queue و Implementation Log — ادامه فاز
+- [x] **Task 1 — Discovery & Planning:** ردیابی کامل مسیر Frontend، API، Backend و Repository و شناسایی گلوگاه‌های ترتیبی و خواندن تکراری.
+  - *Log:* `js/modules/print-designer.js` توابع `initProjectOutput()`, `renderOutputDocument()`, `loadTemplateImages()`, `loadOutputPdfPages()`, `loadOutputImage()` و `pages/print-output.html` بررسی شدند. مسیر POST `/print-templates/:id/resolve` در `Router.js` و `PrintTemplateService.resolve()` و `_resolveProjectData()` بررسی شد. گلوگاه اصلی: resolve و render قالب‌ها ترتیبی است و هر resolve، داده مشترک پروژه/رویداد/پاسخ فرم را دوباره از Repositoryها می‌خواند. گزارش عملکرد موجود، مسیر پروژه واقعی را پوشش نمی‌دهد؛ benchmark اختصاصی باید اضافه شود.
+- [ ] **Task 2 — Batch Resolve with Shared Reads (IN PROGRESS):** افزودن مسیر دسته‌ای امن برای resolve چند قالب در یک درخواست و reuse داده‌های مشترک در همان درخواست، بدون cache کردن داده‌های پروژه.
+- [ ] **Task 3 — Faster Progressive Output Rendering:** اتصال صفحه خروجی به resolve دسته‌ای، نمایش مرحله‌ای قالب‌ها، کاهش انتظار برای منابع ثابت و جلوگیری از تداخل state در رندر.
+- [ ] **Task 4 — Regression, Performance Benchmark & Operational Acceptance:** آزمون قرارداد قدیمی/جدید، tenant/permission، داده تازه، فرم‌های چندردیفی، فایل/تصویر، PDF چندصفحه‌ای، چاپ و مقایسه زمان قبل/بعد در سناریوی واقعی.

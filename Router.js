@@ -537,6 +537,10 @@ const Router = {
       AccessControlService.require(params, 'PROJECT_VIEW');
       return PrintTemplateService.preview(body, params);
     }
+    if (path === '/print-templates/resolve') {
+      AccessControlService.require(params, 'PROJECT_VIEW');
+      return PrintTemplateService.resolveMany(body, params);
+    }
     const printTemplateImageUploadMatch = path.match(/^\/print-templates\/([^/]+)\/images$/);
     if (printTemplateImageUploadMatch) {
       AccessControlService.require(params, 'SYSTEM_SETTINGS');
