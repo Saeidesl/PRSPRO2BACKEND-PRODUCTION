@@ -533,6 +533,10 @@ const Router = {
       AccessControlService.require(params, 'SYSTEM_SETTINGS');
       return PrintTemplateService.create(body, params);
     }
+    if (path === '/print-templates/resolve') {
+      AccessControlService.require(params, 'PROJECT_VIEW');
+      return PrintTemplateService.resolveMany(body, params);
+    }
     if (path === '/print-templates/preview') {
       AccessControlService.require(params, 'PROJECT_VIEW');
       return PrintTemplateService.preview(body, params);
