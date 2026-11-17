@@ -680,6 +680,72 @@ const PrintTemplateService = {
     return Response.success({saved:true, bindingId:bindingId, sourceType:binding.sourceType, result:result},
       {message:'تغییر در منبع اصلی اطلاعات ذخیره شد.'});
   },
+  resolveMany: function(body, params) {
+    const user = this._user(params);
+    body = body || {};
+    Validator.required(body.ProjectID, 'ProjectID');
+    if (!Array.isArray(body.TemplateIDs) || !body.TemplateIDs.length) {
+      throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'فهرست قالب‌ها برای ساخت خروجی الزامی است.');
+    }
+    const templateIds = Array.from(new Set(body.TemplateIDs.map(function(id) {
+      return String(id || '').trim();
+    }).filter(Boolean)));
+    if (!templateIds.length || templateIds.length > 50) {
+      throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'تعداد قالب‌های درخواستی معتبر نیست.');
+    }
+
+    // Read the template sheet once and enforce tenant + active status before resolving.
+    const rows = PrintTemplateRepository.getAll();
+    const templatesById = Object.create(null);
+    rows.forEach(function(row) {
+      if (String(row.TenantID) === String(user.TenantID) &&
+          String(row.Status || 'ACTIVE').toUpperCase() === 'ACTIVE') {
+        templatesById[String(row.ID)] = row;
+      }
+    });
+
+    const templates = templateIds.map(function(id) {
+      const row = templatesById[id];
+      if (!row) throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'یکی از قالب‌های درخواستی پیدا نشد یا غیرفعال است.');
+      return { row: row, definition: this._definition(row) };
+    }, this);
+
+    // Namespace binding IDs so separate templates can safely reuse local IDs.
+    const bindingMap = [];
+    const combinedBindings = [];
+    templates.forEach(function(item, templateIndex) {
+      (item.definition.bindings || []).forEach(function(binding, bindingIndex) {
+        const originalId = String(binding.id || '');
+        const sharedId = '__pt_batch_' + templateIndex + '_' + bindingIndex;
+        combinedBindings.push(Object.assign({}, binding, { id: sharedId }));
+        bindingMap.push({ templateIndex: templateIndex, originalId: originalId, sharedId: sharedId });
+      });
+    });
+
+    // One project-data pass for the union of all template bindings.
+    const shared = this._resolveProjectData(body.ProjectID, { bindings: combinedBindings }, user);
+    const results = templates.map(function(item, templateIndex) {
+      const data = Object.create(null);
+      const sources = Object.create(null);
+      bindingMap.forEach(function(entry) {
+        if (entry.templateIndex !== templateIndex) return;
+        if (Object.prototype.hasOwnProperty.call(shared.data, entry.sharedId)) {
+          data[entry.originalId] = shared.data[entry.sharedId];
+        }
+        if (Object.prototype.hasOwnProperty.call(shared.sources, entry.sharedId)) {
+          sources[entry.originalId] = shared.sources[entry.sharedId];
+        }
+      });
+      const row = item.row;
+      return {
+        template: { ID: row.ID, Code: row.Code, Name: row.Name, Version: Number(row.Version || 1) },
+        project: shared.project,
+        data: data,
+        sources: sources
+      };
+    });
+    return Response.success({ project: shared.project, results: results, resolvedAt: this._now() });
+  },
   resolve: function(id, body, params) {
     const user = this._user(params);
     body = body || {};
