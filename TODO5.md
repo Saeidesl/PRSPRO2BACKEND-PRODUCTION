@@ -8,9 +8,10 @@
 - Backend عملیاتی: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`
 - Frontend عملیاتی: `Saeidesl/PRSPRO2-PRODUCTION`
 - شاخه مبنا در شروع فاز: `main`
-- شاخه کاری هر دو مخزن: `perf/project-print-output-batch-resolve-20261117`
-- Backend main در Discovery: `5178c90110e8a7d4dcba9469947b4ca0095c5137`
-- Frontend main در Discovery: `c170cff1c0815d8ecf4559c6f200e27493fc5f2c`
+- شاخه پیاده‌سازی ادغام‌شده: `perf/project-print-output-batch-resolve-20261117`.
+- Backend main پس از ادغام: `d1c34d72cc8ff9b2e736dc7c880c5cca36e480af`.
+- Frontend main پس از ادغام: `0a3a67ff657300f0e79ce193c3c461d248e42691`.
+- شاخه ثبت پذیرش و انتقال تسک: `docs/batch-resolve-acceptance-log-20261117`.
 - فاز قبلی بهینه‌سازی resolver در 2026-11-16 در ARCHITECTURE.md بسته و آرشیو شده است؛ این TODO5 برای فاز مستقل جدید بازسازی شد.
 - مخازن Development خارج از محدوده‌اند.
 
@@ -60,20 +61,26 @@
 
 - [x] **Task 1 — Discovery & Planning:** بررسی کامل مسیر نمایش خروجی، درخواست‌های resolve، repository reads، asset loading و آزمون‌های موجود.
   - *Log:* در شاخه main، `Router.js`، `PrintTemplateService.js` و `js/modules/print-designer.js` بررسی شدند. مشخص شد `initProjectOutput()` در `js/modules/print-designer.js` برای هر قالب به‌صورت ترتیبی `POST /print-templates/:id/resolve` ارسال می‌کند؛ هر درخواست در `PrintTemplateService.resolve()`، `_resolveProjectData()` را مستقل اجرا کرده و repositoryهای پروژه/رویداد/فرم را مجدداً می‌خواند. قراردادهای فعلی و مجوزهای `PROJECT_VIEW` ثبت شدند. گزارش UI audit فعلی، زمان route را دارد اما اجرای خروجی واقعی پروژه را اندازه نمی‌گیرد. هیچ کد runtime یا داده عملیاتی در Discovery تغییر نکرد.
-- [ ] **Task 2 — Shared Batch Resolve (IN PROGRESS):** پیاده‌سازی resolve تجمیعی برای همه قالب‌های فعال پروژه با context مشترک و خواندن یک‌باره منابع مشترک، با حفظ مسیر قدیمی.
-- [ ] **Task 3 — Progressive Output & Asset Loading:** نمایش تدریجی هر قالب پس از آماده‌شدن، بارگذاری کنترل‌شده تصاویر/PDF و جلوگیری از قفل‌شدن کل خروجی به‌خاطر یک قالب.
+- [x] **Task 2 — Shared Batch Resolve:** پیاده‌سازی resolve تجمیعی برای همه قالب‌های فعال پروژه با context مشترک و خواندن یک‌باره منابع مشترک، با حفظ مسیر قدیمی.
+  - *Log:* `PrintTemplateService.js` تابع `resolveMany(body, params)` را اضافه کرد؛ فهرست قالب‌ها با tenant scope، وضعیت ACTIVE و سقف 50 قالب اعتبارسنجی می‌شود، Bindingهای قالب‌ها namespaced شده و `_resolveProjectData()` برای داده‌های مشترک یک‌بار اجرا می‌شود. در صورت Definition ناسازگار، خطای هر قالب isolate می‌شود. در `Router.js` مسیر `POST /print-templates/resolve` با مجوز `PROJECT_VIEW` اضافه شد و `POST /print-templates/:id/resolve` بدون تغییر باقی ماند. تست `tests/print-template-batch-resolve.test.js` اضافه شد. PR #87 با squash ادغام شد؛ commit عملیاتی Backend: `d1c34d72cc8ff9b2e736dc7c880c5cca36e480af`. workflow رسمی `sync-apps-script.yml` با run `44134620890` روی همین SHA با موفقیت push و deploy کرد؛ step «Deploy isolated production web app» نیز success بود. Product Owner تست یکپارچه خروجی پروژه را در 2026-11-17 تأیید کرد. هیچ Sheet، schema، migration یا داده عملیاتی تغییر نکرد.
+- [ ] **Task 3 — Progressive Output & Asset Loading (IN PROGRESS):** نمایش تدریجی هر قالب پس از آماده‌شدن، بارگذاری کنترل‌شده تصاویر/PDF و جلوگیری از قفل‌شدن کل خروجی به‌خاطر یک قالب.
 - [ ] **Task 4 — Regression, Performance & Operational Acceptance:** آزمون برابری داده، tenant/permission، عدم تکرار repository reads، چاپ/PDF، موبایل و سنجش زمان واقعی خروجی پروژه؛ پذیرش Product Owner.
 
 ### وضعیت اجرا
-- Task 1 Discovery تکمیل و در همین شاخه ثبت شده است.
-- Task 2 در شاخه کاری پیاده‌سازی شده و PR #87 باز است؛ CIهای Backend source checks، PMS agent suite و Procurement diagnostics برای آخرین commit موفق شده‌اند.
-- تغییر Backend فقط در شاخه/PR است؛ هنوز به main ادغام یا به Apps Script منتشر نشده است.
-- Google Sheets schema، داده عملیاتی و migration تغییری نکرده‌اند.
-- Task 2 تا تکمیل بررسی Frontend و پذیرش/ادغام مرحله‌ای هنوز [ ] باقی می‌ماند.
+- Task 1 Discovery و Task 2 Batch Resolve تکمیل و با تست عملیاتی Product Owner پذیرفته شدند.
+- PR #87 در Backend ادغام شده و commit `d1c34d72cc8ff9b2e736dc7c880c5cca36e480af` روی `main` قرار دارد؛ Apps Script با workflow run `44134620890` روی همین SHA با موفقیت منتشر شد.
+- Frontend PR #140 نیز در مخزن عملیاتی ادغام شد؛ commit `0a3a67ff657300f0e79ce193c3c461d248e42691` روی `main` قرار دارد و GitHub Pages run `44135173608` برای همین SHA با conclusion=success پایان یافت.
+- Product Owner در 2026-11-17 صحت خروجی چندقالبی، داده‌ها، ویرایش متن/فایل/جدول، چاپ/PDF و موبایل را تأیید کرد.
+- Task 3 اکنون IN PROGRESS است؛ محدوده آن نمایش تدریجی و زمان‌بندی بارگذاری assetهاست. هیچ تغییر داده عملیاتی یا schema انجام نشده است.
 
-### Task 2 implementation status (IN PROGRESS)
+### Task 2 implementation record (ACCEPTED)
 - شاخه کاری: `perf/project-print-output-batch-resolve-20261117`.
 - `PrintTemplateService.resolveMany(body, params)` اضافه شد: دریافت یک‌باره فهرست قالب‌ها از `PrintTemplateRepository.getAll()`، محدودیت 50 قالب، tenant scope و فقط قالب‌های ACTIVE، namespacing شناسه Bindingها و یک اجرای مشترک `_resolveProjectData()` برای union همه Bindingها.
 - در صورت وجود Definition ناسازگار، مسیر fallback فقط در همان درخواست فعال می‌شود تا خطای یک قالب، قالب‌های دیگر را از نمایش محروم نکند؛ دسترسی پروژه قبل از fallback مجدداً اعتبارسنجی می‌شود.
 - `Router.js`: مسیر `POST /print-templates/resolve` با مجوز `PROJECT_VIEW` به resolver تجمیعی متصل شد. مسیر قدیمی `POST /print-templates/:id/resolve` بدون تغییر حفظ شده است.
-- تست قراردادی جدید: `tests/print-template-batch-resolve.test.js`. تست‌های خودکار CI و بازبینی نهایی هنوز در انتظار هستند؛ Task 2 تکمیل‌شده محسوب نمی‌شود.
+- تست قراردادی جدید: `tests/print-template-batch-resolve.test.js`. تست‌های CI و بازبینی‌های Backend موفق شدند؛ PR #87 ادغام و انتشار Apps Script برای SHA نهایی تأیید شد.
+
+
+### Task 3 discovery handoff
+- ورودی کار: حفظ resolver batch فعلی و ارتقای تجربه نمایش خروجی بدون تغییر قراردادهای داده یا ایجاد cache پویا.
+- بررسی و پیاده‌سازی در Frontend اصلی `pages/print-output.html` و `js/modules/print-designer.js` انجام شود؛ مسیرهای فعلی asset تصویر و PDF حفظ شوند.
