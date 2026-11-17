@@ -727,23 +727,32 @@ const PrintTemplateService = {
       if (row && String(row.TenantID) === String(user.TenantID)) byId[String(row.ID)] = row;
     });
     const sharedReads = Object.create(null);
+    // Validate project visibility once before resolving any template.
+    const projectSnapshot = this._resolveProjectData(body.ProjectID, { bindings: [] }, user, sharedReads).project;
     const items = templateIds.map(function(id) {
       const template = byId[id];
       if (!template || String(template.Status || 'ACTIVE') === 'DELETED') {
-        throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'یکی از قالب‌های انتخاب‌شده پیدا نشد.');
+        return { template: { ID: id }, error: { message: 'یکی از قالب‌های انتخاب‌شده پیدا نشد.' } };
       }
       if (String(template.Status || 'ACTIVE') !== 'ACTIVE') {
-        throw ErrorHandler.create(Constants.ERROR.INVALID_OPERATION, 'یکی از قالب‌های انتخاب‌شده غیرفعال است.');
+        return { template: { ID: id }, error: { message: 'قالب غیرفعال است و قابل استفاده برای تولید سند نیست.' } };
       }
-      const definition = this._definition(template);
-      const resolved = this._resolveProjectData(body.ProjectID, definition, user, sharedReads);
-      return {
-        template: { ID: template.ID, Code: template.Code, Name: template.Name, Version: Number(template.Version || 1) },
-        project: resolved.project,
-        data: resolved.data,
-        sources: resolved.sources || {},
-        resolvedAt: this._now()
-      };
+      try {
+        const definition = this._definition(template);
+        const resolved = this._resolveProjectData(body.ProjectID, definition, user, sharedReads);
+        return {
+          template: { ID: template.ID, Code: template.Code, Name: template.Name, Version: Number(template.Version || 1) },
+          project: resolved.project || projectSnapshot,
+          data: resolved.data,
+          sources: resolved.sources || {},
+          resolvedAt: this._now()
+        };
+      } catch (error) {
+        return {
+          template: { ID: template.ID, Code: template.Code, Name: template.Name, Version: Number(template.Version || 1) },
+          error: { message: error && error.message ? error.message : 'آماده‌سازی قالب ناموفق بود.' }
+        };
+      }
     }, this);
     return Response.success({ items: items });
   },
