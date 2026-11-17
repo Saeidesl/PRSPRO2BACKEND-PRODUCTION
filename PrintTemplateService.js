@@ -722,9 +722,32 @@ const PrintTemplateService = {
       });
     });
 
-    // One project-data pass for the union of all template bindings.
-    const shared = this._resolveProjectData(body.ProjectID, { bindings: combinedBindings }, user);
+    const templateMeta = function(item) {
+      const row = item.row;
+      return { ID: row.ID, Code: row.Code, Name: row.Name, Version: Number(row.Version || 1) };
+    };
+    let shared;
+    let sharedResolutionFailed = false;
+    try {
+      // One project-data pass for the union of all template bindings.
+      shared = this._resolveProjectData(body.ProjectID, { bindings: combinedBindings }, user);
+    } catch (sharedError) {
+      // Preserve the old per-template failure isolation for invalid legacy definitions.
+      // Validate project access once before retrying individual definitions.
+      this._resolveProjectData(body.ProjectID, { bindings: [] }, user);
+      sharedResolutionFailed = true;
+    }
+
     const results = templates.map(function(item, templateIndex) {
+      const rowMeta = templateMeta(item);
+      if (sharedResolutionFailed) {
+        try {
+          const individual = this._resolveProjectData(body.ProjectID, item.definition, user);
+          return { template: rowMeta, project: individual.project, data: individual.data, sources: individual.sources || {} };
+        } catch (templateError) {
+          return { template: rowMeta, error: String(templateError && templateError.message || 'آماده‌سازی این قالب ناموفق بود.') };
+        }
+      }
       const data = Object.create(null);
       const sources = Object.create(null);
       bindingMap.forEach(function(entry) {
@@ -736,15 +759,9 @@ const PrintTemplateService = {
           sources[entry.originalId] = shared.sources[entry.sharedId];
         }
       });
-      const row = item.row;
-      return {
-        template: { ID: row.ID, Code: row.Code, Name: row.Name, Version: Number(row.Version || 1) },
-        project: shared.project,
-        data: data,
-        sources: sources
-      };
-    });
-    return Response.success({ project: shared.project, results: results, resolvedAt: this._now() });
+      return { template: rowMeta, project: shared.project, data: data, sources: sources };
+    }, this);
+    return Response.success({ project: shared ? shared.project : null, results: results, resolvedAt: this._now() });
   },
   resolve: function(id, body, params) {
     const user = this._user(params);
