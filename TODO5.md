@@ -60,20 +60,33 @@
 
 - [x] **Task 1 — Discovery & Planning:** بررسی کامل مسیر نمایش خروجی، درخواست‌های resolve، repository reads، asset loading و آزمون‌های موجود.
   - *Log:* در شاخه main، `Router.js`، `PrintTemplateService.js` و `js/modules/print-designer.js` بررسی شدند. مشخص شد `initProjectOutput()` در `js/modules/print-designer.js` برای هر قالب به‌صورت ترتیبی `POST /print-templates/:id/resolve` ارسال می‌کند؛ هر درخواست در `PrintTemplateService.resolve()`، `_resolveProjectData()` را مستقل اجرا کرده و repositoryهای پروژه/رویداد/فرم را مجدداً می‌خواند. قراردادهای فعلی و مجوزهای `PROJECT_VIEW` ثبت شدند. گزارش UI audit فعلی، زمان route را دارد اما اجرای خروجی واقعی پروژه را اندازه نمی‌گیرد. هیچ کد runtime یا داده عملیاتی در Discovery تغییر نکرد.
-- [ ] **Task 2 — Shared Batch Resolve (IN PROGRESS):** پیاده‌سازی resolve تجمیعی برای همه قالب‌های فعال پروژه با context مشترک و خواندن یک‌باره منابع مشترک، با حفظ مسیر قدیمی.
-- [ ] **Task 3 — Progressive Output & Asset Loading:** نمایش تدریجی هر قالب پس از آماده‌شدن، بارگذاری کنترل‌شده تصاویر/PDF و جلوگیری از قفل‌شدن کل خروجی به‌خاطر یک قالب.
+- [x] **Task 2 — Shared Batch Resolve:** پیاده‌سازی resolve تجمیعی برای همه قالب‌های فعال پروژه با context مشترک و خواندن یک‌باره منابع مشترک، با حفظ مسیر قدیمی.
+- [ ] **Task 3 — Progressive Output & Asset Loading (IN PROGRESS):** نمایش تدریجی هر قالب پس از آماده‌شدن، بارگذاری کنترل‌شده تصاویر/PDF و جلوگیری از قفل‌شدن کل خروجی به‌خاطر یک قالب.
 - [ ] **Task 4 — Regression, Performance & Operational Acceptance:** آزمون برابری داده، tenant/permission، عدم تکرار repository reads، چاپ/PDF، موبایل و سنجش زمان واقعی خروجی پروژه؛ پذیرش Product Owner.
 
 ### وضعیت اجرا
-- Task 1 Discovery تکمیل و در همین شاخه ثبت شده است.
-- Task 2 در شاخه کاری پیاده‌سازی شده و PR #87 باز است؛ CIهای Backend source checks، PMS agent suite و Procurement diagnostics برای آخرین commit موفق شده‌اند.
-- تغییر Backend فقط در شاخه/PR است؛ هنوز به main ادغام یا به Apps Script منتشر نشده است.
-- Google Sheets schema، داده عملیاتی و migration تغییری نکرده‌اند.
-- Task 2 تا تکمیل بررسی Frontend و پذیرش/ادغام مرحله‌ای هنوز [ ] باقی می‌ماند.
+- Task 1 Discovery & Planning تکمیل شده است.
+- Task 2 پیاده‌سازی، ادغام، انتشار Apps Script و تست عملیاتی Product Owner را با موفقیت پشت سر گذاشته و در این ثبت [x] شده است.
+- Backend PR #87 با squash در `main` ادغام شد؛ commit عملیاتی: `d1c34d72cc8ff9b2e736dc7c880c5cca36e480af`.
+- انتشار رسمی Apps Script با workflow `.github/workflows/sync-apps-script.yml`، run شماره `44134620890` روی همین SHA انجام شد؛ مراحل Push و `Deploy isolated production web app` هر دو success بودند.
+- Frontend PR #140 با squash در `main` ادغام شد؛ merge commit: `0a3a67ff657300f0e79ce193c3c461d248e42691`. GitHub Pages workflow شماره `44135173608` روی همین SHA اجرا شد.
+- Product Owner در 2026-11-17 تست عملیاتی خروجی چندقالبی و رفتارهای مرتبط را تأیید کرد.
+- هیچ تغییر در Google Sheets schema، migration یا داده عملیاتی انجام نشد.
+- Task 3 اکنون IN PROGRESS است؛ تمرکز آن نمایش تدریجی قالب‌ها و مدیریت بارگذاری assetهاست.
 
-### Task 2 implementation status (IN PROGRESS)
-- شاخه کاری: `perf/project-print-output-batch-resolve-20261117`.
-- `PrintTemplateService.resolveMany(body, params)` اضافه شد: دریافت یک‌باره فهرست قالب‌ها از `PrintTemplateRepository.getAll()`، محدودیت 50 قالب، tenant scope و فقط قالب‌های ACTIVE، namespacing شناسه Bindingها و یک اجرای مشترک `_resolveProjectData()` برای union همه Bindingها.
-- در صورت وجود Definition ناسازگار، مسیر fallback فقط در همان درخواست فعال می‌شود تا خطای یک قالب، قالب‌های دیگر را از نمایش محروم نکند؛ دسترسی پروژه قبل از fallback مجدداً اعتبارسنجی می‌شود.
-- `Router.js`: مسیر `POST /print-templates/resolve` با مجوز `PROJECT_VIEW` به resolver تجمیعی متصل شد. مسیر قدیمی `POST /print-templates/:id/resolve` بدون تغییر حفظ شده است.
-- تست قراردادی جدید: `tests/print-template-batch-resolve.test.js`. تست‌های خودکار CI و بازبینی نهایی هنوز در انتظار هستند؛ Task 2 تکمیل‌شده محسوب نمی‌شود.
+### Task 2 implementation log — Shared Batch Resolve (ACCEPTED)
+- Backend: `PrintTemplateService.js`، تابع `resolveMany(body, params)`: دریافت دسته‌ای TemplateIDs با سقف 50، اعمال TenantID و ACTIVE، namespacing Binding IDs، یک اجرای مشترک `_resolveProjectData()` برای union Bindingها و جداسازی خطای هر قالب با fallback محدود.
+- Backend: `Router.js` مسیر `POST /print-templates/resolve` با مجوز `PROJECT_VIEW` اضافه شد؛ endpoint قدیمی `POST /print-templates/:id/resolve` بدون تغییر حفظ شد.
+- Backend test: `tests/print-template-batch-resolve.test.js`؛ CIهای Backend موفق شدند.
+- Backend PR #87 merged؛ Apps Script push و deployment روی commit نهایی `d1c34d72cc8ff9b2e736dc7c880c5cca36e480af` در run `44134620890` با conclusion=success تأیید شد.
+- Frontend: `js/modules/print-designer.js`، تابع `PrintDesigner.initProjectOutput(projectId)`، یک درخواست batch با payload `{ ProjectID, TemplateIDs }` می‌فرستد؛ پاسخ‌ها بر اساس TemplateID به قالب‌ها متصل می‌شوند و خطای هر قالب مستقل باقی می‌ماند. درخواست جداگانه پروژه در حالت وجود قالب حذف شد و عنوان پروژه از پاسخ batch تازه می‌آید.
+- Frontend: `index.html` cache-busting به `20261117-project-print-batch-resolve-1` تغییر کرد؛ تست `tests/project-print-output-batch.test.js` و تست‌های `tests/project-print-designer.test.js` و `tests/print-template-library.test.js` به‌روزرسانی شدند.
+- Frontend PR #140 با squash merge commit `0a3a67ff657300f0e79ce193c3c461d248e42691` ادغام شد؛ GitHub Pages deployment run `44135173608` روی همین SHA اجرا شد.
+- Product Owner تست عملیاتی را در 2026-11-17 تأیید کرد؛ ویرایش متن/فایل، جدول چندردیفی، خروجی چاپ/PDF و نمایش واکنش‌گرا در سناریوهای پذیرش بررسی شدند.
+- هیچ schema/Sheet/migration یا داده عملیاتی تغییر نکرد.
+
+### Task 3 — Progressive Output & Asset Loading (IN PROGRESS)
+- هدف: نمایش هر قالب بلافاصله پس از آماده‌شدن، بدون انتظار برای کندترین قالب؛ حفظ ترتیب نهایی قالب‌ها و جلوگیری از اختلال خطای مستقل.
+- محدوده: `pages/print-output.html`، `js/modules/print-designer.js`، rendererهای موجود، `loadTemplateImages()`، `loadOutputPdfPages()` و تست‌های رگرسیون مرتبط.
+- اصل اجرا: ابتدا مسیر فعلی و رفتار DOM دقیقاً بررسی شود؛ سپس زمان‌بندی assetها با concurrency محدود و پاک‌سازی منابع PDF/object URL مدیریت شود. رفتار ویرایش inline، upload، جدول چندردیفی، چاپ/PDF و cache دائمی تعریف قالب‌ها حفظ شود.
+- معیار پذیرش: قالب‌های آماده‌شده تدریجی دیده شوند؛ ترتیب قالب‌ها ثابت بماند؛ خطای یک قالب سایر قالب‌ها را متوقف نکند؛ مصرف حافظه و درخواست assetها کنترل شود؛ هیچ داده پویای پروژه cache نشود.
