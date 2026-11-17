@@ -65,10 +65,11 @@
 - [ ] **Task 4 — Regression, Performance & Operational Acceptance:** آزمون برابری داده، tenant/permission، عدم تکرار repository reads، چاپ/PDF، موبایل و سنجش زمان واقعی خروجی پروژه؛ پذیرش Product Owner.
 
 ### وضعیت اجرا
-- در این مرحله فقط Discovery و مستندسازی انجام شده است.
-- هیچ تغییر Backend runtime، API، Google Sheets، داده عملیاتی یا deployment انجام نشده است.
-- ادغام PR و انتشار Backend فقط پس از تکمیل تست‌ها و تأیید صریح Product Owner انجام می‌شود.
-
+- Task 1 Discovery تکمیل و در همین شاخه ثبت شده است.
+- Task 2 در شاخه کاری پیاده‌سازی شده و PR #87 باز است؛ CIهای Backend source checks، PMS agent suite و Procurement diagnostics برای آخرین commit موفق شده‌اند.
+- تغییر Backend فقط در شاخه/PR است؛ هنوز به main ادغام یا به Apps Script منتشر نشده است.
+- Google Sheets schema، داده عملیاتی و migration تغییری نکرده‌اند.
+- Task 2 تا تکمیل بررسی Frontend و پذیرش/ادغام مرحله‌ای هنوز [ ] باقی می‌ماند.
 
 ### Task 2 implementation status (IN PROGRESS)
 - شاخه کاری: `perf/project-print-output-batch-resolve-20261117`.
