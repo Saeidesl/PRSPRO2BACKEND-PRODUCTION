@@ -68,3 +68,11 @@
 - در این مرحله فقط Discovery و مستندسازی انجام شده است.
 - هیچ تغییر Backend runtime، API، Google Sheets، داده عملیاتی یا deployment انجام نشده است.
 - ادغام PR و انتشار Backend فقط پس از تکمیل تست‌ها و تأیید صریح Product Owner انجام می‌شود.
+
+
+### Task 2 implementation status (IN PROGRESS)
+- شاخه کاری: `perf/project-print-output-batch-resolve-20261117`.
+- `PrintTemplateService.resolveMany(body, params)` اضافه شد: دریافت یک‌باره فهرست قالب‌ها از `PrintTemplateRepository.getAll()`، محدودیت 50 قالب، tenant scope و فقط قالب‌های ACTIVE، namespacing شناسه Bindingها و یک اجرای مشترک `_resolveProjectData()` برای union همه Bindingها.
+- در صورت وجود Definition ناسازگار، مسیر fallback فقط در همان درخواست فعال می‌شود تا خطای یک قالب، قالب‌های دیگر را از نمایش محروم نکند؛ دسترسی پروژه قبل از fallback مجدداً اعتبارسنجی می‌شود.
+- `Router.js`: مسیر `POST /print-templates/resolve` با مجوز `PROJECT_VIEW` به resolver تجمیعی متصل شد. مسیر قدیمی `POST /print-templates/:id/resolve` بدون تغییر حفظ شده است.
+- تست قراردادی جدید: `tests/print-template-batch-resolve.test.js`. تست‌های خودکار CI و بازبینی نهایی هنوز در انتظار هستند؛ Task 2 تکمیل‌شده محسوب نمی‌شود.
