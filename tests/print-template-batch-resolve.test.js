@@ -32,7 +32,8 @@ test('batch resolver namespaces binding IDs and performs one shared project-data
   const batch = service.slice(start, end);
   assert.match(batch, /__pt_batch_/);
   assert.match(batch, /combinedBindings\.push\(Object\.assign\(\{\}, binding, \{ id: sharedId \}\)\)/);
-  assert.equal((batch.match(/this\._resolveProjectData\(/g) || []).length, 1);
+  assert.match(batch, /shared = this\._resolveProjectData\(body\.ProjectID, \{ bindings: combinedBindings \}, user\)/);
+  assert.match(batch, /if \(sharedResolutionFailed\)/);
   assert.match(batch, /Object\.prototype\.hasOwnProperty\.call\(shared\.data/);
   assert.match(batch, /Object\.prototype\.hasOwnProperty\.call\(shared\.sources/);
 });
