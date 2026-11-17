@@ -383,9 +383,16 @@ const PrintTemplateService = {
       Reason: 'غیرفعال‌سازی قالب چاپ مرکزی' });
     return Response.success({ ID: id, Status: 'DELETED' }, { message: 'قالب غیرفعال شد.' });
   },
-  _resolveProjectData: function(projectId, definition, user) {
+  _readResolveShared: function(sharedReads, key, loader) {
+    if (!sharedReads) return loader();
+    if (!Object.prototype.hasOwnProperty.call(sharedReads, key)) sharedReads[key] = loader();
+    return sharedReads[key];
+  },
+  _resolveProjectData: function(projectId, definition, user, sharedReads) {
     Validator.required(projectId, 'ProjectID');
-    const project = ProjectRepository.findById(projectId);
+    const project = this._readResolveShared(sharedReads, 'project:' + String(projectId), function() {
+      return ProjectRepository.findById(projectId);
+    });
     if (!project || String(project.TenantID) !== String(user.TenantID) ||
         !ProjectService._isProjectAvailableToUser_(project, user)) {
       throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'پروژه موردنظر پیدا نشد.');
@@ -413,14 +420,18 @@ const PrintTemplateService = {
     // Read each required sheet at most once per resolve request. Do not retain
     // project data between requests, so edits are visible on the next resolve.
     const infoTypes = needsInformationTypes
-      ? InformationTypeRepository.findByTenant(user.TenantID) : [];
+      ? this._readResolveShared(sharedReads, 'informationTypes:' + String(user.TenantID), function() {
+          return InformationTypeRepository.findByTenant(user.TenantID) || [];
+        }) : [];
     const infoById = Object.create(null);
     infoTypes.forEach(function(type) {
       if (String(type.Status || 'ACTIVE') === 'ACTIVE') infoById[String(type.ID)] = type;
     });
 
     const allInformationRows = needsProjectInformation || needsEventFormFields
-      ? ProjectInformationRepository.findByProject(projectId) : [];
+      ? this._readResolveShared(sharedReads, 'projectInformation:' + String(projectId), function() {
+          return ProjectInformationRepository.findByProject(projectId) || [];
+        }) : [];
     const informationByType = Object.create(null);
     const informationRevisionByType = Object.create(null);
     allInformationRows.forEach(function(row) {
@@ -432,7 +443,11 @@ const PrintTemplateService = {
       if (String(row.Status || 'ACTIVE') === 'ACTIVE') informationByType[typeId] = row;
     });
 
-    const events = needsEvents ? EventRepository.findByProjectId(projectId).filter(function(event) {
+    const projectEvents = needsEvents
+      ? this._readResolveShared(sharedReads, 'events:' + String(projectId), function() {
+          return EventRepository.findByProjectId(projectId) || [];
+        }) : [];
+    const events = needsEvents ? projectEvents.filter(function(event) {
       const status = String(event.Status || '').toUpperCase();
       return String(event.TenantID) === String(user.TenantID) && status !== 'VOID' &&
         status !== 'CANCELLED' && status !== 'CANCELED';
@@ -444,7 +459,11 @@ const PrintTemplateService = {
       eventById[String(event.ID)] = event;
     });
 
-    const responses = hasFormBindings ? FormRepository.getEventResponses().filter(function(row) {
+    const allResponses = hasFormBindings
+      ? this._readResolveShared(sharedReads, 'eventResponses', function() {
+          return FormRepository.getEventResponses() || [];
+        }) : [];
+    const responses = hasFormBindings ? allResponses.filter(function(row) {
       return String(row.TenantID) === String(user.TenantID) && !!eventIds[String(row.EventID)];
     }) : [];
     const responsesByFormId = Object.create(null);
@@ -464,7 +483,9 @@ const PrintTemplateService = {
     });
     const eventTypeById = Object.create(null);
     if (needsEventTypes) {
-      EventTypeRepository.getAll().forEach(function(type) {
+      this._readResolveShared(sharedReads, 'eventTypes:' + String(user.TenantID), function() {
+        return EventTypeRepository.getAll() || [];
+      }).forEach(function(type) {
         if (String(type.TenantID) === String(user.TenantID) &&
             String(type.Status || 'ACTIVE').toUpperCase() === 'ACTIVE' &&
             String(type.ConnectionType || 'PROJECT').toUpperCase() !== 'INDEPENDENT') {
@@ -476,12 +497,16 @@ const PrintTemplateService = {
     const usersById = Object.create(null);
     const departmentsById = Object.create(null);
     if (needsEventFields && (requestedEventFields.CreatorName || requestedEventFields.PerformedByName)) {
-      (UserRepository.getAll() || []).forEach(function(item) {
+      this._readResolveShared(sharedReads, 'users:' + String(user.TenantID), function() {
+        return UserRepository.getAll() || [];
+      }).forEach(function(item) {
         if (item && String(item.TenantID) === String(user.TenantID)) usersById[String(item.ID)] = item;
       });
     }
     if (needsEventFields && requestedEventFields.DepartmentName) {
-      (DepartmentRepository.getAll() || []).forEach(function(item) {
+      this._readResolveShared(sharedReads, 'departments:' + String(user.TenantID), function() {
+        return DepartmentRepository.getAll() || [];
+      }).forEach(function(item) {
         if (item && String(item.TenantID) === String(user.TenantID)) departmentsById[String(item.ID)] = item;
       });
     }
@@ -516,7 +541,9 @@ const PrintTemplateService = {
     const getFormsById = function() {
       if (formsById) return formsById;
       formsById = Object.create(null);
-      (FormRepository.getForms() || []).forEach(function(form) {
+      this._readResolveShared(sharedReads, 'forms:' + String(user.TenantID), function() {
+        return FormRepository.getForms() || [];
+      }).forEach(function(form) {
         if (String(form.TenantID) === String(user.TenantID)) formsById[String(form.ID)] = form;
       });
       return formsById;
@@ -679,6 +706,45 @@ const PrintTemplateService = {
     }
     return Response.success({saved:true, bindingId:bindingId, sourceType:binding.sourceType, result:result},
       {message:'تغییر در منبع اصلی اطلاعات ذخیره شد.'});
+  },
+  resolveMany: function(body, params) {
+    const user = this._user(params);
+    body = body || {};
+    Validator.required(body.ProjectID, 'ProjectID');
+    if (!Array.isArray(body.TemplateIDs) || !body.TemplateIDs.length || body.TemplateIDs.length > 25) {
+      throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'فهرست قالب‌ها نامعتبر است.');
+    }
+    const templateIds = Array.from(new Set(body.TemplateIDs.map(function(id) {
+      return String(id || '').trim();
+    }).filter(Boolean)));
+    if (!templateIds.length || templateIds.length !== body.TemplateIDs.length) {
+      throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'شناسه قالب تکراری یا نامعتبر است.');
+    }
+    const rows = PrintTemplateRepository.getAll() || [];
+    const byId = Object.create(null);
+    rows.forEach(function(row) {
+      if (row && String(row.TenantID) === String(user.TenantID)) byId[String(row.ID)] = row;
+    });
+    const sharedReads = Object.create(null);
+    const items = templateIds.map(function(id) {
+      const template = byId[id];
+      if (!template || String(template.Status || 'ACTIVE') === 'DELETED') {
+        throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'یکی از قالب‌های انتخاب‌شده پیدا نشد.');
+      }
+      if (String(template.Status || 'ACTIVE') !== 'ACTIVE') {
+        throw ErrorHandler.create(Constants.ERROR.INVALID_OPERATION, 'یکی از قالب‌های انتخاب‌شده غیرفعال است.');
+      }
+      const definition = this._definition(template);
+      const resolved = this._resolveProjectData(body.ProjectID, definition, user, sharedReads);
+      return {
+        template: { ID: template.ID, Code: template.Code, Name: template.Name, Version: Number(template.Version || 1) },
+        project: resolved.project,
+        data: resolved.data,
+        sources: resolved.sources || {},
+        resolvedAt: this._now()
+      };
+    }, this);
+    return Response.success({ items: items });
   },
   resolve: function(id, body, params) {
     const user = this._user(params);
