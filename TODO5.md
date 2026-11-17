@@ -88,3 +88,32 @@
 ### Task 3 implementation record (ACCEPTED — Frontend-only)
 - این Macro-Task فقط در Frontend پیاده‌سازی شد؛ Backend runtime، endpointها، مجوزها، Google Sheets schema و داده عملیاتی تغییری نکردند.
 - جزئیات فنی و پذیرش در Log تسک ثبت شده است؛ Task 4 برای Regression, Performance & Operational Acceptance فعال است.
+
+
+### Task 4 — Discovery findings & validation plan (2026-11-17)
+
+#### Repository baseline
+- مخزن عملیاتی Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه مبنا `main`؛ آخرین commit مشاهده‌شده پیش از شاخه مستندات: `dcbf9655ee0df80133b1652095dc07a509f2b25d`.
+- مخزن عملیاتی Frontend مرتبط: `Saeidesl/PRSPRO2-PRODUCTION`، شاخه مبنا `main`؛ آخرین commit مشاهده‌شده: `48a6c631a15c5c7f52100176e4053eb58b42ddb5`.
+- هر دو مخزن فعال، غیر archived، دارای default branch برابر `main` و دسترسی مدیریتی مخزن تأیید شدند. فقط مخازن عملیاتی بررسی شدند.
+
+#### Backend implementation map
+- `Router.js` در `doPost(path, body, params)`: مسیر `POST /print-templates/resolve` با `AccessControlService.require(params, 'PROJECT_VIEW')` به `PrintTemplateService.resolveMany(body, params)` متصل است؛ مسیر قدیمی `POST /print-templates/:id/resolve` همچنان به `resolve(id, body, params)` متصل است.
+- `PrintTemplateService.js`:
+  - `resolveMany(body, params)`: اعتبارسنجی ProjectID و 1 تا 50 شناسه قالب، حذف ID تکراری، دریافت یک‌باره `PrintTemplateRepository.getAll()`، محدودسازی به Tenant جاری و قالب ACTIVE، namespacing شناسه Bindingها، اجرای مشترک `_resolveProjectData()` و بازسازی نتیجه مستقل هر قالب.
+  - `_resolveProjectData(projectId, definition, user)`: اعتبارسنجی وجود پروژه، Tenant و دسترسی کاربر با `ProjectService._isProjectAvailableToUser_()`; خواندن منابع اطلاعات/رویداد/فرم به‌صورت شرطی بر اساس Bindingها.
+  - در صورت شکست resolve مشترک، مسیر fallback برای حفظ جداسازی خطا، resolve تکی قالب‌ها را اجرا می‌کند؛ این مسیر باید در آزمون‌ها به‌طور مستقل بررسی شود.
+- تست موجود `tests/print-template-batch-resolve.test.js` عمدتاً assertionهای ساختاری روی متن کد است؛ مسیر، مجوز، سقف تعداد، tenant/ACTIVE filter، namespacing، یک فراخوانی مشترک و حفظ resolver قدیمی را بررسی می‌کند، اما اجرای واقعی سرویس با repository spy و شمارش فراخوانی‌ها یا آزمون منفی دسترسی را اثبات نمی‌کند.
+- هیچ نشانه‌ای از نیاز به تغییر Sheet، schema، migration یا داده عملیاتی در محدوده فعلی وجود ندارد.
+
+#### Backend validation work required
+- آزمون اجرایی با mock/stub برای شمارش دقیق فراخوانی Repositoryها در resolve batch سالم؛ تفکیک منابع موردنیاز و منابعی که به Binding وابسته نیستند.
+- آزمون عدم دسترسی به پروژه خارج از Tenant یا خارج از محدوده دسترسی کاربر، رد قالب غیرفعال/متعلق به Tenant دیگر، رد بیش از 50 قالب و حفظ رفتار endpoint قدیمی.
+- آزمون fallback و خطای مستقل قالب بدون افشای داده بین قالب‌ها؛ تأیید شود fallback فقط در شرایط تعریف ناسازگار فعال می‌شود و به‌عنوان مسیر عادی عملکرد استفاده نمی‌شود.
+
+#### Integration & operational acceptance criteria
+- برای پروژه دارای N قالب فعال، یک درخواست `POST /print-templates/resolve` و صفر درخواست resolve تکی در مسیر خروجی پروژه ثبت شود.
+- خروجی داده هر قالب با resolver تکی برای همان ورودی برابر باشد؛ اطلاعات پروژه/رویداد/پاسخ فرم در هر بازکردن خروجی تازه باشد.
+- شمارش Repository reads و زمان پاسخ batch در سناریوی چندقالبی ثبت شود؛ زمان assetهای تصویر/PDF جدا از زمان resolve گزارش شود.
+- چاپ/ذخیره PDF، شکست یک قالب، قالب دارای PDF و تصاویر، و عدم تغییر داده عملیاتی در سناریوهای تست کنترل شوند.
+- آزمون‌ها فقط با fixture/mock یا محیط staging مجاز اجرا شوند؛ هیچ ثبت/ویرایش/حذف آزمایشی در دیتابیس عملیاتی انجام نشود.
