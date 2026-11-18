@@ -1506,16 +1506,6 @@ const EventService = {
       {
         event: finalEvent,
         project: updatedProject,
-        workflowMoved: workflowMoved,
-        currentStepID: updatedProject ? updatedProject.CurrentStepID : '',
-        projectStatus: updatedProject ? updatedProject.Status : '',
-        availableDepartmentIDs: updatedProject
-          ? this._parseArray_(updatedProject.AvailableDepartmentIDs)
-          : [],
-        formPersistence: formPersistence,
-        centralInformation: centralInformation,
-        procurementIntegration: procurementIntegration,
-        workflowProgress: workflowProgressAfter
       },
       {
         message: workflowMoved
@@ -1775,61 +1765,6 @@ const EventService = {
     );
   },
 
-  retryProcurementIntegration: function(eventId, params) {
-    var user = AccessControlService.getCurrentUser(params || {});
-    var event = EventRepository.findById(eventId);
-    if (!event || String(event.TenantID) !== String(user.TenantID)) {
-      throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'رویداد مورد نظر پیدا نشد.');
-    }
-    var canManageIntegration = AccessControlService.isAdmin(user) ||
-      PermissionService.hasPermission(user.ID, 'EVENT_EDIT', user) ||
-      PermissionService.hasPermission(user.ID, 'PROCUREMENT_MANAGE', user);
-    if (!canManageIntegration && String(event.CreatedBy || '') !== String(user.ID)) {
-      throw ErrorHandler.create(Constants.ERROR.PERMISSION_DENIED,
-        'فقط ثبت‌کننده رویداد یا کاربر دارای مجوز ویرایش رویداد/مدیریت تأمین می‌تواند اتصال را دوباره اجرا کند.');
-    }
-    if (event.ProjectID) {
-      var project = ProjectRepository.findById(event.ProjectID);
-      if (!project || String(project.TenantID) !== String(user.TenantID) ||
-          !ProjectService._isProjectAvailableToUser_(project, user)) {
-        throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'رویداد مورد نظر پیدا نشد.');
-      }
-    }
-    if (['VOID', 'CANCELLED', 'CANCELED', 'DELETED'].indexOf(String(event.Status || '').toUpperCase()) !== -1) {
-      throw ErrorHandler.create(Constants.ERROR.INVALID_STATUS, 'برای رویداد لغوشده نمی‌توان اتصال تأمین را دوباره اجرا کرد.');
-    }
-    var eventType = EventTypeRepository.findById(event.EventTypeID);
-    if (!eventType || String(eventType.TenantID) !== String(user.TenantID)) {
-      throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'نوع رویداد پیدا نشد.');
-    }
-    var settings = ProcurementEventIntegrationService._find_(eventType.ID, user.TenantID);
-    if (!settings || String(settings.Action || 'NONE').toUpperCase() !== 'RECALCULATE_CONFIRMED_NEEDS' ||
-        !String(settings.ConfirmedQuantityInformationTypeID || '').trim()) {
-      throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR,
-        'برای این رویداد اتصال فعال تعداد قطعی به اطلاعات مرکزی تعریف نشده است.');
-    }
-    var responses = (FormRepository.findResponsesByEvent(eventId) || [])
-      .filter(function(row) { return String(row.TenantID) === String(user.TenantID); })
-      .map(function(row) {
-        var values = {};
-        try {
-          values = JSON.parse(String(row.ResponseJSON || '{}'));
-        } catch (error) {
-          throw ErrorHandler.create(Constants.ERROR.INTERNAL_ERROR, 'پاسخ فرم ذخیره‌شده قابل خواندن نیست.');
-        }
-        if (!values || typeof values !== 'object' || Array.isArray(values)) {
-          throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'ساختار پاسخ فرم ذخیره‌شده معتبر نیست.');
-        }
-        return { FormID: row.FormID, Values: values };
-      });
-    ProcurementEventIntegrationService.validate(eventType, responses, event.ProjectID || '', params || {});
-    var result = ProcurementEventIntegrationService.apply(eventType, event, params || {});
-    AuditService.log({
-      TenantID: user.TenantID, UserID: user.ID, Action: 'PROCUREMENT_INTEGRATION_RETRY',
-      EntityType: 'EVENT', EntityID: event.ID, NewData: result,
-      Reason: 'اجرای مجدد محاسبه نیاز از اطلاعات مرکزی ثبت‌شده در فرم رویداد'
-    });
-    return Response.success({ EventID: event.ID, status: 'SUCCEEDED', result: result && result.data !== undefined ? result.data : result });
-  }
+
 
 };
