@@ -1445,3 +1445,45 @@
 - Backend PR #93 آزمون runtime را اضافه کرد و در commit `a9cb03a177d429dbc83472f7fa1fa9ad876ab03d` ادغام شد؛ انتشار جدید Apps Script برای آن لازم نبود.
 - ثبت پذیرش Task 4 در Backend PR #94 ادغام شد؛ merge commit `72f03640f8c1c9fc48fa58d4b0ccc11e0317f7e7`.
 - این مرحله فقط مستندات است؛ هیچ deployment جدید Backend یا Frontend انجام نمی‌شود.
+
+
+## فاز: گالری تصاویر پروژه در صفحه رویدادها (2026-11-19)
+
+### هدف و تصمیمات محصول
+- افزودن گالری واحد برای تصاویر مستقیم پروژه و تصاویر پیوست‌شده به رویدادهای همان پروژه.
+- روی کارت پروژه فقط دکمه «گالری تصاویر» و شمارنده نمایش داده می‌شود؛ تصویر پروفایل موجود کارت بدون تغییر باقی می‌ماند.
+- تصاویر داخل گالری بر اساس رویداد و تاریخ گروه‌بندی و به ترتیب تاریخ مرتب می‌شوند.
+- بارگذاری اولیه فقط شمارنده سبک را می‌گیرد؛ metadata کامل پس از کلیک روی گالری دریافت می‌شود. thumbnailها lazy-load و تصویر اصلی فقط پس از انتخاب کاربر دانلود می‌شود.
+- هیچ تغییر schema یا migration در Google Sheets انجام نشد.
+
+### نقشه فنی Backend
+- مخزن: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه `main`.
+- فایل‌های اصلی: `AttachmentService.js`, `Router.js`, `GoogleDriveStorage.js`, `StorageRepository.js`, و repositoryهای موجود پروژه/رویداد/نوع رویداد.
+- منبع metadata پیوست‌ها: شیت `15_Attachments` با فیلدهای موجود `ID`, `TenantID`, `EntityType`, `EntityID`, `FileName`, `MimeType`, `FileSize`, `UploadedAt`, `Status`, `AttachmentType`. داده و ساختار شیت تغییر نکرد.
+- `AttachmentService.listProjectImageGallery(projectId, params)`: پیوست‌های تصویری فعال متعلق به خود پروژه و رویدادهای همان پروژه را جمع‌آوری می‌کند؛ رویدادهای `VOID` و `CANCELLED` حذف می‌شوند؛ نام نوع رویداد از داده tenant-scoped نوع رویداد resolve می‌شود. پاسخ فقط metadata امن دارد و `StorageKey` یا bytes/Base64 فایل را افشا نمی‌کند.
+- `AttachmentService.listProjectImageCounts(params)`: شمارش تجمیعی تصاویر پروژه‌های مجاز را بدون درخواست N+1 فراهم می‌کند.
+- `GoogleDriveStorage.getThumbnailAsBase64(storageKey)`: thumbnail ساخته‌شده توسط Google Drive را با اعتبارسنجی MIME تصویری دریافت می‌کند.
+- `StorageRepository.getThumbnailAsBase64(...)` سرویس storage را در اختیار AttachmentService قرار می‌دهد.
+- `AttachmentService.downloadThumbnail(id, params)`: tenant، دسترسی entity، وضعیت attachment و MIME را پیش از تحویل thumbnail بررسی می‌کند.
+- مسیرهای API افزوده‌شده در `Router.js`:
+  - `GET /project-image-gallery/counts` — شمارنده تجمیعی کارت‌ها.
+  - `GET /projects/:projectId/image-gallery` — metadata کامل گالری یک پروژه.
+  - `GET /attachments/:attachmentId/thumbnail` — thumbnail امن یک attachment.
+- مجوزهای `ATTACHMENT_VIEW` و یکی از `PROJECT_VIEW` یا `EVENT_VIEW`، کنترل tenant و بررسی دسترسی پروژه از مسیرهای موجود حفظ شده‌اند. مسیرهای قبلی `GET /project-card-images`, `GET /projects/:projectId/attachments`, `GET /events/:eventId/attachments` و `GET /attachments/:attachmentId/download` بدون جایگزینی یا ایجاد مسیر موازی حفظ شدند.
+- تست‌های Backend: `tests/project-image-gallery-api.test.js` و `tests/project-image-gallery-thumbnail.test.js`؛ پوشش metadata، عدم افشای کلید ذخیره‌سازی/محتوا، tenant/permission، فیلتر وضعیت و MIME، شمارش/خواندن‌های تجمیعی و thumbnail.
+
+### انتشار و پذیرش Backend
+- PR #97 با squash ادغام شد؛ merge commit: `4a131aed6f0e1f7e0e05aad7dc2baacb35671dd7`.
+- ارسال و استقرار Production از workflow موجود `.github/workflows/sync-apps-script.yml` انجام شد؛ run شماره `44595483353` روی commit `e1a95cb81ee766bbc900820f37306a2a82cd4bb8` با نتیجه success پایان یافت. مراحل validate، push به Apps Script ایزوله Production و Deploy Web App موفق بودند.
+- Product Owner در 2026-11-19 تست عملی گالری را موفق اعلام کرد.
+
+### Log پذیرش نهایی
+- [x] Task 1 — Discovery & Planning: ردیابی قراردادهای attachment، رویداد، کارت، مجوز و preview موجود؛ انتخاب endpoint تجمیعی برای اجتناب از N+1.
+- [x] Task 2 — Backend gallery metadata & count contract: افزودن متدها و endpointهای امن فوق، بدون تغییر schema.
+- [x] Task 3 — Frontend gallery experience: پیاده‌سازی مصرف API، modal، گروه‌بندی و lazy loading (جزئیات در ARCHITECTURE فرانت‌اند).
+- [x] Task 4 — Integration, performance & regression acceptance: CI و تست‌های خودکار موفق؛ استقرار Apps Script موفق؛ تأیید عملی Product Owner برای شمارنده، گروه‌بندی، بارگذاری تدریجی، preview، باز/بسته‌شدن مجدد، به‌روزرسانی شمارنده پس از تغییر پیوست و نمایش واکنش‌گرا.
+
+### وضعیت نهایی فاز
+- Backend روی `main` و Apps Script Production مستقر و توسط Product Owner تأیید شد.
+- Frontend روی GitHub Pages منتشر و توسط Product Owner تأیید شد.
+- این فاز بسته شد؛ برای قابلیت بعدی، Task جدید باید در TODO5 تعریف شود.
