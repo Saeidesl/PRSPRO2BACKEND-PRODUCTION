@@ -46,6 +46,12 @@ function loadService() {
     ProjectService: {
       _isProjectAvailableToUser_: (project) => project.ID === 'P1'
     },
+    EventTypeRepository: {
+      getAll: () => [
+        { ID: 'TYPE1', TenantID: 'T1', Name: 'Cutting' },
+        { ID: 'TYPE2', TenantID: 'T2', Name: 'Other tenant type' }
+      ]
+    },
     Validator: { required: (value, label) => {
       if (value === undefined || value === null || String(value) === '') throw new Error('required: ' + label);
     } },
