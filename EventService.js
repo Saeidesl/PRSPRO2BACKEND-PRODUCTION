@@ -1506,6 +1506,9 @@ const EventService = {
       {
         event: finalEvent,
         project: updatedProject,
+        formPersistence: formPersistence,
+        centralInformation: centralInformation,
+        procurementIntegration: procurementIntegration
       },
       {
         message: workflowMoved
