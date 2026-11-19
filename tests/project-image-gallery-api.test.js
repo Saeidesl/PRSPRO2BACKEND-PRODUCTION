@@ -16,7 +16,8 @@ function loadService() {
   const events = [
     { ID: 'E1', TenantID: 'T1', ProjectID: 'P1', EventTypeID: 'TYPE1', OccurredAt: '2026-11-18T10:00:00Z' },
     { ID: 'E2', TenantID: 'T1', ProjectID: 'P2', EventTypeName: 'Sewing', OccurredAt: '2026-11-18T11:00:00Z' },
-    { ID: 'E3', TenantID: 'T2', ProjectID: 'P1', EventTypeName: 'Other tenant event' },\n    { ID: 'E4', TenantID: 'T1', ProjectID: 'P1', Status: 'VOID', EventTypeID: 'TYPE1' }
+    { ID: 'E3', TenantID: 'T2', ProjectID: 'P1', EventTypeName: 'Other tenant event' },
+    { ID: 'E4', TenantID: 'T1', ProjectID: 'P1', Status: 'VOID', EventTypeID: 'TYPE1' }
   ];
   const attachments = [
     { ID: 'A1', TenantID: 'T1', EntityType: 'PROJECT', EntityID: 'P1', MimeType: 'image/jpeg', FileName: 'profile.jpg', UploadedAt: '2026-11-17T10:00:00Z', StorageKey: 'private-drive-key' },
@@ -27,7 +28,8 @@ function loadService() {
     { ID: 'A6', TenantID: 'T1', EntityType: 'EVENT', EntityID: 'E1', MimeType: 'image/jpeg', Status: 'VOID' },
     { ID: 'A7', TenantID: 'T1', EntityType: 'EVENT', EntityID: 'E2', MimeType: 'image/jpeg' },
     { ID: 'A8', TenantID: 'T2', EntityType: 'PROJECT', EntityID: 'P3', MimeType: 'image/jpeg' },
-    { ID: 'A9', TenantID: 'T2', EntityType: 'EVENT', EntityID: 'E3', MimeType: 'image/jpeg' },\n    { ID: 'A10', TenantID: 'T1', EntityType: 'EVENT', EntityID: 'E4', MimeType: 'image/jpeg' }
+    { ID: 'A9', TenantID: 'T2', EntityType: 'EVENT', EntityID: 'E3', MimeType: 'image/jpeg' },
+    { ID: 'A10', TenantID: 'T1', EntityType: 'EVENT', EntityID: 'E4', MimeType: 'image/jpeg' }
   ];
   const user = { ID: 'U1', TenantID: 'T1' };
   const context = {
