@@ -97,6 +97,7 @@ test('event creation exposes separate persistence outcomes for reusable forms an
   const event=read('EventService.js');
   const forms=read('FormService.js');
   assert.match(event,/formPersistence: formPersistence/);
+  assert.match(event,/procurementIntegration: procurementIntegration/);
   assert.match(event,/centralInformation: centralInformation/);
   assert.match(forms,/centralInformationCount/);
   assert.match(forms,/responseCount: responseCount/);
