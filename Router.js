@@ -151,11 +151,11 @@ const Router = {
       return ProjectService.list(params);
     }
 
-    const projectImageGalleryMatch = path.match(/^\\/projects\\/([^/]+)\\/image-gallery$/);
-    if (projectImageGalleryMatch) {
+    const projectImageGalleryParts = path.split('/');
+    if (path.indexOf('/projects/') === 0 && projectImageGalleryParts[3] === 'image-gallery') {
       this.requireAny(params, ['PROJECT_VIEW', 'EVENT_VIEW']);
       AccessControlService.require(params, 'ATTACHMENT_VIEW');
-      return AttachmentService.listProjectImageGallery(decodeURIComponent(projectImageGalleryMatch[1]), params);
+      return AttachmentService.listProjectImageGallery(decodeURIComponent(projectImageGalleryParts[2]), params);
     }
 
     const projectByIdMatch = path.match(/^\/projects\/([^/]+)$/);
