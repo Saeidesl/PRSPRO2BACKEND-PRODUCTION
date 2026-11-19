@@ -155,16 +155,11 @@ test('saving reusable form responses writes the current event ID into central pr
   assert.match(forms, /FormRepository\.insertResponse\(row\)/);
 });
 
-test('retry reads saved reusable-form responses and central project information, not legacy event data', () => {
-  const source = fs.readFileSync(path.join(__dirname, '..', 'EventService.js'), 'utf8');
-  const start = source.indexOf('retryProcurementIntegration: function');
-  const end = source.indexOf('\n\n};', start);
-  const retry = source.slice(start, end);
-  assert.ok(start >= 0 && end > start);
-  assert.match(retry, /FormRepository\.findResponsesByEvent\(eventId\)/);
-  assert.match(retry, /ProcurementEventIntegrationService\.validate\(eventType, responses/);
-  assert.match(retry, /ProcurementEventIntegrationService\.apply\(eventType, event, params/);
-  assert.doesNotMatch(retry, /EventDataRepository|dynamicData|DynamicData/);
+test('dedicated procurement retry endpoint and service were removed', () => {
+  const service = fs.readFileSync(path.join(__dirname, '..', 'EventService.js'), 'utf8');
+  const router = fs.readFileSync(path.join(__dirname, '..', 'Router.js'), 'utf8');
+  assert.doesNotMatch(service, /retryProcurementIntegration/);
+  assert.doesNotMatch(router, /procurement-retry|retryProcurementIntegration/);
 });
 
 test('event integration no longer creates purchase receipts; standard receipt route remains separate', () => {
