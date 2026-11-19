@@ -677,6 +677,28 @@ const AttachmentService = {
   },
 
 
+  downloadThumbnail: function(id, params) {
+    Validator.required(id, 'شناسه فایل');
+    const currentUser = AccessControlService.getCurrentUser(params || {});
+    const attachment = AttachmentRepository.findById(id);
+    if (!attachment ||
+        String(attachment.TenantID) !== String(currentUser.TenantID) ||
+        !this._isAttachmentVisibleToUser_(attachment, currentUser) ||
+        ['DELETED', 'VOID'].indexOf(String(attachment.Status || 'ACTIVE').toUpperCase()) !== -1 ||
+        String(attachment.MimeType || '').toLowerCase().indexOf('image/') !== 0) {
+      throw ErrorHandler.create(Constants.ERROR.FILE_NOT_FOUND, 'تصویر مورد نظر پیدا نشد.');
+    }
+    const thumbnail = StorageRepository.getThumbnailAsBase64(attachment.StorageKey);
+    return Response.success({
+      ID: attachment.ID,
+      FileName: thumbnail.fileName || attachment.FileName,
+      MimeType: thumbnail.mimeType,
+      FileSize: thumbnail.fileSize,
+      Base64: thumbnail.base64
+    });
+  },
+
+
   download: function(
     id,
     params
