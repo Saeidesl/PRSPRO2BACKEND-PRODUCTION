@@ -14,7 +14,7 @@ function loadService() {
     { ID: 'P3', TenantID: 'T2', ProjectCode: 'PR-3', Title: 'Other tenant' }
   ];
   const events = [
-    { ID: 'E1', TenantID: 'T1', ProjectID: 'P1', EventTypeName: 'Cutting', OccurredAt: '2026-11-18T10:00:00Z' },
+    { ID: 'E1', TenantID: 'T1', ProjectID: 'P1', EventTypeID: 'TYPE1', OccurredAt: '2026-11-18T10:00:00Z' },
     { ID: 'E2', TenantID: 'T1', ProjectID: 'P2', EventTypeName: 'Sewing', OccurredAt: '2026-11-18T11:00:00Z' },
     { ID: 'E3', TenantID: 'T2', ProjectID: 'P1', EventTypeName: 'Other tenant event' }
   ];
