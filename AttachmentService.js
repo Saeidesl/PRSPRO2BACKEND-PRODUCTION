@@ -203,6 +203,15 @@ const AttachmentService = {
     });
     const eventById = Object.create(null);
     events.forEach(function(event) { eventById[String(event.ID)] = event; });
+    const eventTypesById = Object.create(null);
+    if (typeof EventTypeRepository !== 'undefined' && EventTypeRepository &&
+        typeof EventTypeRepository.getAll === 'function') {
+      (EventTypeRepository.getAll() || []).forEach(function(eventType) {
+        if (String(eventType.TenantID) === tenantId) {
+          eventTypesById[String(eventType.ID)] = eventType;
+        }
+      });
+    }
 
     const images = (AttachmentRepository.getAll() || []).filter(function(item) {
       const entityType = String(item.EntityType || '').toUpperCase();
@@ -221,7 +230,12 @@ const AttachmentService = {
         EntityType: entityType,
         EntityID: String(item.EntityID || ''),
         EventID: event ? String(event.ID) : '',
-        EventTypeName: event ? String(event.EventTypeName || event.EventTypeCode || event.EventTypeID || 'رویداد ثبت‌شده') : 'تصاویر پروژه',
+        EventTypeName: event ? String(
+          event.EventTypeName ||
+          (eventTypesById[String(event.EventTypeID || '')] &&
+            (eventTypesById[String(event.EventTypeID || '')].Name || eventTypesById[String(event.EventTypeID || '')].Code)) ||
+          event.EventTypeCode || event.EventTypeID || 'رویداد ثبت‌شده'
+        ) : 'تصاویر پروژه',
         EventDate: event ? String(event.OccurredAt || event.CreatedAt || '') : String(item.UploadedAt || item.CreatedAt || ''),
         FileName: String(item.FileName || ''),
         MimeType: String(item.MimeType || ''),
