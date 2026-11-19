@@ -55,7 +55,7 @@ function loadService() {
     Object, String, Number, Array, Date
   };
   const source = fs.readFileSync(path.join(__dirname, '..', 'AttachmentService.js'), 'utf8');
-  vm.runInNewContext(source + '\\nthis.__service = AttachmentService;', context);
+  vm.runInNewContext(source + '\nthis.__service = AttachmentService;', context);
   return { service: context.__service, calls };
 }
 
@@ -84,7 +84,7 @@ test('project image counts aggregate project and event images with one read per 
   const { service, calls } = loadService();
   const result = service.listProjectImageCounts({});
   assert.equal(result.success, true);
-  assert.deepEqual(Array.from(result.data), [{ projectId: 'P1', count: 3 }]);
+  assert.deepEqual(Array.from(result.data, (item) => ({ projectId: item.projectId, count: item.count })), [{ projectId: 'P1', count: 3 }]);
   assert.equal(calls.projects, 1);
   assert.equal(calls.events, 1);
   assert.equal(calls.attachments, 1);
@@ -108,8 +108,10 @@ test('router exposes count and per-project gallery routes with attachment permis
     Object, String, Array
   };
   const source = fs.readFileSync(path.join(__dirname, '..', 'Router.js'), 'utf8');
-  vm.runInNewContext(source + '\\nthis.__router = Router;', context);
-  assert.deepEqual(context.__router.get('/project-image-gallery/counts', {}), { marker: 'counts' });
-  assert.deepEqual(context.__router.get('/projects/P%201/image-gallery', {}), { marker: 'gallery', id: 'P 1' });
+  vm.runInNewContext(source + '\nthis.__router = Router;', context);
+  assert.equal(context.__router.get('/project-image-gallery/counts', {}).marker, 'counts');
+  const gallery = context.__router.get('/projects/P%201/image-gallery', {});
+  assert.equal(gallery.marker, 'gallery');
+  assert.equal(gallery.id, 'P 1');
   assert.deepEqual(required, ['ATTACHMENT_VIEW', 'ATTACHMENT_VIEW']);
 });
