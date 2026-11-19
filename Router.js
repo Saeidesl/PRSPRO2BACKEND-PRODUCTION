@@ -129,6 +129,12 @@ const Router = {
       return DepartmentService.get(departmentId, params);
     }
 
+    if (path === '/project-image-gallery/counts') {
+      this.requireAny(params, ['PROJECT_VIEW', 'EVENT_VIEW']);
+      AccessControlService.require(params, 'ATTACHMENT_VIEW');
+      return AttachmentService.listProjectImageCounts(params);
+    }
+
     if (path === '/project-card-images') {
       AccessControlService.require(params, 'PROJECT_VIEW');
       AccessControlService.require(params, 'ATTACHMENT_VIEW');
@@ -143,6 +149,13 @@ const Router = {
     if (path === '/projects') {
       this.requireAny(params, ['PROJECT_VIEW', 'PROJECT_CREATE']);
       return ProjectService.list(params);
+    }
+
+    const projectImageGalleryMatch = path.match(/^\\/projects\\/([^/]+)\\/image-gallery$/);
+    if (projectImageGalleryMatch) {
+      this.requireAny(params, ['PROJECT_VIEW', 'EVENT_VIEW']);
+      AccessControlService.require(params, 'ATTACHMENT_VIEW');
+      return AttachmentService.listProjectImageGallery(decodeURIComponent(projectImageGalleryMatch[1]), params);
     }
 
     const projectByIdMatch = path.match(/^\/projects\/([^/]+)$/);
