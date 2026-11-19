@@ -410,6 +410,10 @@ const Router = {
         throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'پیوست مورد نظر پیدا نشد.');
       }
 
+      if (parts[3] === 'thumbnail') {
+        return AttachmentService.downloadThumbnail(attachmentId, params);
+      }
+
       if (parts[3] === 'download') {
         return AttachmentService.download(attachmentId, params);
       }
