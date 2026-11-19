@@ -1,22 +1,25 @@
 ## 🎯 Current Objective
-حذف مسیر نتیجه جداگانه پس از ثبت رویداد، حفظ نمایش دقیق نتیجه ذخیره‌سازی و یکپارچگی ملزومات در پاسخ API، و حذف مسیر retry اختصاصی که دیگر در رابط کاربری استفاده نمی‌شود.
+افزودن گالری کامل تصاویر هر پروژه در صفحه رویدادها؛ تصاویر پروژه و پیوست‌های تصویری رویدادهای مرتبط باید در یک گالری گروه‌بندی‌شده بر اساس رویداد و تاریخ قابل مشاهده باشند، بدون دانلود تصویر هنگام بارگذاری اولیه صفحه.
 
 ## 🗺️ Technical Spec & Architecture Map (DO NOT DELETE)
-- Runtime: Google Apps Script V8؛ داده عملیاتی در Google Sheets.
-- API ثبت رویداد: `POST /events` در `Router.js` به `EventService.create` متصل است.
-- منطق ثبت و یکپارچگی: `EventService.js`؛ رویداد، پاسخ فرم‌ها، اطلاعات مرکزی، workflow، audit و ProcurementEventIntegrationService را مدیریت می‌کند.
-- قرارداد پاسخ: `Response.success(data, meta)`؛ فرانت‌اند از `PMS.Api.extractData` برای استخراج payload استفاده می‌کند.
-- خروجی ثبت رویداد اکنون شامل `event`، `project`، `formPersistence`، `centralInformation` و `procurementIntegration` است.
-- مسیر retry اختصاصی `/events/:id/procurement-retry` و متد `EventService.retryProcurementIntegration` حذف شده‌اند؛ مسیر اصلی ثبت رویداد و `ProcurementEventIntegrationService.apply` حفظ شده است.
-- تست‌های مرتبط: `tests/forms-api-contract.test.js` و `tests/procurement-event-integration.test.js`.
-- هیچ تغییر Sheet schema، migration یا حذف داده عملیاتی در این تسک وجود ندارد.
+- مخزن عملیاتی Backend: `Saeidesl/PRSPRO2BACKEND-PRODUCTION`، شاخه مبنا `main`؛ شاخه کاری فاز: `feat/project-event-image-gallery-20261119`.
+- مخزن عملیاتی Frontend: `Saeidesl/PRSPRO2-PRODUCTION`، شاخه مبنا `main`؛ شاخه کاری فاز: `feat/project-event-image-gallery-20261119`.
+- Backend: Google Apps Script V8 + Google Sheets؛ فایل‌های اصلی: `Router.js`, `AttachmentService.js`, `AttachmentRepository.js`, `EventRepository.js`, `ProjectRepository.js`, `ProjectService.js`.
+- ذخیره‌سازی فایل: Google Drive؛ شیت metadata: `15_Attachments`. فیلدهای مرتبط: `ID`, `TenantID`, `EntityType`, `EntityID`, `FileName`, `MimeType`, `FileSize`, `UploadedAt`, `Status`, `AttachmentType`.
+- تصاویر پروژه ممکن است با `EntityType=PROJECT` و انواع پیوست موجود مانند `PROFILE` یا `INFORMATION` ثبت شوند؛ تصاویر رویداد با `EntityType=EVENT` و `EntityID=EventID` ذخیره می‌شوند. رویداد با `EventRepository.findByProjectId(projectId)` به پروژه متصل است.
+- مسیرهای موجود: `GET /project-card-images` (فقط metadata تصویر کارت)، `GET /projects/:projectId/attachments`، `GET /events/:eventId/attachments`، `GET /attachments/:attachmentId/download`. کنترل‌های `PROJECT_VIEW` و `ATTACHMENT_VIEW`، tenant isolation و `ProjectService._isProjectAvailableToUser_` باید حفظ شوند.
+- `AttachmentService.listByEntity(entityType, entityId, params)` دسترسی entity و پیوست‌ها را کنترل می‌کند؛ `AttachmentRepository.findByEntity` و `getAll` در دسترس‌اند. `AttachmentService.listProjectImages` و route `/project-card-images` برای metadata سبک تصویر کارت موجودند.
+- طرح اتصال: یک endpoint تجمیعی فقط-متادیتا برای گالری پروژه و یک خلاصه سبک تعداد تصاویر برای کارت‌ها؛ از N+1 درخواست برای هر رویداد اجتناب شود. فایل تصویر فقط با endpoint دانلود موجود و فقط پس از درخواست کاربر دریافت شود. هیچ تغییر Sheet schema یا جابه‌جایی فایل در محدوده پیش‌بینی نشده است.
+- Frontend: `index.html` بارگذاری `pages/events.html` و `js/modules/events.js` را فراهم می‌کند؛ API از `js/core/api.js` و `PMS.Api.get` استفاده می‌کند. کارت‌ها در `Events.renderProjectQueue` رندر می‌شوند؛ دکمه‌های کارت در `event-queue-project-actions` قرار دارند.
+- مسیر فعلی تصاویر کارت: `Events.loadQueueProjectImages` → `Projects.getProjectCardAttachments` → `GET /project-card-images`؛ بارگذاری تصویر کارت با `IntersectionObserver` و `Projects.loadOneProjectCardImage` انجام می‌شود.
+- پیش‌نمایش مشترک فعلی: `Projects.openImagePreview(src, alt, options)` در `js/modules/projects.js` با Native `<dialog>.showModal()`; دانلود تصویر رویداد از `Events.openEventImageAttachment(attachmentId)` و `GET /attachments/:attachmentId/download` انجام می‌شود. این مسیر و مدیریت Object URL باید reuse شود.
+- CSS صفحه: `css/events.css`؛ صفحه: `pages/events.html`. تست‌ها با Node در `tests/*.test.js` و workflowهای CI موجود اجرا می‌شوند.
+- تصمیم محصول: کارت پروژه فقط دکمه گالری و تعداد تصاویر را نشان می‌دهد؛ thumbnailهای اضافی گالری روی کارت اضافه نمی‌شوند. تصویر پروفایل فعلی کارت در صورت وجود، بخشی از طراحی فعلی باقی می‌ماند. داخل گالری تصاویر بر اساس رویداد و سپس تاریخ مرتب می‌شوند.
+- معیار سرعت: بارگذاری اولیه صفحه فقط metadata شمارش را دریافت می‌کند؛ metadata کامل گالری فقط هنگام بازکردن گالری؛ thumbnailها با Lazy Loading و batch/concurrency محدود؛ تصویر اصلی فقط با انتخاب تصویر. پاسخ metadata نباید Base64 یا محتوای فایل داشته باشد.
 
 ## 📋 Macro-Task Queue & Implementation Log
-- [x] **Task 1 — Discovery & Planning:** ردیابی مسیر ثبت رویداد، قرارداد پاسخ، اتصال Procurement و مسیر retry.
-  - *Log:* مسیر `POST /events` در `Router.js` به `EventService.create` می‌رسد؛ شکست Procurement پس از ذخیره رویداد در `procurementIntegration.status = FAILED` ثبت می‌شود. پیش از این تغییر، payload نهایی پاسخ وضعیت integration را به Frontend منتقل نمی‌کرد.
-- [x] **Task 2 — Backend contract & route cleanup:** بازگرداندن وضعیت‌های persistence/integration در پاسخ ثبت و حذف route/service retry اختصاصی.
-  - *Log:* در `EventService.js` فیلدهای `formPersistence`، `centralInformation` و `procurementIntegration` به payload پاسخ اضافه شدند؛ مسیر `procurementRetryMatch` در `Router.js` و متد `retryProcurementIntegration` حذف شدند. تست‌های `forms-api-contract.test.js` و `procurement-event-integration.test.js` به قرارداد جدید و نبود مسیر اختصاصی به‌روزرسانی شدند. Backend source checks، unit/integration tests، manifest/syntax، QA/release safety و domain contract review همگی موفق هستند.
-- [x] **Task 3 — Integration & merge verification:** تأیید سازگاری با Frontend PR #157، بررسی CI نهایی و ادغام ایمن PR #96؛ بدون deployment تا تأیید جداگانه.
-  - *Log:* PR #96 با آخرین commit `6969811145c780906305deb6f98c5532e631e6b8` باز است؛ CIهای Backend موفق‌اند. ادغام پس از سبز شدن کامل CI نهایی Frontend و Browser Audit انجام می‌شود.
-
-  - *Log نهایی پس از پذیرش کاربر:* PR بک‌اند #96 با merge commit `223e409b2aac23c7dfb58c8d70fd5c956e120da6` در شاخه `main` ادغام شد؛ PR فرانت‌اند هم‌زمان #157 با merge commit `55ae0b9ff2d317a0e151a622714a8be92140d807` ادغام شد. Browser Audit فرانت‌اند موفق شد و کاربر تست یکپارچه نسخه عملیاتی را موفق تأیید کرد. قرارداد پاسخ `POST /events` شامل وضعیت persistence و procurement است؛ route و service retry اختصاصی حذف شده‌اند و مسیر اصلی ثبت رویداد/یکپارچگی ملزومات حفظ شده است. هیچ تغییر schema یا migration داده‌ای انجام نشد. تسک پذیرفته و بسته شد.
+- [x] **Task 1 — Discovery & Planning:** بررسی TODO5/ARCHITECTURE، وضعیت شاخه و commitها، ردیابی کارت پروژه، پیوست‌های پروژه/رویداد، APIها، مجوزها و مسیر preview؛ تعیین طرح سازگار و معیارهای عملکرد.
+  - *Log:* هر دو مخزن عملیاتی فعال و قابل دسترسی‌اند؛ شاخه مبنای هر دو `main` و غیرمحافظت‌شده است. آخرین commitهای مبنا: Backend `70e1a2812be629ec752285ff1a8bbb71cde9ea1f`؛ Frontend `7fa0964758719e6876c13441c1f3418895b5362e`. فازهای قبلی TODO5 در هر دو مخزن بسته و همه Macro-Taskهای ثبت‌شده تکمیل‌اند. شاخه کاری این فاز در هر دو مخزن از همین commitها ساخته شد. ردیابی نشان داد endpoint فعلی `/project-card-images` فقط آخرین تصویر PROFILE را می‌دهد؛ تصاویر رویدادها در `EVENT` attachments ذخیره می‌شوند و برای هر Event از مسیر `/events/:id/attachments` قابل خواندن‌اند. فراخوانی جداگانه این مسیر برای هر رویداد N+1 ایجاد می‌کند؛ بنابراین تجمیع سمت Backend با یک بار خواندن مجموعه رویدادها و پیوست‌ها، همراه با endpoint شمارش سبک، مسیر پیشنهادی است. مسیر دانلود امن و Native Dialog مشترک فعلی حفظ می‌شود. هیچ کد اجرایی یا داده عملیاتی تغییر نکرده است.
+- [ ] **Task 2 — Backend gallery metadata & count contract (IN PROGRESS):** افزودن مسیرهای تجمیعی tenant/project-scoped برای تعداد تصاویر کارت و metadata گالری شامل تصاویر مستقیم پروژه و تصاویر رویدادهای آن؛ بدون Base64 و بدون N+1؛ حفظ مجوزها و قراردادهای فعلی.
+- [ ] **Task 3 — Frontend gallery experience:** افزودن دکمه/تعداد به کارت‌ها، Modal واکنش‌گرا، گروه‌بندی بر اساس رویداد و تاریخ، بارگذاری تدریجی thumbnailها، بازکردن تصویر اصلی با Native Dialog موجود و مدیریت حافظه/Object URL.
+- [ ] **Task 4 — Integration, performance & regression acceptance:** تست قرارداد API، مجوز/tenant، پروژه بدون تصویر و چندتصویری، ترتیب گروه‌ها، صفحه‌بندی/بارگذاری تدریجی، عدم دانلود در بارگذاری اولیه، دسکتاپ/موبایل، CI و بررسی انتشار؛ سپس توقف برای تست Product Owner.
