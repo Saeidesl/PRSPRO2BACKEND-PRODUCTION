@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
+const vm = require('node:vm');
 
 const root = path.join(__dirname, '..');
 const storage = fs.readFileSync(path.join(root, 'GoogleDriveStorage.js'), 'utf8');
@@ -35,4 +36,52 @@ test('thumbnail route remains behind the existing attachment-view permission gat
   assert.match(route, /AccessControlService\.require\(params, 'ATTACHMENT_VIEW'\)/);
   assert.match(route, /parts\[3\] === 'thumbnail'/);
   assert.match(route, /AttachmentService\.downloadThumbnail\(attachmentId, params\)/);
+});
+
+
+function loadThumbnailService(attachment, visible) {
+  const calls = { thumbnail: 0 };
+  const context = {
+    Validator: { required: (value, label) => {
+      if (value === undefined || value === null || String(value) === '') throw new Error('required: ' + label);
+    } },
+    AccessControlService: { getCurrentUser: () => ({ ID: 'U1', TenantID: 'T1' }) },
+    AttachmentRepository: { findById: () => attachment },
+    StorageRepository: { getThumbnailAsBase64: () => {
+      calls.thumbnail += 1;
+      return { fileName: 'small.jpg', mimeType: 'image/jpeg', fileSize: 42, base64: 'c21hbGw=' };
+    } },
+    Constants: { ERROR: { FILE_NOT_FOUND: 'FILE_NOT_FOUND' } },
+    ErrorHandler: { create: (_code, message) => new Error(message) },
+    Response: { success: (data) => ({ success: true, data }) }
+  };
+  const source = fs.readFileSync(path.join(root, 'AttachmentService.js'), 'utf8');
+  vm.runInNewContext(source + '\nthis.__service = AttachmentService;', context);
+  context.__service._isAttachmentVisibleToUser_ = () => visible !== false;
+  return { service: context.__service, calls };
+}
+
+test('thumbnail service returns only reduced image bytes for an authorized active attachment', () => {
+  const attachment = { ID: 'A1', TenantID: 'T1', Status: 'ACTIVE', MimeType: 'image/jpeg', StorageKey: 'private-key' };
+  const { service, calls } = loadThumbnailService(attachment, true);
+  const result = service.downloadThumbnail('A1', {});
+  assert.equal(result.success, true);
+  assert.equal(result.data.Base64, 'c21hbGw=');
+  assert.equal(result.data.MimeType, 'image/jpeg');
+  assert.equal(Object.prototype.hasOwnProperty.call(result.data, 'StorageKey'), false);
+  assert.equal(calls.thumbnail, 1);
+});
+
+test('thumbnail service rejects cross-tenant, hidden, deleted and non-image attachments', () => {
+  const cases = [
+    [{ ID: 'A1', TenantID: 'T2', Status: 'ACTIVE', MimeType: 'image/jpeg' }, true],
+    [{ ID: 'A1', TenantID: 'T1', Status: 'ACTIVE', MimeType: 'image/jpeg' }, false],
+    [{ ID: 'A1', TenantID: 'T1', Status: 'DELETED', MimeType: 'image/jpeg' }, true],
+    [{ ID: 'A1', TenantID: 'T1', Status: 'ACTIVE', MimeType: 'application/pdf' }, true]
+  ];
+  cases.forEach(([attachment, visible]) => {
+    const { service, calls } = loadThumbnailService(attachment, visible);
+    assert.throws(() => service.downloadThumbnail('A1', {}));
+    assert.equal(calls.thumbnail, 0);
+  });
 });
