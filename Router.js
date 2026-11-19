@@ -129,6 +129,12 @@ const Router = {
       return DepartmentService.get(departmentId, params);
     }
 
+    if (path === '/project-image-gallery/counts') {
+      this.requireAny(params, ['PROJECT_VIEW', 'EVENT_VIEW']);
+      AccessControlService.require(params, 'ATTACHMENT_VIEW');
+      return AttachmentService.listProjectImageCounts(params);
+    }
+
     if (path === '/project-card-images') {
       AccessControlService.require(params, 'PROJECT_VIEW');
       AccessControlService.require(params, 'ATTACHMENT_VIEW');
@@ -143,6 +149,13 @@ const Router = {
     if (path === '/projects') {
       this.requireAny(params, ['PROJECT_VIEW', 'PROJECT_CREATE']);
       return ProjectService.list(params);
+    }
+
+    const projectImageGalleryParts = path.split('/');
+    if (path.indexOf('/projects/') === 0 && projectImageGalleryParts[3] === 'image-gallery') {
+      this.requireAny(params, ['PROJECT_VIEW', 'EVENT_VIEW']);
+      AccessControlService.require(params, 'ATTACHMENT_VIEW');
+      return AttachmentService.listProjectImageGallery(decodeURIComponent(projectImageGalleryParts[2]), params);
     }
 
     const projectByIdMatch = path.match(/^\/projects\/([^/]+)$/);
@@ -395,6 +408,10 @@ const Router = {
 
       if (!attachmentId) {
         throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'پیوست مورد نظر پیدا نشد.');
+      }
+
+      if (parts[3] === 'thumbnail') {
+        return AttachmentService.downloadThumbnail(attachmentId, params);
       }
 
       if (parts[3] === 'download') {

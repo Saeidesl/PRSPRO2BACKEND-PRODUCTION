@@ -226,6 +226,31 @@ const GoogleDriveStorage = {
   },
 
 
+  getThumbnailAsBase64: function(storageKey) {
+    const file = this.getFile(storageKey);
+    let thumbnail = null;
+    try {
+      thumbnail = file.getThumbnail();
+    } catch (error) {
+      thumbnail = null;
+    }
+    if (!thumbnail) {
+      throw ErrorHandler.create(Constants.ERROR.FILE_NOT_FOUND, 'پیش‌نمایش کوچک تصویر در دسترس نیست.');
+    }
+    const mimeType = String(thumbnail.getContentType() || '').toLowerCase();
+    if (mimeType.indexOf('image/') !== 0) {
+      throw ErrorHandler.create(Constants.ERROR.FILE_NOT_FOUND, 'پیش‌نمایش تصویر معتبر نیست.');
+    }
+    const bytes = thumbnail.getBytes();
+    return {
+      fileName: file.getName(),
+      mimeType: mimeType,
+      fileSize: bytes.length,
+      base64: Utilities.base64Encode(bytes)
+    };
+  },
+
+
   getFileAsBase64: function(storageKey) {
 
     const file =

@@ -184,6 +184,138 @@ const AttachmentService = {
   },
 
 
+  // Returns only safe image metadata for a single visible project. File bytes,
+  // Drive keys and storage internals are intentionally never exposed here.
+  listProjectImageGallery: function(projectId, params) {
+    Validator.required(projectId, 'شناسه پروژه');
+    const currentUser = AccessControlService.getCurrentUser(params || {});
+    const tenantId = String(currentUser.TenantID || '');
+    const project = ProjectRepository.findById(projectId);
+
+    if (!project || String(project.TenantID) !== tenantId ||
+        !ProjectService._isProjectAvailableToUser_(project, currentUser)) {
+      throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'پروژه مورد نظر پیدا نشد.');
+    }
+
+    const events = (EventRepository.findByProjectId(projectId) || []).filter(function(event) {
+      const eventStatus = String(event.Status || '').toUpperCase();
+      return String(event.TenantID) === tenantId &&
+        String(event.ProjectID) === String(projectId) &&
+        eventStatus !== 'VOID' && eventStatus !== 'CANCELLED';
+    });
+    const eventById = Object.create(null);
+    events.forEach(function(event) { eventById[String(event.ID)] = event; });
+    const eventTypesById = Object.create(null);
+    if (typeof EventTypeRepository !== 'undefined' && EventTypeRepository &&
+        typeof EventTypeRepository.getAll === 'function') {
+      (EventTypeRepository.getAll() || []).forEach(function(eventType) {
+        if (String(eventType.TenantID) === tenantId) {
+          eventTypesById[String(eventType.ID)] = eventType;
+        }
+      });
+    }
+
+    const images = (AttachmentRepository.getAll() || []).filter(function(item) {
+      const entityType = String(item.EntityType || '').toUpperCase();
+      const entityId = String(item.EntityID || '');
+      const status = String(item.Status || 'ACTIVE').toUpperCase();
+      const isImage = String(item.MimeType || '').toLowerCase().indexOf('image/') === 0;
+      if (String(item.TenantID) !== tenantId || !isImage ||
+          status === 'DELETED' || status === 'VOID') return false;
+      if (entityType === 'PROJECT') return entityId === String(projectId);
+      return entityType === 'EVENT' && !!eventById[entityId];
+    }).map(function(item) {
+      const entityType = String(item.EntityType || '').toUpperCase();
+      const event = entityType === 'EVENT' ? eventById[String(item.EntityID)] : null;
+      return {
+        ID: String(item.ID || ''),
+        EntityType: entityType,
+        EntityID: String(item.EntityID || ''),
+        EventID: event ? String(event.ID) : '',
+        EventTypeName: event ? String(
+          event.EventTypeName ||
+          (eventTypesById[String(event.EventTypeID || '')] &&
+            (eventTypesById[String(event.EventTypeID || '')].Name || eventTypesById[String(event.EventTypeID || '')].Code)) ||
+          event.EventTypeCode || event.EventTypeID || 'رویداد ثبت‌شده'
+        ) : 'تصاویر پروژه',
+        EventDate: event ? String(event.OccurredAt || event.CreatedAt || '') : String(item.UploadedAt || item.CreatedAt || ''),
+        FileName: String(item.FileName || ''),
+        MimeType: String(item.MimeType || ''),
+        FileSize: Number(item.FileSize || 0),
+        UploadedAt: String(item.UploadedAt || item.CreatedAt || ''),
+        AttachmentType: String(item.AttachmentType || '')
+      };
+    }).sort(function(a, b) {
+      const dateA = new Date(a.EventDate || a.UploadedAt || 0).getTime() || 0;
+      const dateB = new Date(b.EventDate || b.UploadedAt || 0).getTime() || 0;
+      if (dateA !== dateB) return dateB - dateA;
+      return String(b.UploadedAt).localeCompare(String(a.UploadedAt));
+    });
+
+    return Response.success({
+      project: {
+        ID: String(project.ID),
+        ProjectCode: String(project.ProjectCode || ''),
+        Title: String(project.Title || project.Name || project.ProjectName || '')
+      },
+      items: images
+    });
+  },
+
+
+  // One bounded metadata request supplies counts for every project visible to
+  // the current user. Each sheet is read once; no per-event/per-project N+1.
+  listProjectImageCounts: function(params) {
+    const currentUser = AccessControlService.getCurrentUser(params || {});
+    const tenantId = String(currentUser.TenantID || '');
+    const visibleProjectIds = Object.create(null);
+    (ProjectRepository.getAll() || []).forEach(function(project) {
+      if (String(project.TenantID) === tenantId &&
+          ProjectService._isProjectAvailableToUser_(project, currentUser)) {
+        visibleProjectIds[String(project.ID)] = true;
+      }
+    });
+
+    const visibleEventIds = Object.create(null);
+    const eventsById = Object.create(null);
+    (EventRepository.getAll() || []).forEach(function(event) {
+      const projectId = String(event.ProjectID || '');
+      const eventStatus = String(event.Status || '').toUpperCase();
+      if (String(event.TenantID) === tenantId && visibleProjectIds[projectId] &&
+          eventStatus !== 'VOID' && eventStatus !== 'CANCELLED') {
+        visibleEventIds[String(event.ID)] = true;
+        eventsById[String(event.ID)] = event;
+      }
+    });
+
+    const counts = Object.create(null);
+    Object.keys(visibleProjectIds).forEach(function(projectId) { counts[projectId] = 0; });
+    (AttachmentRepository.getAll() || []).forEach(function(item) {
+      const entityType = String(item.EntityType || '').toUpperCase();
+      const entityId = String(item.EntityID || '');
+      const status = String(item.Status || 'ACTIVE').toUpperCase();
+      if (String(item.TenantID) !== tenantId ||
+          String(item.MimeType || '').toLowerCase().indexOf('image/') !== 0 ||
+          status === 'DELETED' || status === 'VOID') return;
+      let projectId = '';
+      if (entityType === 'PROJECT' && visibleProjectIds[entityId]) {
+        projectId = entityId;
+      } else if (entityType === 'EVENT' && visibleEventIds[entityId]) {
+        // Event IDs are unique within the operational event repository.
+        const event = (eventsById[entityId] || null);
+        projectId = event ? String(event.ProjectID || '') : '';
+      }
+      if (projectId && Object.prototype.hasOwnProperty.call(counts, projectId)) {
+        counts[projectId] += 1;
+      }
+    });
+
+    return Response.success(Object.keys(counts).map(function(projectId) {
+      return { projectId: projectId, count: counts[projectId] };
+    }));
+  },
+
+
   get: function(
     id,
     params
@@ -560,6 +692,28 @@ const AttachmentService = {
       }
     );
 
+  },
+
+
+  downloadThumbnail: function(id, params) {
+    Validator.required(id, 'شناسه فایل');
+    const currentUser = AccessControlService.getCurrentUser(params || {});
+    const attachment = AttachmentRepository.findById(id);
+    if (!attachment ||
+        String(attachment.TenantID) !== String(currentUser.TenantID) ||
+        !this._isAttachmentVisibleToUser_(attachment, currentUser) ||
+        ['DELETED', 'VOID'].indexOf(String(attachment.Status || 'ACTIVE').toUpperCase()) !== -1 ||
+        String(attachment.MimeType || '').toLowerCase().indexOf('image/') !== 0) {
+      throw ErrorHandler.create(Constants.ERROR.FILE_NOT_FOUND, 'تصویر مورد نظر پیدا نشد.');
+    }
+    const thumbnail = StorageRepository.getThumbnailAsBase64(attachment.StorageKey);
+    return Response.success({
+      ID: attachment.ID,
+      FileName: thumbnail.fileName || attachment.FileName,
+      MimeType: thumbnail.mimeType,
+      FileSize: thumbnail.fileSize,
+      Base64: thumbnail.base64
+    });
   },
 
 

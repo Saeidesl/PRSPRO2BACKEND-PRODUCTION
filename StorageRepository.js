@@ -23,6 +23,11 @@ const StorageRepository = {
   },
 
 
+  getThumbnailAsBase64: function(storageKey) {
+    return GoogleDriveStorage.getThumbnailAsBase64(storageKey);
+  },
+
+
   getFileAsBase64: function(storageKey) {
 
     return GoogleDriveStorage.getFileAsBase64(
