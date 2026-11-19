@@ -198,8 +198,10 @@ const AttachmentService = {
     }
 
     const events = (EventRepository.findByProjectId(projectId) || []).filter(function(event) {
+      const eventStatus = String(event.Status || '').toUpperCase();
       return String(event.TenantID) === tenantId &&
-        String(event.ProjectID) === String(projectId);
+        String(event.ProjectID) === String(projectId) &&
+        eventStatus !== 'VOID' && eventStatus !== 'CANCELLED';
     });
     const eventById = Object.create(null);
     events.forEach(function(event) { eventById[String(event.ID)] = event; });
@@ -278,7 +280,9 @@ const AttachmentService = {
     const eventsById = Object.create(null);
     (EventRepository.getAll() || []).forEach(function(event) {
       const projectId = String(event.ProjectID || '');
-      if (String(event.TenantID) === tenantId && visibleProjectIds[projectId]) {
+      const eventStatus = String(event.Status || '').toUpperCase();
+      if (String(event.TenantID) === tenantId && visibleProjectIds[projectId] &&
+          eventStatus !== 'VOID' && eventStatus !== 'CANCELLED') {
         visibleEventIds[String(event.ID)] = true;
         eventsById[String(event.ID)] = event;
       }
