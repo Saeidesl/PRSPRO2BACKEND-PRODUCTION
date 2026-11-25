@@ -422,7 +422,7 @@ const Router = {
     }
 
     if (path === '/users') {
-      AccessControlService.require(params, 'USER_VIEW');
+      this.requireAny(params, ['USER_VIEW', 'EVENT_CREATE']);
       return UserService.list(params);
     }
 
