@@ -953,6 +953,17 @@ const EventService = {
     return Response.success(progress);
   },
 
+  // Backward-compatible adapter for the legacy single-field route; delegates to the atomic validator.
+  updateFieldFromTemplate: function(eventId, field, value, expectedUpdatedAt, params) {
+    if (['OccurredAt','Description'].indexOf(String(field)) === -1) throw ErrorHandler.create(Constants.ERROR.PERMISSION_DENIED, 'این فیلد رویداد قابل ویرایش نیست.');
+    const user = AccessControlService.getCurrentUser(params || {});
+    const event = EventRepository.findById(eventId);
+    if (!event || String(event.TenantID) !== String(user.TenantID)) throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'رویداد قابل ویرایش پیدا نشد.');
+    const values = {OccurredAt: event.OccurredAt, Description: event.Description || ''};
+    values[String(field)] = value;
+    return this.updateFieldsFromTemplate(eventId, values, expectedUpdatedAt, params);
+  },
+
   updateFieldsFromTemplate: function(eventId, values, expectedUpdatedAt, params) {
     const user = AccessControlService.getCurrentUser(params || {});
     if (!values || typeof values !== 'object' || Array.isArray(values) || !Object.prototype.hasOwnProperty.call(values, 'OccurredAt') || !Object.prototype.hasOwnProperty.call(values, 'Description')) throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'تاریخ و شرح رویداد باید هم‌زمان ارائه شوند.');
