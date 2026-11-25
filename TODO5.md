@@ -31,6 +31,7 @@ Allow ordinary event creators to select an active performer in their tenant. Def
 
 - [x] Task 1 — Discovery & Planning
   - *Log:* Reviewed existing EventService performer validation and event-create path. No database/schema or route changes required.
-- [ ] Task 2 — Backend selected performer compatibility (IN PROGRESS)
+- [x] Task 2 — Backend selected performer compatibility
   - *Log:* `_createUnlocked_` now uses `event.PerformedBy || user.ID` for all users. Existing same-tenant active-user validation and creator attribution are preserved. Added `tests/ordinary-event-performer-selection.test.js`.
-- [ ] Task 3 — Frontend & Integration Validation
+- [x] Task 3 — Frontend & Integration Validation
+  - *Log:* Frontend PR #165 merged into operational main (SHA `be0dd759eee2fe6f56056ee21949cde48d0471a5`); backend PR #99 merged (SHA `357e89e1c95892c2095c426609df1296177a255e`). CI suites passed for source checks, PMS agent suite, diagnostics and frontend checks. User acceptance test pending.
