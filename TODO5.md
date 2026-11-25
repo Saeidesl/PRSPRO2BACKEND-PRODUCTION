@@ -21,3 +21,16 @@ Allow SYS_ADMIN/ADMIN users to select the actual event performer during event cr
   - *Log:* EventService.js now rejects a selected performer who is not in the authenticated tenant or is inactive. CreatedBy remains authenticated user; existing admin-only selection path remains. Added tests/admin-event-performer-validation.test.js static contract test.
 - [ ] Task 3 — Frontend Selection UI
 - [ ] Task 4 — Integration & Regression Validation
+
+
+## 🎯 Current Objective — Performer Selection for Ordinary Users
+
+Allow ordinary event creators to select an active performer in their tenant. Default selection remains the current user; Creator attribution and authorization checks remain intact.
+
+## 📋 Macro-Task Queue & Implementation Log — Extension
+
+- [x] Task 1 — Discovery & Planning
+  - *Log:* Reviewed existing EventService performer validation and event-create path. No database/schema or route changes required.
+- [ ] Task 2 — Backend selected performer compatibility (IN PROGRESS)
+  - *Log:* `_createUnlocked_` now uses `event.PerformedBy || user.ID` for all users. Existing same-tenant active-user validation and creator attribution are preserved. Added `tests/ordinary-event-performer-selection.test.js`.
+- [ ] Task 3 — Frontend & Integration Validation
