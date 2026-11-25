@@ -47,3 +47,19 @@ Resolve the reported failure loading the user list with ordinary accounts while 
 - [ ] Task 2 — Backend route adjustment (IN PROGRESS): Removed the role-code gate for the authenticated read-only `/users` list used by performer selection; authentication remains required and `UserService.list` continues to restrict results to the current tenant and sanitize records. Added a contract test.
 - [ ] Task 3 — CI/regression verification and PR review.
 - [ ] Task 4 — Production deployment/live acceptance (requires approved operational deployment workflow and live verification).
+
+
+## 🎯 Current Objective — Production deployment and live acceptance for performer list fix
+
+Track release of merged fix for ordinary-user performer-list access. CI is verified; Apps Script source sync/deployment and live acceptance remain pending.
+
+## 📋 Macro-Task Queue & Implementation Log — Extension
+
+- [x] Task 1 — Discovery and deployment workflow review
+  - *Log:* Reviewed the operational sync workflow `.github/workflows/sync-apps-script.yml`. It requires manual `workflow_dispatch`, explicit confirmation input, and for deployment the repository variable `ALLOW_APPS_SCRIPT_DEPLOY=true`. The GitHub connector available here has no workflow-dispatch action, so the release cannot be triggered from this session.
+- [x] Task 2 — Backend fix merged
+  - *Log:* PR #100 merged to `main` at commit `2cd698a8c08d31b03cf57e6d608020faf45b54c4`. `Router.js` authenticates `GET /users` and calls existing `UserService.list(params)`; tenant scoping and sanitization remain in `UserService.js`. Test contract updated in `tests/event-performer-users-list-permission.test.js`.
+- [x] Task 3 — CI verification
+  - *Log:* Backend source checks, PMS agent suite, and procurement performance diagnostics all passed for merge commit `2cd698a8c08d31b03cf57e6d608020faf45b54c4`.
+- [ ] Task 4 — Apps Script release and live acceptance (IN PROGRESS; blocked on workflow-dispatch capability)
+  - *Log:* No source push or web-app deployment has been triggered from this session. Manual dispatch of the production workflow is required; production deployment is gated by `ALLOW_APPS_SCRIPT_DEPLOY` and explicit confirmation. Live ordinary-user validation is still pending.
