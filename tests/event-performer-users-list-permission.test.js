@@ -4,7 +4,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 
-test('event creators may read tenant-scoped user list to choose a performer', () => {
+test('authenticated users can access the tenant-scoped user list for performer selection', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'Router.js'), 'utf8');
-  assert.match(source, /this\.requireAny\(params, \['USER_VIEW', 'EVENT_CREATE'\]\)/);
+  const route = source.match(/if \(path === '\/users'\) \{([\s\S]*?)\n    \}/);
+  assert.ok(route, 'GET /users route exists');
+  assert.match(route[1], /AccessControlService\.getCurrentUser\(params \|\| \{\}\)/);
+  assert.match(route[1], /return UserService\.list\(params\)/);
+  assert.doesNotMatch(route[1], /requireAny|AccessControlService\.require\(/);
 });

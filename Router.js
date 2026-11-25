@@ -422,7 +422,11 @@ const Router = {
     }
 
     if (path === '/users') {
-      this.requireAny(params, ['USER_VIEW', 'EVENT_CREATE']);
+      // The authenticated user's tenant-scoped, sanitized user list is needed
+      // by event performer selection. This read-only endpoint is intentionally
+      // available to authenticated users without USER_VIEW/EVENT_CREATE role
+      // permission checks; UserService.list enforces tenant isolation.
+      AccessControlService.getCurrentUser(params || {});
       return UserService.list(params);
     }
 
