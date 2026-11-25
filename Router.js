@@ -958,6 +958,12 @@ const Router = {
       return EventTypeService.update(path.split('/')[2], body, params);
     }
 
+    const eventBasicFieldsMatch = path.match(/^\\/events\\/([^/]+)\\/basic-fields$/);
+    if (eventBasicFieldsMatch) {
+      AccessControlService.require(params, 'EVENT_EDIT');
+      return EventService.updateFieldsFromTemplate(decodeURIComponent(eventBasicFieldsMatch[1]), body.values, body.expectedUpdatedAt, params);
+    }
+
     const eventFieldUpdateMatch = path.match(/^\/events\/([^/]+)\/fields$/);
     if (eventFieldUpdateMatch) {
       AccessControlService.require(params, 'EVENT_EDIT');
