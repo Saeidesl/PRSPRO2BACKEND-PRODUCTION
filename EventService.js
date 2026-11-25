@@ -1175,11 +1175,12 @@ const EventService = {
 
     if (
       !performedUser ||
-      String(performedUser.TenantID) !== String(user.TenantID)
+      String(performedUser.TenantID) !== String(user.TenantID) ||
+      String(performedUser.Status || Constants.STATUS.ACTIVE).toUpperCase() !== String(Constants.STATUS.ACTIVE).toUpperCase()
     ) {
       throw ErrorHandler.create(
         Constants.ERROR.USER_NOT_FOUND,
-        'کاربر انجام‌دهنده معتبر نیست.'
+        'کاربر انجام‌دهنده معتبر نیست یا فعال نیست.'
       );
     }
 
