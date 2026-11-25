@@ -35,3 +35,15 @@ Allow ordinary event creators to select an active performer in their tenant. Def
   - *Log:* `_createUnlocked_` now uses `event.PerformedBy || user.ID` for all users. Existing same-tenant active-user validation and creator attribution are preserved. Added `tests/ordinary-event-performer-selection.test.js`.
 - [x] Task 3 — Frontend & Integration Validation
   - *Log:* Frontend PR #165 merged into operational main (SHA `be0dd759eee2fe6f56056ee21949cde48d0471a5`); backend PR #99 merged (SHA `357e89e1c95892c2095c426609df1296177a255e`). CI suites passed for source checks, PMS agent suite, diagnostics and frontend checks. User acceptance test pending.
+
+
+## 🎯 Current Objective — Fix ordinary-user performer list access
+
+Resolve the reported failure loading the user list with ordinary accounts while preserving tenant isolation and exposing only sanitized user records.
+
+## 📋 Macro-Task Queue & Implementation Log — Extension
+
+- [x] Task 1 — Discovery: Reviewed the `/users` route, `UserService.list`, tenant filtering/sanitization, permission gate, and frontend failure handling.
+- [ ] Task 2 — Backend route adjustment (IN PROGRESS): Removed the role-code gate for the authenticated read-only `/users` list used by performer selection; authentication remains required and `UserService.list` continues to restrict results to the current tenant and sanitize records. Added a contract test.
+- [ ] Task 3 — CI/regression verification and PR review.
+- [ ] Task 4 — Production deployment/live acceptance (requires approved operational deployment workflow and live verification).
