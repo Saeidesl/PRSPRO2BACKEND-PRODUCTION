@@ -1095,9 +1095,7 @@ const EventService = {
 
     const isAdmin = this._isAdmin_(user);
 
-    const performedBy = isAdmin
-      ? (event.PerformedBy || user.ID)
-      : user.ID;
+    const performedBy = event.PerformedBy || user.ID;
 
     const validationEvent = Object.assign({}, event);
     validationEvent.PerformedBy = performedBy;
