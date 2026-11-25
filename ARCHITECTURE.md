@@ -1487,3 +1487,19 @@
 - Backend روی `main` و Apps Script Production مستقر و توسط Product Owner تأیید شد.
 - Frontend روی GitHub Pages منتشر و توسط Product Owner تأیید شد.
 - این فاز بسته شد؛ برای قابلیت بعدی، Task جدید باید در TODO5 تعریف شود.
+
+
+## فاز: ویرایش و ابطال منطقی رویدادها (2026-11-25)
+
+### دامنه و پذیرش
+- دسترسی ویرایش/ابطال برای SYS_ADMIN و کاربران دارای مجوز صریح EVENT_EDIT؛ کنترل سمت سرور و tenant/project/department scope.
+- ویرایش اتمیک تاریخ و توضیحات با کنترل نسخه و جلوگیری از تغییر ناایمن رویدادهای downstream؛ ابطال منطقی با دلیل و حفظ داده‌های فرم/پیوست و سابقه.
+- Backend PR #101 merge شد: commit `c6c58f0a989a815b0a392bbccd265c92c7a30b32`. CI موفق.
+- Frontend PR #169 merge شد: commit `ed9bf71b9e9e07af7b96aa67e127e9084849d10a`. CI موفق پیش از merge.
+- Backend Apps Script sync/deploy از Workflow عملیاتی در run #45683410404 روی commit فوق با conclusion=success تأیید شد؛ push و Deploy Web App موفق.
+- پذیرش عملی Product Owner در 2026-11-25: تست ویرایش و ابطال منطقی تأیید شد؛ فاز بسته شد.
+
+### نقشه اجرایی
+- Backend: `EventService.js`, `Router.js`; endpoint اتمیک `PUT /events/:id/basic-fields` با `expectedUpdatedAt`، ScriptLock، مجوز و scope، بررسی downstream برای تغییر تاریخ و Audit. Adapter مسیر قدیمی `PUT /events/:id/fields` حفظ شده است. `PUT /events/:id/void` ابطال منطقی با دلیل.
+- Frontend: `js/modules/events.js`; modal و کنترل‌های مجوزدار ویرایش و Void، کنترل concurrency و refresh نمایش رویدادها.
+- هیچ schema یا hard-delete تغییر نکرد؛ مسیرهای سازگار قبلی حفظ شدند.
