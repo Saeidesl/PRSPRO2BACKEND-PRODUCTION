@@ -22,4 +22,5 @@ Implement secure editing and removal (soft-void) of existing events for SYS_ADMI
 - [ ] Task 3 — Frontend event actions and editing experience
 - [ ] Task 4 — Integration, automated regression tests and release readiness
 
+- *Compatibility correction (2026-11-25):* Restored `updateFieldFromTemplate` as a backward-compatible adapter that reads the current event fields and delegates to the atomic update method; the legacy route no longer calls a missing service method. Runtime validation pending.
 - *Integration review (2026-11-25):* Draft PR opened for integration review; static inspection confirms Router.js atomic route uses `PUT /events/:id/basic-fields`, server-side `EVENT_EDIT`, and service validates both fields, tenant/project scope, department, downstream events, and optimistic version before one update + audit. PR and live verification still pending; CI statuses are empty.
