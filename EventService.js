@@ -976,7 +976,8 @@ const EventService = {
       const eventType = EventTypeRepository.findById(event.EventTypeID);
       if (!eventType || String(eventType.TenantID) !== String(user.TenantID)) throw ErrorHandler.create(Constants.ERROR.NOT_FOUND, 'نوع رویداد معتبر نیست.');
       if (!this._isAdmin_(user) && String(event.DepartmentID || '') !== String(user.DepartmentID || '')) throw ErrorHandler.create(Constants.ERROR.PERMISSION_DENIED, 'ویرایش این رویداد فقط برای واحد ثبت‌کننده مجاز است.');
-      const dateChanged = new Date(String(values.OccurredAt || '')).getTime() !== new Date(String(event.OccurredAt || '')).getTime();\n      if (dateChanged && this._hasLaterEventInAnotherDepartment_(event, user.TenantID)) throw ErrorHandler.create(Constants.ERROR.INVALID_STATUS, 'زمان این رویداد قابل تغییر نیست؛ پس از آن در واحد دیگری رویداد ثبت شده است.');
+      const dateChanged = new Date(String(values.OccurredAt || '')).getTime() !== new Date(String(event.OccurredAt || '')).getTime();
+      if (dateChanged && this._hasLaterEventInAnotherDepartment_(event, user.TenantID)) throw ErrorHandler.create(Constants.ERROR.INVALID_STATUS, 'زمان این رویداد قابل تغییر نیست؛ پس از آن در واحد دیگری رویداد ثبت شده است.');
       if (String(event.UpdatedAt || event.CreatedAt || '') !== String(expectedUpdatedAt || '')) throw ErrorHandler.create(Constants.ERROR.CONFLICT, 'رویداد هم‌زمان تغییر کرده است؛ قالب را تازه‌سازی کنید.');
       const description = String(values.Description === null || values.Description === undefined ? '' : values.Description);
       if (description.length > 5000) throw ErrorHandler.create(Constants.ERROR.VALIDATION_ERROR, 'توضیحات رویداد بیش از حد مجاز است.');
