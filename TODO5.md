@@ -18,6 +18,6 @@ Implement secure editing and removal (soft-void) of existing events for SYS_ADMI
 - [x] Task 1 — Discovery & Planning
   - *Log:* Reviewed operational mainline EventService.js, Router.js, EventRepository.js and Frontend events.js/router.js. Existing EVENT_EDIT permission and soft-void route identified; dedicated branches created in both operational repositories.
 - [ ] Task 2 — Backend event edit/removal authorization and integrity (IN PROGRESS)
-  - *Implementation log:* Router.js now exposes PUT /events/:id/fields, protected by EVENT_EDIT, and delegates to existing EventService.updateFieldFromTemplate (OccurredAt/Description only; tenant/project/department/version safeguards and audit preserved). Existing /events/:id/void remains the logical void path. Form response editing is not bypassed; the existing amendment workflow remains intact. Pending route/API regression verification.
+  - *Implementation log:* Added atomic `PUT /events/:id/basic-fields` with EVENT_EDIT guard and EventService.updateFieldsFromTemplate. Date and description validate together and persist in one repository update under script lock, tenant/project/department and version checks, downstream-event safeguard, and audit. Existing single-field route retained for compatibility; logical void path remains unchanged. Pending regression verification.
 - [ ] Task 3 — Frontend event actions and editing experience
 - [ ] Task 4 — Integration, automated regression tests and release readiness
